@@ -1,0 +1,80 @@
+# Unreal Engine generated files
+[Bb]inaries/
+[Dd]erivedDataCache/
+[Ii]ntermediate/
+[Ss]aved/
+LocalBuilds/
+[Bb]uild/[Rr]eceipts/
+
+# Unreal Content is distributed to collaborators as a separate resource package.
+# Keep the local directory intact, but never include it in source-code pushes.
+/Content/
+
+# Unreal per-user content
+/Plugins/Developer/RiderLink/
+
+# Visual Studio / Rider / VS Code / Xcode
+.vs/
+.idea/
+.vscode/
+*.sln
+*.slnx
+*.suo
+*.user
+*.userosscache
+*.sdf
+*.opensdf
+*.VC.db*
+*.sln.docstates
+*.xcodeproj
+*.xcworkspace
+*.code-workspace
+compile_commands.json
+
+# Python generated files and local environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+env/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs, crashes, temporary and backup files
+*.log
+*.dmp
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*.stackdump
+*~
+
+# Disposable download/cache locations
+/Downloads/
+/DownloadCache/
+/VendorDownloads/
+/Cache/
+/Temp/
+*.download
+*.part
+*.crdownload
+
+# Operating system files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
