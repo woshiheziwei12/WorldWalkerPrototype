@@ -5,9 +5,13 @@
 #include "FantasyWorldLayout.generated.h"
 
 class AExponentialHeightFog;
+class AFantasyAmbientSoundscape;
+class AFantasyAmbientWispField;
+class AFantasyFateAltar;
 class APostProcessVolume;
 class AFantasyNPC;
 class UMaterialInterface;
+class UInstancedStaticMeshComponent;
 class UPointLightComponent;
 class USceneComponent;
 class UStaticMesh;
@@ -42,6 +46,7 @@ private:
 	void BuildBattleApproach();
 	void BuildReturnPortalLandmark();
 	void SpawnResidents();
+	void SpawnWorldAmbienceAndEvent();
 	void ConfigureWorldAtmosphere();
 	void RefreshCapturedSky();
 	void HideTemplateFloor();
@@ -68,6 +73,18 @@ private:
 	UPROPERTY(VisibleAnywhere, Category="World")
 	TObjectPtr<USceneComponent> SceneRoot;
 
+	/** W01-only star field; deliberately independent from the W00 sky setup. */
+	UPROPERTY(VisibleAnywhere, Category="World|Atmosphere")
+	TObjectPtr<UStaticMeshComponent> NightSkySphere;
+
+	/** Stylised moon anchor so the route keeps a readable night focal point. */
+	UPROPERTY(VisibleAnywhere, Category="World|Atmosphere")
+	TObjectPtr<UStaticMeshComponent> NightMoon;
+
+	/** Sparse deterministic stars layered in front of the HDRI. */
+	UPROPERTY(VisibleAnywhere, Category="World|Atmosphere")
+	TObjectPtr<UInstancedStaticMeshComponent> NightStars;
+
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> EnvironmentMeshes;
 
@@ -76,6 +93,15 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AFantasyNPC>> Residents;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AFantasyAmbientWispField> AmbientWispField;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AFantasyAmbientSoundscape> AmbientSoundscape;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AFantasyFateAltar> FateAltar;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AExponentialHeightFog> SpawnedFog;

@@ -17,24 +17,31 @@ cd WorldWalkerPrototype
 git lfs pull
 ```
 
-`Content/WorldWalker` 中由项目维护的地图、数据资产和共享内容通过 Git LFS 自动取得。体积较大且基本不修改的第三方资源仍通过独立资源包 `WorldWalkerPrototype_Resources_20260814.zip` 分发，其 SHA-256 是 `C469B0C3E3AC62967780856E404290D16D540B97A974FB81979DD001BF2B8F25`。把资源包直接解压到仓库根目录，确认最终路径为 `WorldWalkerPrototype/Content/...`，并保持 `AnimeCharacters`、`Asian_Village`、`Portals`、`Realistic_Starter_VFX_Pack_Vol2` 以及各世界 `ThirdParty` 目录不变。
+`Content/WorldWalker` 中由项目维护的地图、数据资产和共享内容通过 Git LFS 自动取得。第三方资源分两个包，必须按顺序解压到仓库根目录：
+
+1. `WorldWalkerPrototype_Resources_20260814.zip`，SHA-256 `C469B0C3E3AC62967780856E404290D16D540B97A974FB81979DD001BF2B8F25`。
+2. `WorldWalkerPrototype_Resources_Incremental_20260815.zip`，SHA-256 `20623A38D9BF3D921616D1BC5E0E24170EF6AA1E5B846880297F8C0F263A8C0C`；出现同名文件时允许覆盖四个 W01 角色网格。
+
+确认最终路径为 `WorldWalkerPrototype/Content/...`，并保持 `AnimeCharacters`、`Asian_Village`、`Portals`、`Realistic_Starter_VFX_Pack_Vol2` 以及各世界 `ThirdParty` 目录不变。增量包同时包含 W00/W01 月夜 HDRI、W01 环境音和离线重建缓存。
 
 然后双击 `WorldWalkerPrototype.uproject`。首次打开可能需要重新生成 Visual Studio 工程、编译 C++ 模块和 Shader；`.sln`、`Binaries/`、`Intermediate/`、`Saved/` 等均为本机生成物，不进入版本控制。
 
 ## 当前可玩内容
 
-- W00：大型东方村落夜景、动漫女性角色、待机/行走/奔跑/跳跃、`Shift` 冲刺，以及无需按 `E` 的自动旋涡门。
-- W01：西幻营地与村落、四名中文对话 NPC、角色形态切换、十张起始牌、三印共鸣/英勇/格挡/状态系统，以及黑棘誓约骑士 Boss 战。
+- W00：大型东方村落 HDRI 夜景、动漫女性角色、待机/行走/奔跑/跳跃、`Shift` 冲刺，以及在 12–18 米安全位置生成、无需按 `E` 的双层水纹自动旋涡门。
+- W01：西幻营地与村落、四名中文对话 NPC、命运碑三选一、月星/灵火/空间音景、角色形态切换、十张起始牌与六张战后奖励牌、三印共鸣/英勇/格挡/状态系统，以及黑棘誓约骑士 Boss 战。
 - 世界旅行：W00 自动进入 W01，W01 可通过返回门回到 W00。
 
 ## 内容生成顺序
 
 关闭 Unreal Editor 并完整编译 Editor 后，依次用 UnrealEditor-Cmd 执行：
 
-1. `Scripts/setup_w00_main_world.py`
-2. `Scripts/import_w01_fantasy_assets.py`
-3. `Scripts/import_w01_world_assets.py`
-4. `Scripts/setup_world_content.py`
+1. 首次缺基础资源时：`Scripts/import_w01_fantasy_assets.py`、`Scripts/import_w01_world_assets.py`
+2. `Scripts/setup_world_content.py`
+3. `Scripts/import_w01_audio_assets.py`
+4. `Scripts/import_w01_environment_assets.py`
+5. `Scripts/import_w00_environment_assets.py`
+6. `Scripts/setup_w00_main_world.py`
 
 成功标记、测试步骤和当前架构详见 [`Docs/项目活文档.md`](Docs/项目活文档.md)。
 

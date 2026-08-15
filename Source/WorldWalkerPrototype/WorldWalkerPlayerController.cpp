@@ -59,6 +59,9 @@ void AWorldWalkerPlayerController::RefreshCombat(
 	const int32 CurrentBlock,
 	const int32 CurrentValor,
 	const int32 MaxValor,
+	const int32 DrawPileCount,
+	const int32 DiscardPileCount,
+	const int32 ExhaustPileCount,
 	const FString& SealText,
 	const FString& PlayerStatusText,
 	const FString& EnemyStatusText,
@@ -80,6 +83,9 @@ void AWorldWalkerPlayerController::RefreshCombat(
 			CurrentBlock,
 			CurrentValor,
 			MaxValor,
+			DrawPileCount,
+			DiscardPileCount,
+			ExhaustPileCount,
 			SealText,
 			PlayerStatusText,
 			EnemyStatusText,
@@ -105,4 +111,35 @@ void AWorldWalkerPlayerController::ShowCombatResult(const bool bPlayerWon)
 	{
 		HUDWidget->ShowCombatResult(bPlayerWon);
 	}
+}
+
+void AWorldWalkerPlayerController::ShowRewardSelection(
+	const TArray<FString>& CardLabels,
+	const TArray<UTexture2D*>& CardArtworks,
+	const TArray<FLinearColor>& CardSchoolTints)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->ShowRewardSelection(CardLabels, CardArtworks, CardSchoolTints);
+	}
+}
+
+void AWorldWalkerPlayerController::ShowRewardConfirmation(const FString& ConfirmationText)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->ShowRewardConfirmation(ConfirmationText);
+	}
+}
+
+void AWorldWalkerPlayerController::ExitCombatToExploration(const FString& ConfirmationText)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->ShowExploration();
+		HUDWidget->SetExplorationMessage(ConfirmationText);
+	}
+
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
 }

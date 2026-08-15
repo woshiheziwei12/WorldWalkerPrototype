@@ -114,6 +114,10 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	ValorText->SetColorAndOpacity(FSlateColor(AntiqueGold));
 	ResourceRow->AddChildToHorizontalBox(ValorText)->SetPadding(FMargin(18.0f, 1.0f));
 
+	PileText = MakeText(TEXT("PileText"), TEXT("牌堆 5  |  弃牌 0  |  消耗 0"), 16);
+	PileText->SetColorAndOpacity(FSlateColor(MutedParchment));
+	ResourceRow->AddChildToHorizontalBox(PileText)->SetPadding(FMargin(18.0f, 2.0f));
+
 	SealTextBlock = MakeText(TEXT("SealText"), TEXT("三印  [钢铁] [圣徽] [奥术]"), 17);
 	SealTextBlock->SetColorAndOpacity(FSlateColor(MutedParchment));
 	CombatBox->AddChildToVerticalBox(SealTextBlock)->SetPadding(FMargin(0.0f, 2.0f));
@@ -214,9 +218,9 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 
 	RestartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("RestartButton"));
 	RestartButton->SetBackgroundColor(FLinearColor(0.34f, 0.24f, 0.08f, 1.0f));
-	UTextBlock* RestartLabel = MakeText(TEXT("RestartButtonLabel"), TEXT("返回灰烬隘口"), 19);
-	RestartLabel->SetColorAndOpacity(FSlateColor(Parchment));
-	RestartButton->AddChild(RestartLabel);
+	RestartButtonLabel = MakeText(TEXT("RestartButtonLabel"), TEXT("重新挑战"), 19);
+	RestartButtonLabel->SetColorAndOpacity(FSlateColor(Parchment));
+	RestartButton->AddChild(RestartButtonLabel);
 	RestartButton->OnClicked.AddDynamic(this, &UWorldWalkerHUDWidget::HandleRestartClicked);
 	CombatBox->AddChildToVerticalBox(RestartButton)->SetPadding(FMargin(25.0f, 6.0f));
 
@@ -235,6 +239,9 @@ void UWorldWalkerHUDWidget::ShowExploration()
 
 	ExplorationPanel->SetVisibility(ESlateVisibility::HitTestInvisible);
 	CombatPanel->SetVisibility(ESlateVisibility::Collapsed);
+	bShowingRewardChoices = false;
+	bRewardConfirmed = false;
+	bPlayerCanAct = false;
 }
 
 void UWorldWalkerHUDWidget::SetExplorationMessage(const FString& Message)
@@ -253,7 +260,10 @@ void UWorldWalkerHUDWidget::ShowCombat(
 {
 	ExplorationPanel->SetVisibility(ESlateVisibility::Collapsed);
 	CombatPanel->SetVisibility(ESlateVisibility::Visible);
+	bShowingRewardChoices = false;
+	bRewardConfirmed = false;
 	RestartButton->SetVisibility(ESlateVisibility::Collapsed);
+	RestartButtonLabel->SetText(FText::FromString(TEXT("重新挑战")));
 	CardRow->SetVisibility(ESlateVisibility::Visible);
 	EndTurnButton->SetVisibility(ESlateVisibility::Visible);
 	PlayerHealthText->SetText(FText::FromString(FString::Printf(
@@ -263,6 +273,7 @@ void UWorldWalkerHUDWidget::ShowCombat(
 	EnergyText->SetText(FText::FromString(TEXT("能量 --")));
 	BlockText->SetText(FText::FromString(TEXT("格挡 0")));
 	ValorText->SetText(FText::FromString(TEXT("英勇 0 / 3")));
+	PileText->SetText(FText::FromString(TEXT("牌堆 --  |  弃牌 0  |  消耗 0")));
 	SealTextBlock->SetText(FText::FromString(TEXT("三印  [钢铁] [圣徽] [奥术]")));
 	PlayerStatusTextBlock->SetText(FText::FromString(TEXT("我方：无状态")));
 	EnemyStatusTextBlock->SetText(FText::FromString(TEXT("敌方：无状态")));
@@ -281,6 +292,9 @@ void UWorldWalkerHUDWidget::RefreshCombatState(
 	const int32 CurrentBlock,
 	const int32 CurrentValor,
 	const int32 MaxValor,
+	const int32 DrawPileCount,
+	const int32 DiscardPileCount,
+	const int32 ExhaustPileCount,
 	const FString& SealText,
 	const FString& PlayerStatusText,
 	const FString& EnemyStatusText,
@@ -300,6 +314,11 @@ void UWorldWalkerHUDWidget::RefreshCombatState(
 		TEXT("格挡  %d"), CurrentBlock)));
 	ValorText->SetText(FText::FromString(FString::Printf(
 		TEXT("英勇  %d / %d"), CurrentValor, MaxValor)));
+	PileText->SetText(FText::FromString(FString::Printf(
+		TEXT("牌堆 %d  |  弃牌 %d  |  消耗 %d"),
+		DrawPileCount,
+		DiscardPileCount,
+		ExhaustPileCount)));
 	SealTextBlock->SetText(FText::FromString(
 		SealText.IsEmpty() ? TEXT("三印：尚未点亮") : SealText));
 	PlayerStatusTextBlock->SetText(FText::FromString(FString::Printf(
@@ -364,12 +383,82 @@ void UWorldWalkerHUDWidget::SetCombatMessage(const FString& Message, const bool 
 
 void UWorldWalkerHUDWidget::ShowCombatResult(const bool bPlayerWon)
 {
+	bShowingRewardChoices = false;
+	bRewardConfirmed = false;
 	SetCombatMessage(
 		bPlayerWon ? TEXT("胜利！黑棘誓约已经破除。") : TEXT("战败。灰烬隘口又吞没了一位立誓者。"),
 		false);
 	CardRow->SetVisibility(ESlateVisibility::Collapsed);
 	EndTurnButton->SetVisibility(ESlateVisibility::Collapsed);
+	RestartButtonLabel->SetText(FText::FromString(TEXT("重新挑战")));
 	RestartButton->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UWorldWalkerHUDWidget::ShowRewardSelection(
+	const TArray<FString>& CardLabels,
+	const TArray<UTexture2D*>& CardArtworks,
+	const TArray<FLinearColor>& CardSchoolTints)
+{
+	bShowingRewardChoices = true;
+	bRewardConfirmed = false;
+	bPlayerCanAct = true;
+	CachedCardPlayable.Init(true, CardLabels.Num());
+	CardRow->SetVisibility(ESlateVisibility::Visible);
+	EndTurnButton->SetVisibility(ESlateVisibility::Collapsed);
+	RestartButton->SetVisibility(ESlateVisibility::Collapsed);
+	CombatMessageText->SetText(FText::FromString(
+		TEXT("胜利！从钢铁、圣徽与奥术战利品中选择一张，加入本次旅途牌组。")));
+
+	for (int32 CardIndex = 0; CardIndex < CardButtons.Num(); ++CardIndex)
+	{
+		const bool bHasReward = CardLabels.IsValidIndex(CardIndex);
+		CardButtons[CardIndex]->SetVisibility(
+			bHasReward ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		if (!bHasReward)
+		{
+			continue;
+		}
+
+		CardButtonLabels[CardIndex]->SetText(FText::FromString(CardLabels[CardIndex]));
+		const FLinearColor SchoolTint = CardSchoolTints.IsValidIndex(CardIndex)
+			? CardSchoolTints[CardIndex]
+			: FLinearColor(0.42f, 0.29f, 0.10f, 1.0f);
+		CardButtons[CardIndex]->SetBackgroundColor(FLinearColor(
+			0.035f + SchoolTint.R * 0.48f,
+			0.025f + SchoolTint.G * 0.48f,
+			0.025f + SchoolTint.B * 0.48f,
+			1.0f));
+		CardArtworkFrames[CardIndex]->SetBrushColor(FLinearColor(
+			0.014f + SchoolTint.R * 0.16f,
+			0.010f + SchoolTint.G * 0.16f,
+			0.014f + SchoolTint.B * 0.16f,
+			1.0f));
+
+		if (CardArtworks.IsValidIndex(CardIndex) && CardArtworks[CardIndex])
+		{
+			CardArtworkImages[CardIndex]->SetBrushFromTexture(CardArtworks[CardIndex], true);
+			CardArtworkImages[CardIndex]->SetColorAndOpacity(FLinearColor::White);
+		}
+		else
+		{
+			CardArtworkImages[CardIndex]->SetBrushFromTexture(nullptr);
+			CardArtworkImages[CardIndex]->SetColorAndOpacity(FLinearColor::Transparent);
+		}
+		CardButtons[CardIndex]->SetIsEnabled(true);
+	}
+}
+
+void UWorldWalkerHUDWidget::ShowRewardConfirmation(const FString& ConfirmationText)
+{
+	bShowingRewardChoices = false;
+	bRewardConfirmed = true;
+	bPlayerCanAct = false;
+	CardRow->SetVisibility(ESlateVisibility::Collapsed);
+	EndTurnButton->SetVisibility(ESlateVisibility::Collapsed);
+	CombatMessageText->SetText(FText::FromString(ConfirmationText));
+	RestartButtonLabel->SetText(FText::FromString(TEXT("收下战利品并返回探索")));
+	RestartButton->SetVisibility(ESlateVisibility::Visible);
+	RestartButton->SetIsEnabled(true);
 }
 
 void UWorldWalkerHUDWidget::HandleCard0Clicked() { HandleCardClicked(0); }
@@ -382,7 +471,14 @@ void UWorldWalkerHUDWidget::HandleCardClicked(const int32 HandIndex)
 {
 	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
 	{
-		GameMode->HandlePlayCard(HandIndex);
+		if (bShowingRewardChoices)
+		{
+			GameMode->HandleRewardSelection(HandIndex);
+		}
+		else
+		{
+			GameMode->HandlePlayCard(HandIndex);
+		}
 	}
 }
 
@@ -398,6 +494,13 @@ void UWorldWalkerHUDWidget::HandleRestartClicked()
 {
 	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
 	{
-		GameMode->RestartDemo();
+		if (bRewardConfirmed)
+		{
+			GameMode->HandleReturnToExploration();
+		}
+		else
+		{
+			GameMode->RestartDemo();
+		}
 	}
 }

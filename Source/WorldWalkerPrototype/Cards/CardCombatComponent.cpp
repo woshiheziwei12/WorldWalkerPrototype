@@ -1,12 +1,70 @@
 #include "Cards/CardCombatComponent.h"
 
 #include "Cards/CardDefinition.h"
+#include "Cards/Fantasy/FantasyCardProgressionSubsystem.h"
 #include "Engine/AssetManager.h"
+#include "Engine/GameInstance.h"
 
 namespace
 {
 	const FString FantasyCardPath(TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/Cards"));
 	constexpr uint8 AllSchoolsMask = (1 << 0) | (1 << 1) | (1 << 2);
+
+	TArray<UCardDefinition*> LoadCardDefinitions(
+		const FName CardSetId,
+		int32* OutScannedAssetCount = nullptr,
+		int32* OutRegisteredDefinitionCount = nullptr)
+	{
+		UAssetManager& AssetManager = UAssetManager::Get();
+		const TArray<FString> CardScanPaths = {FantasyCardPath};
+		const int32 ScannedAssetCount = AssetManager.ScanPathsForPrimaryAssets(
+			UCardDefinition::PrimaryAssetType,
+			CardScanPaths,
+			UCardDefinition::StaticClass(),
+			false,
+			false,
+			true);
+		TArray<FPrimaryAssetId> CardIds;
+		AssetManager.GetPrimaryAssetIdList(UCardDefinition::PrimaryAssetType, CardIds);
+		CardIds.Sort([](const FPrimaryAssetId& Left, const FPrimaryAssetId& Right)
+		{
+			return Left.PrimaryAssetName.LexicalLess(Right.PrimaryAssetName);
+		});
+
+		if (OutScannedAssetCount)
+		{
+			*OutScannedAssetCount = ScannedAssetCount;
+		}
+		if (OutRegisteredDefinitionCount)
+		{
+			*OutRegisteredDefinitionCount = CardIds.Num();
+		}
+
+		TArray<UCardDefinition*> Definitions;
+		for (const FPrimaryAssetId& CardId : CardIds)
+		{
+			const FSoftObjectPath CardPath = AssetManager.GetPrimaryAssetPath(CardId);
+			if (!CardPath.ToString().StartsWith(FantasyCardPath + TEXT("/")))
+			{
+				continue;
+			}
+
+			UCardDefinition* Card = Cast<UCardDefinition>(CardPath.TryLoad());
+			if (Card && Card->CardSetId == CardSetId)
+			{
+				Definitions.Add(Card);
+			}
+		}
+		return Definitions;
+	}
+
+	void ShuffleCards(TArray<UCardDefinition*>& Cards)
+	{
+		for (int32 Index = Cards.Num() - 1; Index > 0; --Index)
+		{
+			Cards.Swap(Index, FMath::RandRange(0, Index));
+		}
+	}
 }
 
 const FName UCardCombatComponent::FantasyCardSetId(TEXT("W01_EasternHorror"));
@@ -36,36 +94,24 @@ bool UCardCombatComponent::LoadStartingDeck(const FName CardSetId)
 		return false;
 	}
 
-	UAssetManager& AssetManager = UAssetManager::Get();
-	const TArray<FString> CardScanPaths = {FantasyCardPath};
-	const int32 ScannedAssetCount = AssetManager.ScanPathsForPrimaryAssets(
-		UCardDefinition::PrimaryAssetType,
-		CardScanPaths,
-		UCardDefinition::StaticClass(),
-		false,
-		false,
-		true);
-	TArray<FPrimaryAssetId> CardIds;
-	AssetManager.GetPrimaryAssetIdList(UCardDefinition::PrimaryAssetType, CardIds);
-	CardIds.Sort([](const FPrimaryAssetId& Left, const FPrimaryAssetId& Right)
-	{
-		return Left.PrimaryAssetName.LexicalLess(Right.PrimaryAssetName);
-	});
+	int32 ScannedAssetCount = 0;
+	int32 RegisteredDefinitionCount = 0;
+	const TArray<UCardDefinition*> Definitions = LoadCardDefinitions(
+		CardSetId,
+		&ScannedAssetCount,
+		&RegisteredDefinitionCount);
+	const UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
 
-	for (const FPrimaryAssetId& CardId : CardIds)
+	for (UCardDefinition* Card : Definitions)
 	{
-		const FSoftObjectPath CardPath = AssetManager.GetPrimaryAssetPath(CardId);
-		if (!CardPath.ToString().StartsWith(FantasyCardPath + TEXT("/")))
-		{
-			continue;
-		}
-		UCardDefinition* Card = Cast<UCardDefinition>(CardPath.TryLoad());
-		if (!Card || Card->CardSetId != CardSetId || Card->StartingDeckCopies <= 0)
-		{
-			continue;
-		}
-
 		for (int32 CopyIndex = 0; CopyIndex < Card->StartingDeckCopies; ++CopyIndex)
+		{
+			StartingDeck.Add(Card);
+		}
+		const int32 RewardCopies = Progression ? Progression->GetGrantedCopies(Card->CardId) : 0;
+		for (int32 CopyIndex = 0; CopyIndex < RewardCopies; ++CopyIndex)
 		{
 			StartingDeck.Add(Card);
 		}
@@ -80,18 +126,19 @@ bool UCardCombatComponent::LoadStartingDeck(const FName CardSetId)
 			*CardSetId.ToString(),
 			*FantasyCardPath,
 			ScannedAssetCount,
-			CardIds.Num());
+			RegisteredDefinitionCount);
 	}
 	else
 	{
 		UE_LOG(
 			LogTemp,
 			Display,
-			TEXT("WorldWalker starter deck loaded. Set=%s Scanned=%d RegisteredDefinitions=%d Cards=%d"),
+			TEXT("WorldWalker starter deck loaded. Set=%s Scanned=%d RegisteredDefinitions=%d Cards=%d RunRewards=%d"),
 			*CardSetId.ToString(),
 			ScannedAssetCount,
-			CardIds.Num(),
-			StartingDeck.Num());
+			RegisteredDefinitionCount,
+			StartingDeck.Num(),
+			Progression ? Progression->GetTotalGrantedCopies() : 0);
 		LoadedCardSetId = CardSetId;
 	}
 	return !StartingDeck.IsEmpty();
@@ -183,6 +230,19 @@ UCardDefinition* UCardCombatComponent::PlayCard(const int32 HandIndex)
 	CurrentEnergy -= Card->EnergyCost;
 	CurrentValor -= Card->ValorCost;
 	Hand.RemoveAt(HandIndex);
+	RegisterPlayedSchool(Card->School);
+	return Card;
+}
+
+void UCardCombatComponent::FinalizePlayedCard(UCardDefinition* Card)
+{
+	// Deck copies intentionally share the same definition pointer, so pointer
+	// containment cannot be used as a duplicate-call guard here.
+	if (!Card)
+	{
+		return;
+	}
+
 	if (Card->bExhaust)
 	{
 		ExhaustPile.Add(Card);
@@ -191,8 +251,6 @@ UCardDefinition* UCardCombatComponent::PlayCard(const int32 HandIndex)
 	{
 		DiscardPile.Add(Card);
 	}
-	RegisterPlayedSchool(Card->School);
-	return Card;
 }
 
 bool UCardCombatComponent::HasAnyPlayableCard() const
@@ -205,6 +263,94 @@ bool UCardCombatComponent::HasAnyPlayableCard() const
 		}
 	}
 	return false;
+}
+
+TArray<UCardDefinition*> UCardCombatComponent::BuildRewardChoices(const int32 ChoiceCount) const
+{
+	const int32 SafeChoiceCount = FMath::Max(0, ChoiceCount);
+	TArray<UCardDefinition*> SteelCards;
+	TArray<UCardDefinition*> FaithCards;
+	TArray<UCardDefinition*> ArcaneCards;
+	TArray<UCardDefinition*> RemainingCards;
+
+	for (UCardDefinition* Card : LoadCardDefinitions(FantasyCardSetId))
+	{
+		if (!Card || !Card->bRewardEligible)
+		{
+			continue;
+		}
+
+		switch (Card->School)
+		{
+		case ECardSchool::Steel: SteelCards.Add(Card); break;
+		case ECardSchool::Faith: FaithCards.Add(Card); break;
+		case ECardSchool::Arcane: ArcaneCards.Add(Card); break;
+		case ECardSchool::None:
+		default: RemainingCards.Add(Card); break;
+		}
+	}
+
+	ShuffleCards(SteelCards);
+	ShuffleCards(FaithCards);
+	ShuffleCards(ArcaneCards);
+	TArray<UCardDefinition*> Choices;
+	if (!SteelCards.IsEmpty() && Choices.Num() < SafeChoiceCount)
+	{
+		Choices.Add(SteelCards.Pop(EAllowShrinking::No));
+	}
+	if (!FaithCards.IsEmpty() && Choices.Num() < SafeChoiceCount)
+	{
+		Choices.Add(FaithCards.Pop(EAllowShrinking::No));
+	}
+	if (!ArcaneCards.IsEmpty() && Choices.Num() < SafeChoiceCount)
+	{
+		Choices.Add(ArcaneCards.Pop(EAllowShrinking::No));
+	}
+
+	RemainingCards.Append(SteelCards);
+	RemainingCards.Append(FaithCards);
+	RemainingCards.Append(ArcaneCards);
+	ShuffleCards(RemainingCards);
+	while (Choices.Num() < SafeChoiceCount && !RemainingCards.IsEmpty())
+	{
+		Choices.Add(RemainingCards.Pop(EAllowShrinking::No));
+	}
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01 victory reward choices prepared. Requested=%d Offered=%d RewardPool=%d"),
+		SafeChoiceCount,
+		Choices.Num(),
+		Choices.Num() + RemainingCards.Num());
+	return Choices;
+}
+
+bool UCardCombatComponent::GrantRewardCard(UCardDefinition* Card)
+{
+	if (!Card || !Card->bRewardEligible || Card->CardSetId != FantasyCardSetId
+		|| !GetWorld() || !GetWorld()->GetGameInstance())
+	{
+		return false;
+	}
+
+	UFantasyCardProgressionSubsystem* Progression =
+		GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
+	if (!Progression || !Progression->GrantCard(Card))
+	{
+		return false;
+	}
+
+	StartingDeck.Add(Card);
+	return true;
+}
+
+int32 UCardCombatComponent::GetRunRewardCount() const
+{
+	const UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	return Progression ? Progression->GetTotalGrantedCopies() : 0;
 }
 
 int32 UCardCombatComponent::DrawCards(const int32 Count)

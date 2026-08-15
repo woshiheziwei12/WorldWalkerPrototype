@@ -172,6 +172,174 @@ CARD_SPECS = (
         "artwork_name": "T_Card_LionheartJudgment",
         "copies": 1,
     },
+    # Victory-only progression cards.  They reuse the existing CC0 icon set,
+    # remain outside the ten-card starter deck, and are discovered through the
+    # CardDefinition reward flag rather than a hard-coded runtime list.
+    {
+        "asset_name": "DA_Card_BlackthornRiposte",
+        "card_id": "BlackthornRiposte",
+        "display_name": "黑棘还击",
+        "description": "架开兵刃后立刻反斩，兼顾钢铁系的攻防节奏。",
+        "energy_cost": 1,
+        "valor_cost": 0,
+        "card_type": unreal.CardType.ATTACK,
+        "school": unreal.CardSchool.STEEL,
+        "effects": (
+            {
+                "effect_type": unreal.FantasyCombatEffectType.DAMAGE,
+                "target": unreal.FantasyCombatTarget.OPPONENT,
+                "magnitude": 9,
+            },
+            {
+                "effect_type": unreal.FantasyCombatEffectType.BLOCK,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 4,
+            },
+        ),
+        "retain": False,
+        "exhaust": False,
+        "artwork_name": "T_Card_LongSwordSlash",
+        "copies": 0,
+        "reward_eligible": True,
+    },
+    {
+        "asset_name": "DA_Card_FreeCompanyBanner",
+        "card_id": "FreeCompanyBanner",
+        "display_name": "自由佣兵旗",
+        "description": "立下战旗，使本场战斗中的钢铁攻击愈发凌厉。",
+        "energy_cost": 1,
+        "valor_cost": 0,
+        "card_type": unreal.CardType.OATH,
+        "school": unreal.CardSchool.STEEL,
+        "effects": (
+            {
+                "effect_type": unreal.FantasyCombatEffectType.APPLY_STATUS,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 1,
+                "status": unreal.FantasyCombatStatus.STRENGTH,
+            },
+            {
+                "effect_type": unreal.FantasyCombatEffectType.GAIN_VALOR,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 1,
+            },
+        ),
+        "retain": False,
+        "exhaust": True,
+        "artwork_name": "T_Card_LionheartJudgment",
+        "copies": 0,
+        "reward_eligible": True,
+    },
+    {
+        "asset_name": "DA_Card_DawnAegis",
+        "card_id": "DawnAegis",
+        "display_name": "黎明圣盾",
+        "description": "晨曦驱散破甲诅咒，并赐予厚重守护。",
+        "energy_cost": 1,
+        "valor_cost": 0,
+        "card_type": unreal.CardType.SKILL,
+        "school": unreal.CardSchool.FAITH,
+        "effects": (
+            {
+                "effect_type": unreal.FantasyCombatEffectType.BLOCK,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 12,
+            },
+            {
+                "effect_type": unreal.FantasyCombatEffectType.REMOVE_STATUS,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 1,
+                "status": unreal.FantasyCombatStatus.EXPOSED,
+            },
+        ),
+        "retain": True,
+        "exhaust": False,
+        "artwork_name": "T_Card_KiteShieldGuard",
+        "copies": 0,
+        "reward_eligible": True,
+    },
+    {
+        "asset_name": "DA_Card_PilgrimsSanctuary",
+        "card_id": "PilgrimsSanctuary",
+        "display_name": "朝圣者圣所",
+        "description": "以圣徽构筑短暂圣所，同时疗愈伤势。",
+        "energy_cost": 2,
+        "valor_cost": 0,
+        "card_type": unreal.CardType.SKILL,
+        "school": unreal.CardSchool.FAITH,
+        "effects": (
+            {
+                "effect_type": unreal.FantasyCombatEffectType.HEAL,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 8,
+            },
+            {
+                "effect_type": unreal.FantasyCombatEffectType.BLOCK,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 8,
+            },
+        ),
+        "retain": False,
+        "exhaust": False,
+        "artwork_name": "T_Card_KnightsPrayer",
+        "copies": 0,
+        "reward_eligible": True,
+    },
+    {
+        "asset_name": "DA_Card_RuneCascade",
+        "card_id": "RuneCascade",
+        "display_name": "符文奔流",
+        "description": "释放奥术奔流后窥见下一枚符文。",
+        "energy_cost": 1,
+        "valor_cost": 0,
+        "card_type": unreal.CardType.SPELL,
+        "school": unreal.CardSchool.ARCANE,
+        "effects": (
+            {
+                "effect_type": unreal.FantasyCombatEffectType.DAMAGE,
+                "target": unreal.FantasyCombatTarget.OPPONENT,
+                "magnitude": 8,
+            },
+            {
+                "effect_type": unreal.FantasyCombatEffectType.DRAW,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 1,
+            },
+        ),
+        "retain": False,
+        "exhaust": False,
+        "artwork_name": "T_Card_ArcaneSpark",
+        "copies": 0,
+        "reward_eligible": True,
+    },
+    {
+        "asset_name": "DA_Card_HourglassHex",
+        "card_id": "HourglassHex",
+        "display_name": "沙漏咒缚",
+        "description": "扭曲敌人的行动节奏，并立即补充一张手牌。",
+        "energy_cost": 1,
+        "valor_cost": 0,
+        "card_type": unreal.CardType.SPELL,
+        "school": unreal.CardSchool.ARCANE,
+        "effects": (
+            {
+                "effect_type": unreal.FantasyCombatEffectType.APPLY_STATUS,
+                "target": unreal.FantasyCombatTarget.OPPONENT,
+                "magnitude": 2,
+                "status": unreal.FantasyCombatStatus.WEAK,
+            },
+            {
+                "effect_type": unreal.FantasyCombatEffectType.DRAW,
+                "target": unreal.FantasyCombatTarget.SELF,
+                "magnitude": 1,
+            },
+        ),
+        "retain": False,
+        "exhaust": True,
+        "artwork_name": "T_Card_ReadOpening",
+        "copies": 0,
+        "reward_eligible": True,
+    },
 )
 
 ENEMY_SPEC = {
@@ -373,6 +541,10 @@ def ensure_card_definition(spec):
     # Unreal's Python reflection removes the native boolean `b` prefix.
     card.set_editor_property("retain", spec["retain"])
     card.set_editor_property("exhaust", spec["exhaust"])
+    card.set_editor_property(
+        "reward_eligible",
+        spec.get("reward_eligible", False),
+    )
 
     artwork_name = spec["artwork_name"]
     artwork_path = f"{W01_CARD_ART_ROOT}/{artwork_name}"
@@ -468,6 +640,14 @@ def main():
     for spec in CARD_SPECS:
         card_path = ensure_card_definition(spec)
         unreal.log(f"Card content ready: {spec['card_id']} -> {card_path}")
+
+    reward_count = sum(
+        1 for spec in CARD_SPECS if spec.get("reward_eligible", False)
+    )
+    unreal.log(
+        "W01_CARD_PROGRESSION_SETUP_COMPLETE "
+        f"definitions={len(CARD_SPECS)} rewards={reward_count}"
+    )
 
     enemy_path = ensure_enemy_definition(ENEMY_SPEC)
     unreal.log(

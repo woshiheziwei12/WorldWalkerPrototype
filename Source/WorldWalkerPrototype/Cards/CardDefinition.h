@@ -62,5 +62,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card", meta=(ClampMin="0"))
 	int32 StartingDeckCopies = 1;
 
+	/** Reward cards never enter the starter deck until the player claims them after a W01 victory. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression")
+	bool bRewardEligible = false;
+
 	static const FPrimaryAssetType PrimaryAssetType;
 };

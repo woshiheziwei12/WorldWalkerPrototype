@@ -31,6 +31,8 @@ public:
 	void StartCombat(AWorldWalkerCharacter* PlayerCharacter, AWorldWalkerEnemy* EnemyCharacter);
 	void HandlePlayCard(int32 HandIndex);
 	void HandleEndPlayerTurn();
+	void HandleRewardSelection(int32 RewardIndex);
+	void HandleReturnToExploration();
 	void RestartDemo();
 	const FString& GetExplorationMessage() const { return ExplorationMessage; }
 
@@ -49,6 +51,7 @@ private:
 	int32 ResolveDamageAgainstPlayer(int32 BaseDamage, bool bConsumeWeak, bool& bPerfectBlock);
 	FString BuildNextIntentText() const;
 	void FinishCombat(bool bPlayerWon);
+	void BeginVictoryReward();
 	void RefreshCombatUI() const;
 	AWorldWalkerPlayerController* GetWorldWalkerController() const;
 
@@ -79,6 +82,9 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UWorldDefinition> CurrentWorldDefinition;
 
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UCardDefinition>> PendingRewardChoices;
+
 	FTimerHandle EnemyTurnTimer;
 	FString ExplorationMessage = TEXT("WASD Move | Mouse Look | Space Jump | E Interact");
 	FFantasyCombatRuntimeState PlayerFantasyState;
@@ -86,4 +92,6 @@ private:
 	int32 CurrentEnemyIntentIndex = 0;
 	bool bCombatActive = false;
 	bool bWaitingForEnemy = false;
+	bool bAwaitingRewardSelection = false;
+	bool bRewardReadyToLeave = false;
 };

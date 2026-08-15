@@ -26,6 +26,9 @@ public:
 		int32 CurrentBlock,
 		int32 CurrentValor,
 		int32 MaxValor,
+		int32 DrawPileCount,
+		int32 DiscardPileCount,
+		int32 ExhaustPileCount,
 		const FString& SealText,
 		const FString& PlayerStatusText,
 		const FString& EnemyStatusText,
@@ -36,6 +39,12 @@ public:
 		const TArray<FLinearColor>& CardSchoolTints);
 	void SetCombatMessage(const FString& Message, bool bCanAttack);
 	void ShowCombatResult(bool bPlayerWon);
+	void ShowRewardSelection(
+		const TArray<FString>& CardLabels,
+		const TArray<UTexture2D*>& CardArtworks,
+		const TArray<FLinearColor>& CardSchoolTints);
+	void ShowRewardConfirmation(const FString& ConfirmationText);
+	void ExitCombatToExploration(const FString& ConfirmationText);
 
 private:
 	UPROPERTY(Transient)

@@ -31,7 +31,13 @@ public:
 	/** Compatibility alias for existing callers. */
 	bool CanPlayCard(int32 HandIndex) const;
 	UCardDefinition* PlayCard(int32 HandIndex);
+	/** Moves a card to discard/exhaust only after all of its effects and resonance draws resolve. */
+	void FinalizePlayedCard(UCardDefinition* Card);
 	bool HasAnyPlayableCard() const;
+	/** Returns a data-driven W01 reward offer, prioritising one card from each school. */
+	TArray<UCardDefinition*> BuildRewardChoices(int32 ChoiceCount = 3) const;
+	/** Persists one reward copy for this run and immediately adds it to the next battle deck. */
+	bool GrantRewardCard(UCardDefinition* Card);
 
 	/** Draws up to the hand-size limit and returns the number actually drawn. */
 	int32 DrawCards(int32 Count);
@@ -50,6 +56,8 @@ public:
 	int32 GetDrawPileCount() const { return DrawPile.Num(); }
 	int32 GetDiscardPileCount() const { return DiscardPile.Num(); }
 	int32 GetExhaustPileCount() const { return ExhaustPile.Num(); }
+	int32 GetStartingDeckCount() const { return StartingDeck.Num(); }
+	int32 GetRunRewardCount() const;
 	FName GetLoadedCardSetId() const { return LoadedCardSetId; }
 
 	bool IsSchoolLit(ECardSchool School) const;

@@ -19,6 +19,21 @@
 #include "World/WorldTravelSubsystem.h"
 #include "WorldWalkerPlayerController.h"
 
+namespace
+{
+	FLinearColor GetCardSchoolTint(const ECardSchool School)
+	{
+		switch (School)
+		{
+		case ECardSchool::Steel: return FLinearColor(0.42f, 0.49f, 0.58f, 1.0f);
+		case ECardSchool::Faith: return FLinearColor(0.82f, 0.60f, 0.16f, 1.0f);
+		case ECardSchool::Arcane: return FLinearColor(0.31f, 0.16f, 0.68f, 1.0f);
+		case ECardSchool::None:
+		default: return FLinearColor(0.55f, 0.14f, 0.10f, 1.0f);
+		}
+	}
+}
+
 AWorldWalkerGameModeBase::AWorldWalkerGameModeBase()
 {
 	DefaultPawnClass = AWorldWalkerCharacter::StaticClass();
@@ -74,7 +89,7 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 
 	if (CurrentWorldDefinition->WorldId == UWorldTravelSubsystem::EasternHorrorWorldId)
 	{
-		ExplorationMessage = TEXT("灰烬王国 · 黑棘隘口\n沿火炬小径调查营地 | E 交谈/挑战 | Q 切换形态 | 右后方返回主世界");
+		ExplorationMessage = TEXT("灰烬王国 · 黑棘隘口\n探索营地与命运碑 | E 交谈/挑战/聆听 | Q 切换形态 | 右后方返回主世界");
 		ActivePlayer->ConfigureFantasyWorldForm(true, true);
 		if (UCardCombatComponent* CardCombat = ActivePlayer->GetCardCombatComponent())
 		{
@@ -265,6 +280,9 @@ void AWorldWalkerGameModeBase::StartCombat(
 
 	bCombatActive = true;
 	bWaitingForEnemy = false;
+	bAwaitingRewardSelection = false;
+	bRewardReadyToLeave = false;
+	PendingRewardChoices.Reset();
 	CurrentEnemyIntentIndex = 0;
 	PlayerFantasyState = FFantasyCombatRuntimeState();
 	EnemyFantasyState = FFantasyCombatRuntimeState();
@@ -311,6 +329,7 @@ void AWorldWalkerGameModeBase::HandlePlayCard(const int32 HandIndex)
 	}
 
 	ResolvePlayerCardEffects(Card);
+	ActiveCardCombat->FinalizePlayedCard(Card);
 
 	RefreshCombatUI();
 
@@ -609,16 +628,128 @@ void AWorldWalkerGameModeBase::FinishCombat(const bool bPlayerWon)
 	GetWorldTimerManager().ClearTimer(EnemyTurnTimer);
 	RefreshCombatUI();
 
-	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
-	{
-		Controller->ShowCombatResult(bPlayerWon);
-	}
-
 	if (bPlayerWon && ActiveEnemy)
 	{
 		ActiveEnemy->PlayIntentAnimation(EWorldWalkerEnemyAnimationCue::Death);
 		ActiveEnemy->SetActorEnableCollision(false);
 	}
+
+	if (bPlayerWon)
+	{
+		BeginVictoryReward();
+	}
+	else if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+	{
+		Controller->ShowCombatResult(false);
+	}
+}
+
+void AWorldWalkerGameModeBase::BeginVictoryReward()
+{
+	PendingRewardChoices.Reset();
+	if (ActiveCardCombat)
+	{
+		for (UCardDefinition* Card : ActiveCardCombat->BuildRewardChoices(3))
+		{
+			PendingRewardChoices.Add(Card);
+		}
+	}
+	bAwaitingRewardSelection = PendingRewardChoices.Num() == 3;
+	bRewardReadyToLeave = false;
+
+	AWorldWalkerPlayerController* Controller = GetWorldWalkerController();
+	if (!Controller || !bAwaitingRewardSelection)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("W01 victory reward unavailable. Expected=3 Actual=%d"),
+			PendingRewardChoices.Num());
+		bRewardReadyToLeave = Controller != nullptr;
+		if (Controller)
+		{
+			Controller->ShowRewardConfirmation(
+				TEXT("战利品资料尚未生成，本次不发放卡牌。你仍可安全返回探索。"));
+		}
+		return;
+	}
+
+	TArray<FString> RewardLabels;
+	TArray<UTexture2D*> RewardArtworks;
+	TArray<FLinearColor> RewardSchoolTints;
+	for (const UCardDefinition* Card : PendingRewardChoices)
+	{
+		RewardLabels.Add(Card ? Card->BuildRulesText() : TEXT("缺失的战利品"));
+		RewardArtworks.Add(Card ? Card->Artwork.LoadSynchronous() : nullptr);
+		RewardSchoolTints.Add(Card
+			? GetCardSchoolTint(Card->School)
+			: FLinearColor(0.20f, 0.16f, 0.12f, 1.0f));
+	}
+	Controller->ShowRewardSelection(RewardLabels, RewardArtworks, RewardSchoolTints);
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_VICTORY_REWARD_READY Choices=%s|%s|%s"),
+		*PendingRewardChoices[0]->CardId.ToString(),
+		*PendingRewardChoices[1]->CardId.ToString(),
+		*PendingRewardChoices[2]->CardId.ToString());
+}
+
+void AWorldWalkerGameModeBase::HandleRewardSelection(const int32 RewardIndex)
+{
+	if (!bAwaitingRewardSelection || !PendingRewardChoices.IsValidIndex(RewardIndex)
+		|| !ActiveCardCombat)
+	{
+		return;
+	}
+
+	UCardDefinition* RewardCard = PendingRewardChoices[RewardIndex];
+	if (!ActiveCardCombat->GrantRewardCard(RewardCard))
+	{
+		if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+		{
+			Controller->SetCombatMessage(TEXT("战利品未能写入牌组，请重新选择。"), true);
+		}
+		return;
+	}
+
+	bAwaitingRewardSelection = false;
+	bRewardReadyToLeave = true;
+	PendingRewardChoices.Reset();
+	const FString Confirmation = FString::Printf(
+		TEXT("已收下【%s】并加入本次旅途牌组。当前牌组 %d 张，其中战利品 %d 张。"),
+		*RewardCard->DisplayName.ToString(),
+		ActiveCardCombat->GetStartingDeckCount(),
+		ActiveCardCombat->GetRunRewardCount());
+	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+	{
+		Controller->ShowRewardConfirmation(Confirmation);
+	}
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_VICTORY_REWARD_CLAIMED Card=%s Deck=%d RunRewards=%d"),
+		*RewardCard->CardId.ToString(),
+		ActiveCardCombat->GetStartingDeckCount(),
+		ActiveCardCombat->GetRunRewardCount());
+}
+
+void AWorldWalkerGameModeBase::HandleReturnToExploration()
+{
+	if (!bRewardReadyToLeave || !ActivePlayer)
+	{
+		return;
+	}
+
+	bRewardReadyToLeave = false;
+	ActivePlayer->SetCombatLocked(false);
+	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+	{
+		Controller->ExitCombatToExploration(FString::Printf(
+			TEXT("战利品已收入牌组（本次旅途 %d 张）\n可继续与营地居民交谈，或返回主世界后再次进入灰烬王国。"),
+			ActiveCardCombat ? ActiveCardCombat->GetRunRewardCount() : 0));
+	}
+	UE_LOG(LogTemp, Display, TEXT("W01_REWARD_RETURNED_TO_EXPLORATION"));
 }
 
 void AWorldWalkerGameModeBase::RefreshCombatUI() const
@@ -647,22 +778,7 @@ void AWorldWalkerGameModeBase::RefreshCombatUI() const
 				continue;
 			}
 
-			switch (Card->School)
-			{
-			case ECardSchool::Steel:
-				CardSchoolTints.Add(FLinearColor(0.42f, 0.49f, 0.58f, 1.0f));
-				break;
-			case ECardSchool::Faith:
-				CardSchoolTints.Add(FLinearColor(0.82f, 0.60f, 0.16f, 1.0f));
-				break;
-			case ECardSchool::Arcane:
-				CardSchoolTints.Add(FLinearColor(0.31f, 0.16f, 0.68f, 1.0f));
-				break;
-			case ECardSchool::None:
-			default:
-				CardSchoolTints.Add(FLinearColor(0.55f, 0.14f, 0.10f, 1.0f));
-				break;
-			}
+			CardSchoolTints.Add(GetCardSchoolTint(Card->School));
 		}
 
 		Controller->RefreshCombat(
@@ -675,6 +791,9 @@ void AWorldWalkerGameModeBase::RefreshCombatUI() const
 			ActiveCardCombat->GetCurrentBlock(),
 			ActiveCardCombat->GetCurrentValor(),
 			ActiveCardCombat->GetMaxValor(),
+			ActiveCardCombat->GetDrawPileCount(),
+			ActiveCardCombat->GetDiscardPileCount(),
+			ActiveCardCombat->GetExhaustPileCount(),
 			ActiveCardCombat->GetSchoolSummary(),
 			PlayerFantasyState.BuildSummary(),
 			EnemyFantasyState.BuildSummary(),

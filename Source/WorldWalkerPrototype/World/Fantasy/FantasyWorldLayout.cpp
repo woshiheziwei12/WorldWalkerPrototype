@@ -3,6 +3,7 @@
 #include "Characters/FantasyNPC.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SceneComponent.h"
@@ -17,11 +18,16 @@
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
+#include "Engine/TextureCube.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "TimerManager.h"
+#include "UObject/ConstructorHelpers.h"
+#include "World/Fantasy/Exploration/FantasyFateAltar.h"
+#include "World/Fantasy/FantasyAmbientSoundscape.h"
+#include "World/Fantasy/FantasyAmbientWispField.h"
 #include "World/WorldPortal.h"
 
 const FVector AFantasyWorldLayout::BattleAnchorLocalLocation(2320.0f, 0.0f, 0.0f);
@@ -43,6 +49,76 @@ AFantasyWorldLayout::AFantasyWorldLayout()
 	PrimaryActorTick.bCanEverTick = false;
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
+
+	// The template map's sky sphere is intentionally hidden at runtime because
+	// it is too small for the W01 route and produces the partial-sky warning in
+	// off-screen renders. A dedicated, very large sphere keeps every camera
+	// inside W01's independently imported CC0 moon-night HDRI without changing
+	// the proven moon/sky fill values below.
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SkySphereMesh(
+		TEXT("/Engine/MapTemplates/Sky/SM_SkySphere.SM_SkySphere"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SkyDetailSphereMesh(
+		TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+
+	NightSkySphere = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("W01NightSkySphere"));
+	NightSkySphere->SetupAttachment(SceneRoot);
+	NightSkySphere->SetRelativeLocation(FVector(1200.0f, 0.0f, -1000.0f));
+	NightSkySphere->SetRelativeScale3D(FVector(100.0f));
+	NightSkySphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	NightSkySphere->SetCollisionResponseToAllChannels(ECR_Ignore);
+	NightSkySphere->SetCastShadow(false);
+	NightSkySphere->SetReceivesDecals(false);
+	NightSkySphere->SetBoundsScale(4.0f);
+	NightSkySphere->SetVisibility(false);
+	if (SkySphereMesh.Succeeded())
+	{
+		NightSkySphere->SetStaticMesh(SkySphereMesh.Object);
+	}
+
+	NightMoon = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("W01NightMoon"));
+	NightMoon->SetupAttachment(SceneRoot);
+	NightMoon->SetRelativeLocation(FVector(3800.0f, 1550.0f, 1950.0f));
+	NightMoon->SetRelativeScale3D(FVector(2.8f));
+	NightMoon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	NightMoon->SetCollisionResponseToAllChannels(ECR_Ignore);
+	NightMoon->SetCastShadow(false);
+	NightMoon->SetReceivesDecals(false);
+	NightMoon->SetVisibility(false);
+	if (SkyDetailSphereMesh.Succeeded())
+	{
+		NightMoon->SetStaticMesh(SkyDetailSphereMesh.Object);
+	}
+
+	NightStars = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("W01NightStars"));
+	NightStars->SetupAttachment(SceneRoot);
+	NightStars->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	NightStars->SetCollisionResponseToAllChannels(ECR_Ignore);
+	NightStars->SetCastShadow(false);
+	NightStars->SetReceivesDecals(false);
+	NightStars->SetBoundsScale(2.0f);
+	NightStars->SetVisibility(false);
+	if (SkyDetailSphereMesh.Succeeded())
+	{
+		NightStars->SetStaticMesh(SkyDetailSphereMesh.Object);
+		for (int32 StarIndex = 0; StarIndex < 48; ++StarIndex)
+		{
+			const float Azimuth = FMath::DegreesToRadians(
+				FMath::Fmod(17.0f + static_cast<float>(StarIndex) * 137.508f, 360.0f));
+			const float Elevation = FMath::DegreesToRadians(
+				20.0f + static_cast<float>((StarIndex * 47) % 55));
+			const float Distance = 3100.0f + static_cast<float>((StarIndex * 113) % 1400);
+			const FVector Direction(
+				FMath::Cos(Elevation) * FMath::Cos(Azimuth),
+				FMath::Cos(Elevation) * FMath::Sin(Azimuth),
+				FMath::Sin(Elevation));
+			const float StarScale = 0.060f
+				+ static_cast<float>((StarIndex * 19) % 5) * 0.018f;
+			NightStars->AddInstance(FTransform(
+				FQuat::Identity,
+				FVector(1200.0f, 0.0f, 120.0f) + Direction * Distance,
+				FVector(StarScale)));
+		}
+	}
 }
 
 void AFantasyWorldLayout::BeginPlay()
@@ -56,6 +132,67 @@ void AFantasyWorldLayout::BeginPlay()
 		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/Environment/SM_W01_Path/Stone_Dark.Stone_Dark"));
 	RoadMaterial = LoadObject<UMaterialInterface>(nullptr,
 		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/Environment/SM_W01_Path/Stone_Light.Stone_Light"));
+	UMaterialInterface* AuthoredNightSky = LoadObject<UMaterialInterface>(
+		nullptr,
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/PolyHaven/Sky/M_W01_QwantaniMoonNoonSkyNight.M_W01_QwantaniMoonNoonSkyNight"));
+	if (NightSkySphere && AuthoredNightSky)
+	{
+		if (UMaterialInstanceDynamic* NightSkyMaterial = UMaterialInstanceDynamic::Create(
+			AuthoredNightSky,
+			NightSkySphere))
+		{
+			NightSkyMaterial->SetScalarParameterValue(TEXT("SkyBrightness"), 0.045f);
+			NightSkyMaterial->SetVectorParameterValue(
+				TEXT("SkyTint"),
+				FLinearColor(0.20f, 0.35f, 1.0f));
+			NightSkySphere->SetMaterial(0, NightSkyMaterial);
+		}
+		else
+		{
+			NightSkySphere->SetMaterial(0, AuthoredNightSky);
+		}
+		NightSkySphere->SetVisibility(true);
+		UE_LOG(LogTemp, Display, TEXT("W01_HDRI_SKY_READY Material=night-graded"));
+	}
+	else
+	{
+		// A missing optional HDRI keeps the already-tested SkyAtmosphere gradient;
+		// never expose the engine template material that renders as bright stripes.
+		UE_LOG(LogTemp, Warning, TEXT("W01 optional HDRI sky material is missing; using atmosphere fallback."));
+	}
+	UMaterialInterface* EmissiveSkyDetailMaterial = LoadObject<UMaterialInterface>(
+		nullptr,
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Materials/M_W01_EmissiveSkyDetail.M_W01_EmissiveSkyDetail"));
+	if (EmissiveSkyDetailMaterial)
+	{
+		if (UMaterialInstanceDynamic* MoonMaterial = UMaterialInstanceDynamic::Create(
+			EmissiveSkyDetailMaterial,
+			NightMoon))
+		{
+			MoonMaterial->SetVectorParameterValue(
+				TEXT("Color"),
+				FLinearColor(0.52f, 0.68f, 1.0f) * 1.2f);
+			NightMoon->SetMaterial(0, MoonMaterial);
+			NightMoon->SetVisibility(true);
+		}
+		if (UMaterialInstanceDynamic* StarMaterial = UMaterialInstanceDynamic::Create(
+			EmissiveSkyDetailMaterial,
+			NightStars))
+		{
+			StarMaterial->SetVectorParameterValue(
+				TEXT("Color"),
+				FLinearColor(0.62f, 0.76f, 1.0f) * 5.0f);
+			NightStars->SetMaterial(0, StarMaterial);
+			NightStars->SetVisibility(true);
+		}
+	}
+	else
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("W01 optional sky-detail material is missing; moon and stars remain hidden."));
+	}
 
 	ConfigureWorldAtmosphere();
 	BuildGroundAndRoad();
@@ -64,6 +201,7 @@ void AFantasyWorldLayout::BeginPlay()
 	BuildBattleApproach();
 	BuildReturnPortalLandmark();
 	SpawnResidents();
+	SpawnWorldAmbienceAndEvent();
 	GetWorldTimerManager().SetTimerForNextTick(
 		this,
 		&AFantasyWorldLayout::RefreshCapturedSky);
@@ -78,6 +216,55 @@ void AFantasyWorldLayout::BeginPlay()
 		EnvironmentMeshes.Num(),
 		TorchLights.Num(),
 		Residents.Num());
+}
+
+void AFantasyWorldLayout::SpawnWorldAmbienceAndEvent()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AmbientWispField = GetWorld()->SpawnActor<AFantasyAmbientWispField>(
+		AFantasyAmbientWispField::StaticClass(),
+		GetActorTransform(),
+		SpawnParameters);
+	AmbientSoundscape = GetWorld()->SpawnActor<AFantasyAmbientSoundscape>(
+		AFantasyAmbientSoundscape::StaticClass(),
+		GetActorTransform(),
+		SpawnParameters);
+
+	// Keep the one-shot event in the open clearing between the arrival point and
+	// the village gate. It remains visible from the road without overlapping the
+	// chapel, market, residents or the return portal's collision volume.
+	const FVector AltarLocalLocation(120.0f, 470.0f, 0.0f);
+	const FTransform AltarTransform(
+		GetActorRotation() + FRotator(0.0f, -90.0f, 0.0f),
+		GetActorTransform().TransformPosition(AltarLocalLocation));
+	FateAltar = AFantasyFateAltar::SpawnConfigured(
+		GetWorld(),
+		AltarTransform,
+		TEXT("AshenFateAltar"),
+		FText::FromString(TEXT("灰烬命运碑")),
+		FText::FromString(
+			TEXT("焦黑石碑仍有心跳般的微光。三枚古老符文等待你刻下唯一的誓言；一旦选择，命运便不会回头。")));
+	if (FateAltar)
+	{
+		FateAltar->SetOwner(this);
+	}
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("Ashen Kingdom ambient layer ready. Wisps=%s Soundscape=%s FateAltar=%s"),
+		AmbientWispField ? TEXT("spawned") : TEXT("missing"),
+		AmbientSoundscape ? TEXT("spawned") : TEXT("missing"),
+		FateAltar ? TEXT("spawned") : TEXT("missing"));
 }
 
 FVector AFantasyWorldLayout::GetBattleAnchorLocation() const
@@ -98,6 +285,9 @@ FRotator AFantasyWorldLayout::GetForwardFacingRotation() const
 void AFantasyWorldLayout::ConfigureWorldAtmosphere()
 {
 	HideTemplateFloor();
+	UTextureCube* AuthoredNightCubemap = LoadObject<UTextureCube>(
+		nullptr,
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/PolyHaven/Sky/T_W01_QwantaniMoonNoon.T_W01_QwantaniMoonNoon"));
 
 	for (TActorIterator<ADirectionalLight> It(GetWorld()); It; ++It)
 	{
@@ -130,10 +320,18 @@ void AFantasyWorldLayout::ConfigureWorldAtmosphere()
 			SkyLight->SetMobility(EComponentMobility::Movable);
 			SkyLight->SetVisibility(true);
 			It->SetActorHiddenInGame(false);
-			SkyLight->SourceType = SLS_CapturedScene;
+			SkyLight->SourceType = AuthoredNightCubemap
+				? SLS_SpecifiedCubemap
+				: SLS_CapturedScene;
+			if (AuthoredNightCubemap)
+			{
+				// Keep character fill independent from the deliberately dark visible
+				// dome.  The same verified HDRI supplies stable cool ambient light.
+				SkyLight->SetCubemap(AuthoredNightCubemap);
+			}
 			SkyLight->SetRealTimeCapture(false);
-			SkyLight->bLowerHemisphereIsBlack = false;
-			SkyLight->SetIntensity(0.62f);
+			SkyLight->bLowerHemisphereIsBlack = true;
+			SkyLight->SetIntensity(AuthoredNightCubemap ? 0.09f : 0.62f);
 			SkyLight->SetIndirectLightingIntensity(1.0f);
 			SkyLight->SetVolumetricScatteringIntensity(0.32f);
 			SkyLight->SetLightColor(FLinearColor(0.36f, 0.48f, 0.82f));
@@ -232,7 +430,10 @@ void AFantasyWorldLayout::RefreshCapturedSky()
 	{
 		if (USkyLightComponent* SkyLight = It->GetLightComponent())
 		{
-			SkyLight->RecaptureSky();
+			if (SkyLight->SourceType == SLS_CapturedScene)
+			{
+				SkyLight->RecaptureSky();
+			}
 		}
 	}
 }
