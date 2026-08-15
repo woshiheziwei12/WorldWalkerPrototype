@@ -6,16 +6,18 @@
 
 - Unreal Engine 5.8.1
 - Visual Studio 2022，安装“使用 C++ 的游戏开发”和项目根目录 `.vsconfig` 中列出的组件
-- Git
+- Git 与 Git LFS 3.x
 
 ## 首次获取项目
 
 ```powershell
+git lfs install
 git clone https://github.com/woshiheziwei12/WorldWalkerPrototype.git
 cd WorldWalkerPrototype
+git lfs pull
 ```
 
-`Content/` 不上传 Git，必须从项目成员处取得独立资源包 `WorldWalkerPrototype_Resources_20260814.zip`。其 SHA-256 是 `C469B0C3E3AC62967780856E404290D16D540B97A974FB81979DD001BF2B8F25`。把压缩包直接解压到仓库根目录，确认最终路径为 `WorldWalkerPrototype/Content/...`，并保持 `AnimeCharacters`、`Asian_Village`、`Portals` 和 `Realistic_Starter_VFX_Pack_Vol2` 顶层目录名不变。
+`Content/WorldWalker` 中由项目维护的地图、数据资产和共享内容通过 Git LFS 自动取得。体积较大且基本不修改的第三方资源仍通过独立资源包 `WorldWalkerPrototype_Resources_20260814.zip` 分发，其 SHA-256 是 `C469B0C3E3AC62967780856E404290D16D540B97A974FB81979DD001BF2B8F25`。把资源包直接解压到仓库根目录，确认最终路径为 `WorldWalkerPrototype/Content/...`，并保持 `AnimeCharacters`、`Asian_Village`、`Portals`、`Realistic_Starter_VFX_Pack_Vol2` 以及各世界 `ThirdParty` 目录不变。
 
 然后双击 `WorldWalkerPrototype.uproject`。首次打开可能需要重新生成 Visual Studio 工程、编译 C++ 模块和 Shader；`.sln`、`Binaries/`、`Intermediate/`、`Saved/` 等均为本机生成物，不进入版本控制。
 
@@ -40,6 +42,6 @@ cd WorldWalkerPrototype
 
 - 修改项目前先阅读 `AGENTS.md` 和 `Docs/项目活文档.md`。
 - 结构、职责、流程、依赖或构建方式变化时，同一次提交必须更新活文档。
-- `Content/` 由 `.gitignore` 排除，只通过团队资源包分发；不要使用 `git add -f` 强制提交资源。
-- `.gitattributes` 保留 Unreal 二进制的 Git LFS 规则，仅作为未来显式纳管单个资产时的保护措施。
+- 项目原创 `.uasset` 和 `.umap` 由 Git LFS 管理；提交前用 `git lfs status` 检查，其他成员同步后运行 `git lfs pull`。
+- 第三方资源顶层目录和所有 `ThirdParty/` 目录由 `.gitignore` 排除，只通过团队资源包分发；不要使用 `git add -f` 强制提交。
 - 第三方资源清单和授权记录位于 `ThirdPartyAssets.csv` 与 `Docs/`。
