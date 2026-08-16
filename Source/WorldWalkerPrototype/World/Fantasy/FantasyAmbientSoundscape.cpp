@@ -59,6 +59,30 @@ AFantasyAmbientSoundscape::AFantasyAmbientSoundscape()
 	AmbientCueComponent->bStopWhenOwnerDestroyed = true;
 	AmbientCueComponent->bShouldRemainActiveIfDropped = true;
 	ConfigureSpatialAudio(AmbientCueComponent, 260.0f, 1850.0f);
+
+	ExplorationMusicComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ExplorationMusic"));
+	ExplorationMusicComponent->SetupAttachment(SceneRoot);
+	ExplorationMusicComponent->bAutoActivate = false;
+	ExplorationMusicComponent->bAllowSpatialization = false;
+	ExplorationMusicComponent->bStopWhenOwnerDestroyed = true;
+
+	BattleMusicComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("BattleMusic"));
+	BattleMusicComponent->SetupAttachment(SceneRoot);
+	BattleMusicComponent->bAutoActivate = false;
+	BattleMusicComponent->bAllowSpatialization = false;
+	BattleMusicComponent->bStopWhenOwnerDestroyed = true;
+
+	CardSfxComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("CardSfx"));
+	CardSfxComponent->SetupAttachment(SceneRoot);
+	CardSfxComponent->bAutoActivate = false;
+	CardSfxComponent->bAllowSpatialization = false;
+	CardSfxComponent->bStopWhenOwnerDestroyed = true;
+
+	ActionSfxComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ActionSfx"));
+	ActionSfxComponent->SetupAttachment(SceneRoot);
+	ActionSfxComponent->bAutoActivate = false;
+	ActionSfxComponent->bAllowSpatialization = false;
+	ActionSfxComponent->bStopWhenOwnerDestroyed = true;
 }
 
 void AFantasyAmbientSoundscape::BeginPlay()
@@ -108,6 +132,50 @@ void AFantasyAmbientSoundscape::BeginPlay()
 		}
 	}
 
+	ExplorationMusic = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_ExplorationMusic.SW_W01_ExplorationMusic"), AmbientAudioRoot),
+		TEXT("exploration_music"));
+	BattleMusic = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_BattleMusic.SW_W01_BattleMusic"), AmbientAudioRoot),
+		TEXT("battle_music"));
+	CardPlaySound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_CardPlay.SW_W01_CardPlay"), AmbientAudioRoot),
+		TEXT("card_play"));
+	CardDrawSound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_CardDraw.SW_W01_CardDraw"), AmbientAudioRoot),
+		TEXT("card_draw"));
+	CardShuffleSound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_CardShuffle.SW_W01_CardShuffle"), AmbientAudioRoot),
+		TEXT("card_shuffle"));
+	TurnPassSound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_TurnPass.SW_W01_TurnPass"), AmbientAudioRoot),
+		TEXT("turn_pass"));
+	RouteSound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_RouteChoice.SW_W01_RouteChoice"), AmbientAudioRoot),
+		TEXT("route_choice"));
+	AttackSound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_Attack.SW_W01_Attack"), AmbientAudioRoot),
+		TEXT("attack"));
+	SpellSound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_Spell.SW_W01_Spell"), AmbientAudioRoot),
+		TEXT("spell"));
+	DefenseSound = LoadOptionalSound(
+		FString::Printf(TEXT("%s/SW_W01_Defense.SW_W01_Defense"), AmbientAudioRoot),
+		TEXT("defense"));
+
+	if (ExplorationMusic && ExplorationMusicComponent)
+	{
+		ExplorationMusicComponent->SetSound(ExplorationMusic);
+		ExplorationMusicComponent->SetVolumeMultiplier(0.0f);
+		ExplorationMusicComponent->Play();
+		ExplorationMusicComponent->FadeIn(1.6f, 0.24f, 0.0f);
+	}
+	if (BattleMusic && BattleMusicComponent)
+	{
+		BattleMusicComponent->SetSound(BattleMusic);
+		BattleMusicComponent->SetVolumeMultiplier(0.0f);
+	}
+
 	// All cues remain outside the central movement lane. Their broad falloff
 	// makes them audible while travelling without sounding attached to the
 	// player or competing with NPC conversations.
@@ -129,11 +197,16 @@ void AFantasyAmbientSoundscape::BeginPlay()
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("W01_AMBIENT_SOUNDSCAPE_READY FireAsset=%d/1 FireLoops=%d/4 Ambience=%d/5 CuePoints=%d"),
+		TEXT("W01_AMBIENT_SOUNDSCAPE_READY FireAsset=%d/1 FireLoops=%d/4 Ambience=%d/5 CuePoints=%d Music=%d/2 CardSfx=%d/8"),
 		FireLoopSound ? 1 : 0,
 		PlayingFireLoops,
 		AmbientCueSounds.Num(),
-		AmbientCueLocations.Num());
+		AmbientCueLocations.Num(),
+		(ExplorationMusic ? 1 : 0) + (BattleMusic ? 1 : 0),
+		(CardPlaySound ? 1 : 0) + (CardDrawSound ? 1 : 0)
+			+ (CardShuffleSound ? 1 : 0) + (TurnPassSound ? 1 : 0)
+			+ (RouteSound ? 1 : 0) + (AttackSound ? 1 : 0)
+			+ (SpellSound ? 1 : 0) + (DefenseSound ? 1 : 0));
 }
 
 void AFantasyAmbientSoundscape::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -147,6 +220,17 @@ void AFantasyAmbientSoundscape::EndPlay(const EEndPlayReason::Type EndPlayReason
 	{
 		AmbientCueComponent->Stop();
 	}
+	for (UAudioComponent* Component : {
+		ExplorationMusicComponent.Get(),
+		BattleMusicComponent.Get(),
+		CardSfxComponent.Get(),
+		ActionSfxComponent.Get()})
+	{
+		if (Component)
+		{
+			Component->Stop();
+		}
+	}
 	for (UAudioComponent* FireComponent : FireLoopComponents)
 	{
 		if (FireComponent)
@@ -156,6 +240,100 @@ void AFantasyAmbientSoundscape::EndPlay(const EEndPlayReason::Type EndPlayReason
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void AFantasyAmbientSoundscape::SetBattleMusicActive(const bool bBattleActive)
+{
+	if (bBattleActive)
+	{
+		if (ExplorationMusicComponent && ExplorationMusicComponent->IsPlaying())
+		{
+			ExplorationMusicComponent->FadeOut(0.8f, 0.0f);
+		}
+		if (BattleMusicComponent && BattleMusic)
+		{
+			BattleMusicComponent->SetSound(BattleMusic);
+			BattleMusicComponent->FadeIn(0.9f, 0.34f, 0.0f);
+		}
+	}
+	else
+	{
+		if (BattleMusicComponent && BattleMusicComponent->IsPlaying())
+		{
+			BattleMusicComponent->FadeOut(0.9f, 0.0f);
+		}
+		if (ExplorationMusicComponent && ExplorationMusic)
+		{
+			ExplorationMusicComponent->SetSound(ExplorationMusic);
+			ExplorationMusicComponent->FadeIn(1.2f, 0.24f, 0.0f);
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("W01_MUSIC_STATE Mode=%s"), bBattleActive ? TEXT("Battle") : TEXT("Exploration"));
+}
+
+void AFantasyAmbientSoundscape::PlayCardCue(
+	const EFantasyAudioCue Cue,
+	const bool bEnemy)
+{
+	if (CardSfxComponent && CardPlaySound)
+	{
+		CardSfxComponent->SetSound(CardPlaySound);
+		CardSfxComponent->SetVolumeMultiplier(bEnemy ? 0.64f : 0.78f);
+		CardSfxComponent->SetPitchMultiplier(bEnemy ? 0.91f : 1.02f);
+		CardSfxComponent->Play();
+	}
+
+	USoundBase* ActionSound = nullptr;
+	switch (Cue)
+	{
+	case EFantasyAudioCue::Attack: ActionSound = AttackSound; break;
+	case EFantasyAudioCue::Spell: ActionSound = SpellSound; break;
+	case EFantasyAudioCue::Defense:
+	case EFantasyAudioCue::Equipment:
+	case EFantasyAudioCue::Counter: ActionSound = DefenseSound; break;
+	default: break;
+	}
+	if (ActionSfxComponent && ActionSound)
+	{
+		ActionSfxComponent->SetSound(ActionSound);
+		ActionSfxComponent->SetVolumeMultiplier(bEnemy ? 0.56f : 0.68f);
+		ActionSfxComponent->SetPitchMultiplier(bEnemy ? 0.90f : 1.0f);
+		ActionSfxComponent->Play();
+	}
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_CARD_AUDIO_CUE Side=%s Cue=%d CardLayer=%d ActionLayer=%d"),
+		bEnemy ? TEXT("Enemy") : TEXT("Player"),
+		static_cast<int32>(Cue),
+		CardPlaySound ? 1 : 0,
+		ActionSound ? 1 : 0);
+}
+
+void AFantasyAmbientSoundscape::PlayInterfaceCue(const EFantasyAudioCue Cue)
+{
+	USoundBase* InterfaceSound = nullptr;
+	switch (Cue)
+	{
+	case EFantasyAudioCue::Draw: InterfaceSound = CardDrawSound; break;
+	case EFantasyAudioCue::TurnEnd: InterfaceSound = TurnPassSound; break;
+	case EFantasyAudioCue::Reward: InterfaceSound = CardShuffleSound; break;
+	case EFantasyAudioCue::Route: InterfaceSound = RouteSound; break;
+	default: break;
+	}
+	if (CardSfxComponent && InterfaceSound)
+	{
+		CardSfxComponent->SetSound(InterfaceSound);
+		CardSfxComponent->SetVolumeMultiplier(0.68f);
+		CardSfxComponent->SetPitchMultiplier(1.0f);
+		CardSfxComponent->Play();
+	}
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_INTERFACE_AUDIO_CUE Cue=%d Loaded=%d"),
+		static_cast<int32>(Cue),
+		InterfaceSound ? 1 : 0);
 }
 
 void AFantasyAmbientSoundscape::ConfigureSpatialAudio(

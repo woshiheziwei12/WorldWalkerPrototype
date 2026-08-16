@@ -19,6 +19,8 @@ enum class EWorldWalkerFantasyAnimationState : uint8
 	Walk,
 	Run,
 	Attack,
+	Utility,
+	Spell,
 	HitReact
 };
 
@@ -40,6 +42,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
 	void PlayFantasyCardAttackAnimation();
 
+	/** Plays a guarded/utility card gesture distinct from an attack. */
+	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
+	void PlayFantasyCardUtilityAnimation();
+
+	/** Plays the W01 form's spell gesture. */
+	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
+	void PlayFantasyCardSpellAnimation();
+
 	/** Plays the W01 form's hit reaction, then safely returns to locomotion/idle. */
 	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
 	void PlayFantasyHitReactionAnimation();
@@ -52,6 +62,9 @@ protected:
 private:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+
+	/** Bound to E; reflected so unattended smoke tests can exercise the real interaction path. */
+	UFUNCTION()
 	void TryInteract();
 	void ToggleWorldForm();
 	void ApplyWorldFormVisibility();
@@ -85,6 +98,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimSequence> FantasyAttackAnimation;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimSequence> FantasyUtilityAnimation;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimSequence> FantasySpellAnimation;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimSequence> FantasyHitReactionAnimation;

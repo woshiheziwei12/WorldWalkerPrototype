@@ -8,6 +8,7 @@ class UBorder;
 class UButton;
 class UHorizontalBox;
 class UImage;
+class UProgressBar;
 class UTextBlock;
 class UTexture2D;
 class UVerticalBox;
@@ -25,13 +26,15 @@ public:
 		int32 PlayerMaxHealth,
 		int32 EnemyHealth,
 		int32 EnemyMaxHealth,
-		const FString& EnemyDisplayName);
+		const FString& EnemyDisplayName,
+		UTexture2D* EnemyPortrait);
 	void RefreshCombatState(
 		int32 PlayerHealth,
 		int32 PlayerMaxHealth,
 		int32 EnemyHealth,
 		int32 EnemyMaxHealth,
 		const FString& EnemyDisplayName,
+		UTexture2D* EnemyPortrait,
 		int32 CurrentActionPoints,
 		int32 MaxActionPoints,
 		int32 CurrentMana,
@@ -157,7 +160,16 @@ private:
 	TObjectPtr<UTextBlock> PlayerHealthText;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UProgressBar> PlayerHealthBar;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> EnemyHealthText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UProgressBar> EnemyHealthBar;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UImage> EnemyPortraitImage;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> EnergyText;

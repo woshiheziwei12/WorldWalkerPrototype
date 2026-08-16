@@ -254,6 +254,8 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 		const TCHAR* WalkPath;
 		const TCHAR* RunPath;
 		const TCHAR* AttackPath;
+		const TCHAR* UtilityPath;
+		const TCHAR* SpellPath;
 		const TCHAR* HitPath;
 	};
 
@@ -266,6 +268,8 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Walk.SK_W01_RogueCharacterArmature_Walk"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Run.SK_W01_RogueCharacterArmature_Run"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Dagger_Attack.SK_W01_RogueCharacterArmature_Dagger_Attack"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Roll.SK_W01_RogueCharacterArmature_Roll"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_PickUp.SK_W01_RogueCharacterArmature_PickUp"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_RecieveHit.SK_W01_RogueCharacterArmature_RecieveHit"),
 		},
 		{
@@ -275,6 +279,8 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Walk.SK_W01_WarriorCharacterArmature_Walk"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Run.SK_W01_WarriorCharacterArmature_Run"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Sword_Attack.SK_W01_WarriorCharacterArmature_Sword_Attack"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Roll.SK_W01_WarriorCharacterArmature_Roll"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_PickUp.SK_W01_WarriorCharacterArmature_PickUp"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_RecieveHit.SK_W01_WarriorCharacterArmature_RecieveHit"),
 		},
 	};
@@ -284,6 +290,8 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 	FantasyWalkAnimation = nullptr;
 	FantasyRunAnimation = nullptr;
 	FantasyAttackAnimation = nullptr;
+	FantasyUtilityAnimation = nullptr;
+	FantasySpellAnimation = nullptr;
 	FantasyHitReactionAnimation = nullptr;
 
 	for (int32 ProfileIndex = 0; ProfileIndex < UE_ARRAY_COUNT(Profiles); ++ProfileIndex)
@@ -294,14 +302,19 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 		UAnimSequence* Walk = LoadObject<UAnimSequence>(nullptr, Profile.WalkPath);
 		UAnimSequence* Run = LoadObject<UAnimSequence>(nullptr, Profile.RunPath);
 		UAnimSequence* Attack = LoadObject<UAnimSequence>(nullptr, Profile.AttackPath);
+		UAnimSequence* Utility = LoadObject<UAnimSequence>(nullptr, Profile.UtilityPath);
+		UAnimSequence* Spell = LoadObject<UAnimSequence>(nullptr, Profile.SpellPath);
 		UAnimSequence* Hit = LoadObject<UAnimSequence>(nullptr, Profile.HitPath);
 
-		const bool bAllAssetsLoaded = PresentationMesh && Idle && Walk && Run && Attack && Hit;
+		const bool bAllAssetsLoaded = PresentationMesh && Idle && Walk && Run && Attack
+			&& Utility && Spell && Hit;
 		const bool bSkeletonsMatch = bAllAssetsLoaded && PresentationMesh->GetSkeleton()
 			&& Idle->GetSkeleton() == PresentationMesh->GetSkeleton()
 			&& Walk->GetSkeleton() == PresentationMesh->GetSkeleton()
 			&& Run->GetSkeleton() == PresentationMesh->GetSkeleton()
 			&& Attack->GetSkeleton() == PresentationMesh->GetSkeleton()
+			&& Utility->GetSkeleton() == PresentationMesh->GetSkeleton()
+			&& Spell->GetSkeleton() == PresentationMesh->GetSkeleton()
 			&& Hit->GetSkeleton() == PresentationMesh->GetSkeleton();
 		if (!bSkeletonsMatch)
 		{
@@ -319,6 +332,8 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 		FantasyWalkAnimation = Walk;
 		FantasyRunAnimation = Run;
 		FantasyAttackAnimation = Attack;
+		FantasyUtilityAnimation = Utility;
+		FantasySpellAnimation = Spell;
 		FantasyHitReactionAnimation = Hit;
 		FantasyFormMesh->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
 		FantasyFormMesh->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
@@ -327,7 +342,7 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 		UE_LOG(
 			LogTemp,
 			Display,
-			TEXT("W01_PLAYER_PRESENTATION_READY Profile=%s Mesh=1 Animations=5/5 Fallback=%d"),
+			TEXT("W01_PLAYER_PRESENTATION_READY Profile=%s Mesh=1 Animations=7/7 Fallback=%d"),
 			Profile.Name,
 			ProfileIndex > 0 ? 1 : 0);
 		return true;
@@ -403,6 +418,22 @@ void AWorldWalkerCharacter::PlayFantasyCardAttackAnimation()
 		FantasyAttackAnimation,
 		EWorldWalkerFantasyAnimationState::Attack,
 		1.15f);
+}
+
+void AWorldWalkerCharacter::PlayFantasyCardUtilityAnimation()
+{
+	PlayFantasyActionAnimation(
+		FantasyUtilityAnimation,
+		EWorldWalkerFantasyAnimationState::Utility,
+		1.18f);
+}
+
+void AWorldWalkerCharacter::PlayFantasyCardSpellAnimation()
+{
+	PlayFantasyActionAnimation(
+		FantasySpellAnimation,
+		EWorldWalkerFantasyAnimationState::Spell,
+		1.08f);
 }
 
 void AWorldWalkerCharacter::PlayFantasyHitReactionAnimation()

@@ -44,6 +44,44 @@ AMBIENCE_ARCHIVE = {
     "sha256": "4E95C28A468CBDE21D6300AA0BB9A5AEDBEE01B393E712418C49D6B4B8A758BB",
 }
 
+EXPLORATION_MUSIC_SOURCE = {
+    "url": "https://opengameart.org/sites/default/files/qubodup-yd-DarkShrineLoop-OpenGameArt.ogg",
+    "file_name": "W01_Explore_DarkShrine.ogg",
+    "sha256": "9580618DC851F70C3A11B5FF87672867DE44CD38B35DABF926D6BEFDE20E78D0",
+}
+
+BATTLE_MUSIC_SOURCE = {
+    "url": "https://opengameart.org/sites/default/files/the_march_of_devils_dome_loop.wav",
+    "file_name": "W01_Battle_EpicMarch.wav",
+    "sha256": "7DFFCB82140F3ACED075B2766F135C17757C60BD8F7A2717B11AB49318C824D6",
+}
+
+CARD_SFX_ARCHIVE = {
+    "url": "https://opengameart.org/sites/default/files/Cardsounds.zip",
+    "file_name": "Cardsounds.zip",
+    "sha256": "0C01B7807909119A4D93364FA3661F7C4BE1421721E65DA8A816EDD71CF3F899",
+}
+
+RPG_SFX_ARCHIVE = {
+    "url": "https://opengameart.org/sites/default/files/80-CC0-RPG-SFX_0.zip",
+    "file_name": "80-CC0-RPG-SFX.zip",
+    "sha256": "1C2F06FF4E8563B5B8B745B23CF213C1474142A69BB82BD8F5E10D9B3F7A7BBD",
+}
+
+CARD_SFX_SOURCES = (
+    ("playcard.wav", "SW_W01_CardPlay"),
+    ("draw.wav", "SW_W01_CardDraw"),
+    ("shuffle.wav", "SW_W01_CardShuffle"),
+    ("Passturn.wav", "SW_W01_TurnPass"),
+    ("stagechangeoldnotification.wav", "SW_W01_RouteChoice"),
+)
+
+RPG_SFX_SOURCES = (
+    ("blade_01.ogg", "SW_W01_Attack"),
+    ("spell_01.ogg", "SW_W01_Spell"),
+    ("metal_01.ogg", "SW_W01_Defense"),
+)
+
 AMBIENCE_SOURCES = (
     ("ambience-1.wav", "23C9438B65835F8E493A00DE244387BE33E0303E774E15022692CABB1B707DF0"),
     ("ambience-2.wav", "B03D50AA11DF1FD7D859A5776299D73F9D9444565AC6501720D0035DF0AB3424"),
@@ -161,6 +199,27 @@ def _find_ambience_source(extraction_root: Path, file_name: str) -> Path:
     return matches[0]
 
 
+def _find_archive_source(extraction_root: Path, file_name: str) -> Path:
+    matches = [
+        candidate
+        for candidate in extraction_root.rglob("*")
+        if candidate.is_file()
+        and candidate.name.casefold() == file_name.casefold()
+        and "__MACOSX" not in candidate.parts
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected one W01 SFX source named {file_name}, found {len(matches)}"
+        )
+    return matches[0]
+
+
+def _prepare_import_source(source: Path, converted_root: Path, asset_name: str) -> Path:
+    if source.suffix.casefold() != ".wav":
+        return source
+    return _convert_pcm_to_16bit(source, converted_root / f"{asset_name}.wav")
+
+
 def _import_sound(source: Path, asset_name: str, looping: bool) -> str:
     asset_path = f"{DESTINATION_ROOT}/{asset_name}"
     task = unreal.AssetImportTask()
@@ -192,9 +251,19 @@ def main() -> None:
 
     fire_source = _download_verified(FIRE_SOURCE, source_root)
     ambience_archive = _download_verified(AMBIENCE_ARCHIVE, source_root)
+    exploration_music_source = _download_verified(EXPLORATION_MUSIC_SOURCE, source_root)
+    battle_music_source = _download_verified(BATTLE_MUSIC_SOURCE, source_root)
+    card_sfx_archive = _download_verified(CARD_SFX_ARCHIVE, source_root)
+    rpg_sfx_archive = _download_verified(RPG_SFX_ARCHIVE, source_root)
     ambience_root = source_root / "dark_ambiences"
     if not ambience_root.is_dir():
         _safe_extract_zip(ambience_archive, ambience_root)
+    card_sfx_root = source_root / "card_sfx"
+    if not card_sfx_root.is_dir():
+        _safe_extract_zip(card_sfx_archive, card_sfx_root)
+    rpg_sfx_root = source_root / "rpg_sfx"
+    if not rpg_sfx_root.is_dir():
+        _safe_extract_zip(rpg_sfx_archive, rpg_sfx_root)
 
     converted_fire = _convert_pcm_to_16bit(
         fire_source, converted_root / "SW_W01_FireLoop.wav"
@@ -211,6 +280,31 @@ def main() -> None:
         )
         imported_ambience.append(_import_sound(converted, asset_name, False))
 
+    imported_music = [
+        _import_sound(exploration_music_source, "SW_W01_ExplorationMusic", True),
+        _import_sound(
+            _prepare_import_source(
+                battle_music_source, converted_root, "SW_W01_BattleMusic"
+            ),
+            "SW_W01_BattleMusic",
+            True,
+        ),
+    ]
+
+    imported_card_sfx: list[str] = []
+    for file_name, asset_name in CARD_SFX_SOURCES:
+        source = _find_archive_source(card_sfx_root, file_name)
+        imported_card_sfx.append(
+            _import_sound(
+                _prepare_import_source(source, converted_root, asset_name),
+                asset_name,
+                False,
+            )
+        )
+    for file_name, asset_name in RPG_SFX_SOURCES:
+        source = _find_archive_source(rpg_sfx_root, file_name)
+        imported_card_sfx.append(_import_sound(source, asset_name, False))
+
     unreal.EditorAssetLibrary.save_directory(
         DESTINATION_ROOT,
         only_if_is_dirty=False,
@@ -219,7 +313,9 @@ def main() -> None:
     unreal.log(
         "W01_AUDIO_IMPORT_COMPLETE "
         f"fire={1 if imported_fire else 0}/1 "
-        f"ambience={len(imported_ambience)}/{len(AMBIENCE_SOURCES)}"
+        f"ambience={len(imported_ambience)}/{len(AMBIENCE_SOURCES)} "
+        f"music={len(imported_music)}/2 "
+        f"card_sfx={len(imported_card_sfx)}/8"
     )
 
 

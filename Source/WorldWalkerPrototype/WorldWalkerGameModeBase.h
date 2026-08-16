@@ -12,12 +12,15 @@ class AWorldWalkerPlayerController;
 class AWorldHubLayout;
 class AWorldPortal;
 class AFantasyBattleArena;
+class AFantasyAmbientSoundscape;
 class AFantasyWorldLayout;
+class AFantasyWorldChoiceActor;
 class UCardCombatComponent;
 class UCardDefinition;
 class UFantasyEnemyDefinition;
 class UFantasyEnemyDeckRuntime;
 class UFantasyCardProgressionSubsystem;
+class UTexture2D;
 struct FFantasyEnemyIntentStep;
 class UWorldDefinition;
 
@@ -30,6 +33,7 @@ public:
 	AWorldWalkerGameModeBase();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void StartCombat(AWorldWalkerCharacter* PlayerCharacter, AWorldWalkerEnemy* EnemyCharacter);
 	void HandlePlayCard(int32 HandIndex);
@@ -53,12 +57,20 @@ private:
 	void InitializeFantasyRun();
 	void ResumeOrPresentFantasyRun();
 	void PresentRouteChoices();
+	void SpawnWorldChoices(
+		bool bEventChoices,
+		const TArray<FText>& Titles,
+		const TArray<FText>& Descriptions,
+		const TArray<FLinearColor>& Colors);
+	void DestroyWorldChoices();
 	void ActivateRouteNode(const FFantasyRouteNodeChoice& Node);
 	void PresentEventChoices(FName EventId);
 	void CompleteActiveNode(const FString& ResolutionMessage);
 	void PrepareCombatNode(FName EnemyId);
 	void ClearActiveEnemy();
 	void HandleEnemyTurn();
+	void HandleEnemyTurnStep();
+	void FinishEnemyTurnSequence();
 	void ResolvePlayerCardEffects(UCardDefinition* Card);
 	void ResolveEnemyIntent(const FFantasyEnemyIntentStep& Intent);
 	void ResolveEnemyCardEffects(UCardDefinition* Card);
@@ -81,6 +93,8 @@ private:
 	void FinishCombat(bool bPlayerWon);
 	void BeginVictoryReward();
 	void RefreshCombatUI() const;
+	AFantasyAmbientSoundscape* GetFantasySoundscape() const;
+	UTexture2D* GetEnemyPortraitTexture() const;
 	AWorldWalkerPlayerController* GetWorldWalkerController() const;
 
 	UPROPERTY(Transient)
@@ -105,6 +119,9 @@ private:
 	TObjectPtr<AFantasyWorldLayout> ActiveFantasyWorld;
 
 	UPROPERTY(Transient)
+	TArray<TObjectPtr<AFantasyWorldChoiceActor>> ActiveWorldChoices;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UFantasyEnemyDefinition> ActiveFantasyEnemyDefinition;
 
 	UPROPERTY(Transient)
@@ -117,6 +134,7 @@ private:
 	TArray<TObjectPtr<UCardDefinition>> PendingRewardChoices;
 
 	FTimerHandle EnemyTurnTimer;
+	TArray<FString> CurrentEnemyTurnCardNames;
 	FString ExplorationMessage = TEXT("WASD Move | Mouse Look | Space Jump | E Interact");
 	FFantasyCombatRuntimeState PlayerFantasyState;
 	FFantasyCombatRuntimeState EnemyFantasyState;

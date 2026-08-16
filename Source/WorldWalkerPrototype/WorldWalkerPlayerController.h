@@ -20,13 +20,15 @@ public:
 		int32 PlayerMaxHealth,
 		int32 EnemyHealth,
 		int32 EnemyMaxHealth,
-		const FString& EnemyDisplayName);
+		const FString& EnemyDisplayName,
+		UTexture2D* EnemyPortrait);
 	void RefreshCombat(
 		int32 PlayerHealth,
 		int32 PlayerMaxHealth,
 		int32 EnemyHealth,
 		int32 EnemyMaxHealth,
 		const FString& EnemyDisplayName,
+		UTexture2D* EnemyPortrait,
 		int32 CurrentActionPoints,
 		int32 MaxActionPoints,
 		int32 CurrentMana,

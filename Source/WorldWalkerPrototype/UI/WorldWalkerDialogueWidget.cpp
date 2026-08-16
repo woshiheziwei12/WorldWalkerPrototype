@@ -41,6 +41,8 @@ void UWorldWalkerNPCPromptWidget::BuildWidgetTree()
 	PromptText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("PromptText"));
 	PromptText->SetColorAndOpacity(FSlateColor(FLinearColor(0.94f, 0.83f, 0.58f, 1.0f)));
 	PromptText->SetJustification(ETextJustify::Center);
+	PromptText->SetAutoWrapText(true);
+	PromptText->SetMinDesiredWidth(320.0f);
 	PromptText->SetShadowOffset(FVector2D(1.0f, 1.0f));
 	FSlateFontInfo Font = PromptText->GetFont();
 	Font.Size = 17;

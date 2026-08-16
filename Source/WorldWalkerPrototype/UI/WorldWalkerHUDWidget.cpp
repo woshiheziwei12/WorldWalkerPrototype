@@ -8,6 +8,7 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
+#include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
 #include "Components/Spacer.h"
 #include "Components/TextBlock.h"
@@ -32,6 +33,7 @@ void UWorldWalkerHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	SetIsFocusable(true);
 	ShowExploration();
 	UE_LOG(LogTemp, Display, TEXT("WorldWalker HUD constructed and added to the viewport."));
 }
@@ -163,45 +165,83 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	UHorizontalBox* HealthRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("HealthRow"));
 	CombatBox->AddChildToVerticalBox(HealthRow)->SetHorizontalAlignment(HAlign_Center);
 
+	UVerticalBox* PlayerSummary = WidgetTree->ConstructWidget<UVerticalBox>(
+		UVerticalBox::StaticClass(), TEXT("PlayerSummary"));
 	PlayerHealthText = MakeText(TEXT("PlayerHealth"), TEXT("红斗篷骑士 100 / 100"), 20);
 	PlayerHealthText->SetColorAndOpacity(FSlateColor(Parchment));
-	HealthRow->AddChildToHorizontalBox(PlayerHealthText)->SetPadding(FMargin(24.0f, 2.0f));
+	PlayerSummary->AddChildToVerticalBox(PlayerHealthText);
+	PlayerHealthBar = WidgetTree->ConstructWidget<UProgressBar>(
+		UProgressBar::StaticClass(), TEXT("PlayerHealthBar"));
+	PlayerHealthBar->SetPercent(1.0f);
+	PlayerHealthBar->SetFillColorAndOpacity(FLinearColor(0.18f, 0.72f, 0.42f, 1.0f));
+	PlayerSummary->AddChildToVerticalBox(PlayerHealthBar)->SetPadding(FMargin(12.0f, 4.0f));
+	HealthRow->AddChildToHorizontalBox(PlayerSummary)->SetPadding(FMargin(20.0f, 8.0f));
 
+	UTextBlock* VersusLabel = MakeText(TEXT("VersusLabel"), TEXT("VS"), 24);
+	VersusLabel->SetColorAndOpacity(FSlateColor(AntiqueGold));
+	HealthRow->AddChildToHorizontalBox(VersusLabel)->SetPadding(FMargin(28.0f, 34.0f));
+
+	USizeBox* PortraitSize = WidgetTree->ConstructWidget<USizeBox>(
+		USizeBox::StaticClass(), TEXT("EnemyPortraitSize"));
+	PortraitSize->SetWidthOverride(112.0f);
+	PortraitSize->SetHeightOverride(112.0f);
+	UBorder* PortraitFrame = WidgetTree->ConstructWidget<UBorder>(
+		UBorder::StaticClass(), TEXT("EnemyPortraitFrame"));
+	PortraitFrame->SetBrushColor(FLinearColor(0.36f, 0.075f, 0.06f, 1.0f));
+	PortraitFrame->SetPadding(FMargin(4.0f));
+	EnemyPortraitImage = WidgetTree->ConstructWidget<UImage>(
+		UImage::StaticClass(), TEXT("EnemyPortraitImage"));
+	EnemyPortraitImage->SetColorAndOpacity(FLinearColor(0.28f, 0.08f, 0.07f, 1.0f));
+	PortraitFrame->SetContent(EnemyPortraitImage);
+	PortraitSize->AddChild(PortraitFrame);
+	HealthRow->AddChildToHorizontalBox(PortraitSize)->SetPadding(FMargin(8.0f, 1.0f));
+
+	UVerticalBox* EnemySummary = WidgetTree->ConstructWidget<UVerticalBox>(
+		UVerticalBox::StaticClass(), TEXT("EnemySummary"));
+	UTextBlock* EnemyKind = MakeText(TEXT("EnemyKind"), TEXT("对手图鉴"), 14);
+	EnemyKind->SetColorAndOpacity(FSlateColor(MutedParchment));
+	EnemySummary->AddChildToVerticalBox(EnemyKind);
 	EnemyHealthText = MakeText(TEXT("EnemyHealth"), TEXT("对手 92 / 92"), 20);
-	EnemyHealthText->SetColorAndOpacity(FSlateColor(FLinearColor(0.88f, 0.34f, 0.27f, 1.0f)));
-	HealthRow->AddChildToHorizontalBox(EnemyHealthText)->SetPadding(FMargin(24.0f, 2.0f));
+	EnemyHealthText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.42f, 0.31f, 1.0f)));
+	EnemySummary->AddChildToVerticalBox(EnemyHealthText);
+	EnemyHealthBar = WidgetTree->ConstructWidget<UProgressBar>(
+		UProgressBar::StaticClass(), TEXT("EnemyHealthBar"));
+	EnemyHealthBar->SetPercent(1.0f);
+	EnemyHealthBar->SetFillColorAndOpacity(FLinearColor(0.82f, 0.12f, 0.09f, 1.0f));
+	EnemySummary->AddChildToVerticalBox(EnemyHealthBar)->SetPadding(FMargin(12.0f, 4.0f));
+	HealthRow->AddChildToHorizontalBox(EnemySummary)->SetPadding(FMargin(12.0f, 8.0f, 20.0f, 8.0f));
 
 	UHorizontalBox* ResourceRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ResourceRow"));
 	CombatBox->AddChildToVerticalBox(ResourceRow)->SetHorizontalAlignment(HAlign_Center);
 
 	EnergyText = MakeText(TEXT("EnergyText"), TEXT("行动力 1 / 1"), 18);
 	EnergyText->SetColorAndOpacity(FSlateColor(FLinearColor(0.44f, 0.69f, 0.94f, 1.0f)));
-	ResourceRow->AddChildToHorizontalBox(EnergyText)->SetPadding(FMargin(18.0f, 1.0f));
+	ResourceRow->AddChildToHorizontalBox(EnergyText)->SetPadding(FMargin(10.0f, 1.0f));
 
 	BlockText = MakeText(TEXT("BlockText"), TEXT("格挡 0"), 18);
 	BlockText->SetColorAndOpacity(FSlateColor(FLinearColor(0.60f, 0.73f, 0.81f, 1.0f)));
-	ResourceRow->AddChildToHorizontalBox(BlockText)->SetPadding(FMargin(18.0f, 1.0f));
+	ResourceRow->AddChildToHorizontalBox(BlockText)->SetPadding(FMargin(10.0f, 1.0f));
 
 	ValorText = MakeText(TEXT("ValorText"), TEXT("法力 0  |  装备 0 / 3"), 18);
 	ValorText->SetColorAndOpacity(FSlateColor(AntiqueGold));
-	ResourceRow->AddChildToHorizontalBox(ValorText)->SetPadding(FMargin(18.0f, 1.0f));
+	ResourceRow->AddChildToHorizontalBox(ValorText)->SetPadding(FMargin(10.0f, 1.0f));
 
 	PileText = MakeText(TEXT("PileText"), TEXT("牌堆 5  |  弃牌 0  |  消耗 0"), 16);
 	PileText->SetColorAndOpacity(FSlateColor(MutedParchment));
-	ResourceRow->AddChildToHorizontalBox(PileText)->SetPadding(FMargin(18.0f, 2.0f));
+	CombatBox->AddChildToVerticalBox(PileText)->SetPadding(FMargin(0.0f, 2.0f));
 
 	SealTextBlock = MakeText(TEXT("SealText"), TEXT("旅途牌组：基础牌"), 17);
 	SealTextBlock->SetColorAndOpacity(FSlateColor(MutedParchment));
 	CombatBox->AddChildToVerticalBox(SealTextBlock)->SetPadding(FMargin(0.0f, 2.0f));
 
-	UHorizontalBox* StatusRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("StatusRow"));
-	CombatBox->AddChildToVerticalBox(StatusRow)->SetHorizontalAlignment(HAlign_Center);
 	PlayerStatusTextBlock = MakeText(TEXT("PlayerStatusText"), TEXT("我方：无状态"), 15);
 	PlayerStatusTextBlock->SetColorAndOpacity(FSlateColor(MutedParchment));
-	StatusRow->AddChildToHorizontalBox(PlayerStatusTextBlock)->SetPadding(FMargin(18.0f, 1.0f));
+	PlayerStatusTextBlock->SetAutoWrapText(true);
+	CombatBox->AddChildToVerticalBox(PlayerStatusTextBlock)->SetPadding(FMargin(48.0f, 1.0f));
 	EnemyStatusTextBlock = MakeText(TEXT("EnemyStatusText"), TEXT("敌方：无状态"), 15);
 	EnemyStatusTextBlock->SetColorAndOpacity(FSlateColor(MutedParchment));
-	StatusRow->AddChildToHorizontalBox(EnemyStatusTextBlock)->SetPadding(FMargin(18.0f, 1.0f));
+	EnemyStatusTextBlock->SetAutoWrapText(true);
+	CombatBox->AddChildToVerticalBox(EnemyStatusTextBlock)->SetPadding(FMargin(48.0f, 1.0f));
 
 	UBorder* IntentPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("IntentPanel"));
 	IntentPanel->SetBrushColor(DeepWine);
@@ -299,7 +339,7 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	UCanvasPanelSlot* CombatSlot = RootCanvas->AddChildToCanvas(CombatPanel);
 	CombatSlot->SetAnchors(FAnchors(0.5f, 0.95f));
 	CombatSlot->SetAlignment(FVector2D(0.5f, 1.0f));
-	CombatSlot->SetSize(FVector2D(1120.0f, 650.0f));
+	CombatSlot->SetSize(FVector2D(1220.0f, 760.0f));
 }
 
 void UWorldWalkerHUDWidget::ShowExploration()
@@ -332,7 +372,8 @@ void UWorldWalkerHUDWidget::ShowCombat(
 	const int32 PlayerMaxHealth,
 	const int32 EnemyHealth,
 	const int32 EnemyMaxHealth,
-	const FString& EnemyDisplayName)
+	const FString& EnemyDisplayName,
+	UTexture2D* EnemyPortrait)
 {
 	ExplorationPanel->SetVisibility(ESlateVisibility::Collapsed);
 	CombatPanel->SetVisibility(ESlateVisibility::Visible);
@@ -349,6 +390,22 @@ void UWorldWalkerHUDWidget::ShowCombat(
 		TEXT("红斗篷骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
 	EnemyHealthText->SetText(FText::FromString(FString::Printf(
 		TEXT("%s  %d / %d"), *EnemyDisplayName, EnemyHealth, EnemyMaxHealth)));
+	PlayerHealthBar->SetPercent(PlayerMaxHealth > 0
+		? static_cast<float>(PlayerHealth) / static_cast<float>(PlayerMaxHealth)
+		: 0.0f);
+	EnemyHealthBar->SetPercent(EnemyMaxHealth > 0
+		? static_cast<float>(EnemyHealth) / static_cast<float>(EnemyMaxHealth)
+		: 0.0f);
+	if (EnemyPortrait)
+	{
+		EnemyPortraitImage->SetBrushFromTexture(EnemyPortrait, true);
+		EnemyPortraitImage->SetColorAndOpacity(FLinearColor::White);
+	}
+	else
+	{
+		EnemyPortraitImage->SetBrushFromTexture(nullptr);
+		EnemyPortraitImage->SetColorAndOpacity(FLinearColor(0.28f, 0.08f, 0.07f, 1.0f));
+	}
 	EnergyText->SetText(FText::FromString(TEXT("行动力 --")));
 	BlockText->SetText(FText::FromString(TEXT("格挡 0")));
 	ValorText->SetText(FText::FromString(TEXT("法力 0  |  装备 0 / 3")));
@@ -367,6 +424,7 @@ void UWorldWalkerHUDWidget::RefreshCombatState(
 	const int32 EnemyHealth,
 	const int32 EnemyMaxHealth,
 	const FString& EnemyDisplayName,
+	UTexture2D* EnemyPortrait,
 	const int32 CurrentActionPoints,
 	const int32 MaxActionPoints,
 	const int32 CurrentMana,
@@ -388,6 +446,17 @@ void UWorldWalkerHUDWidget::RefreshCombatState(
 		TEXT("红斗篷骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
 	EnemyHealthText->SetText(FText::FromString(FString::Printf(
 		TEXT("%s  %d / %d"), *EnemyDisplayName, EnemyHealth, EnemyMaxHealth)));
+	PlayerHealthBar->SetPercent(PlayerMaxHealth > 0
+		? static_cast<float>(PlayerHealth) / static_cast<float>(PlayerMaxHealth)
+		: 0.0f);
+	EnemyHealthBar->SetPercent(EnemyMaxHealth > 0
+		? static_cast<float>(EnemyHealth) / static_cast<float>(EnemyMaxHealth)
+		: 0.0f);
+	if (EnemyPortrait)
+	{
+		EnemyPortraitImage->SetBrushFromTexture(EnemyPortrait, true);
+		EnemyPortraitImage->SetColorAndOpacity(FLinearColor::White);
+	}
 	EnergyText->SetText(FText::FromString(FString::Printf(
 		TEXT("行动力  %d / %d"), CurrentActionPoints, MaxActionPoints)));
 	BlockText->SetText(FText::FromString(FString::Printf(

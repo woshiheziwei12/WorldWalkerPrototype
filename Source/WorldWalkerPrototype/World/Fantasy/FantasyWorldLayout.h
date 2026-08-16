@@ -35,6 +35,7 @@ public:
 	FVector GetBattleAnchorLocation() const;
 	FVector GetReturnPortalLocation() const;
 	FRotator GetForwardFacingRotation() const;
+	AFantasyAmbientSoundscape* GetAmbientSoundscape() const { return AmbientSoundscape; }
 
 protected:
 	virtual void BeginPlay() override;

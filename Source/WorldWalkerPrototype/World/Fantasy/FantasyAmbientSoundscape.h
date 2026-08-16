@@ -9,6 +9,20 @@ class UAudioComponent;
 class USceneComponent;
 class USoundBase;
 
+UENUM()
+enum class EFantasyAudioCue : uint8
+{
+	Attack,
+	Spell,
+	Defense,
+	Equipment,
+	Counter,
+	Draw,
+	TurnEnd,
+	Reward,
+	Route
+};
+
 /**
  * W01-only environmental audio bed for the Ashen Kingdom exploration route.
  *
@@ -23,6 +37,15 @@ class WORLDWALKERPROTOTYPE_API AFantasyAmbientSoundscape : public AActor
 
 public:
 	AFantasyAmbientSoundscape();
+
+	/** Cross-fades the exploration and battle music beds. */
+	void SetBattleMusicActive(bool bBattleActive);
+
+	/** Plays the universal card placement sound plus the matching combat cue. */
+	void PlayCardCue(EFantasyAudioCue Cue, bool bEnemy);
+
+	/** Plays a non-card route, draw, turn, or reward cue. */
+	void PlayInterfaceCue(EFantasyAudioCue Cue);
 
 protected:
 	virtual void BeginPlay() override;
@@ -46,11 +69,53 @@ private:
 	UPROPERTY(VisibleAnywhere, Category="Ambient Audio")
 	TObjectPtr<UAudioComponent> AmbientCueComponent;
 
+	UPROPERTY(VisibleAnywhere, Category="Music")
+	TObjectPtr<UAudioComponent> ExplorationMusicComponent;
+
+	UPROPERTY(VisibleAnywhere, Category="Music")
+	TObjectPtr<UAudioComponent> BattleMusicComponent;
+
+	UPROPERTY(VisibleAnywhere, Category="Combat Audio")
+	TObjectPtr<UAudioComponent> CardSfxComponent;
+
+	UPROPERTY(VisibleAnywhere, Category="Combat Audio")
+	TObjectPtr<UAudioComponent> ActionSfxComponent;
+
 	UPROPERTY(Transient)
 	TObjectPtr<USoundBase> FireLoopSound;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<USoundBase>> AmbientCueSounds;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> ExplorationMusic;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> BattleMusic;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> CardPlaySound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> CardDrawSound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> CardShuffleSound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> TurnPassSound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> RouteSound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> AttackSound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> SpellSound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> DefenseSound;
 
 	TArray<FVector> AmbientCueLocations;
 	FTimerHandle AmbientCueTimer;

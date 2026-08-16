@@ -7,6 +7,7 @@
 #include "Cards/Fantasy/FantasyCardProgressionSubsystem.h"
 #include "Cards/Fantasy/FantasyEnemyDeckRuntime.h"
 #include "Cards/Fantasy/FantasyEnemyDefinition.h"
+#include "CollisionQueryParams.h"
 #include "Combat/CombatantComponent.h"
 #include "Engine/Texture2D.h"
 #include "Engine/World.h"
@@ -15,7 +16,9 @@
 #include "TimerManager.h"
 #include "World/WorldDefinition.h"
 #include "World/Fantasy/FantasyBattleArena.h"
+#include "World/Fantasy/FantasyAmbientSoundscape.h"
 #include "World/Fantasy/FantasyWorldLayout.h"
+#include "World/Fantasy/Exploration/FantasyWorldChoiceActor.h"
 #include "World/WorldHubLayout.h"
 #include "World/WorldPortal.h"
 #include "World/WorldTravelSubsystem.h"
@@ -32,6 +35,23 @@ namespace
 		case ECardSchool::Arcane: return FLinearColor(0.31f, 0.16f, 0.68f, 1.0f);
 		case ECardSchool::None:
 		default: return FLinearColor(0.55f, 0.14f, 0.10f, 1.0f);
+		}
+	}
+
+	EFantasyAudioCue GetCardAudioCue(const UCardDefinition* Card)
+	{
+		if (!Card)
+		{
+			return EFantasyAudioCue::Defense;
+		}
+		switch (Card->CardType)
+		{
+		case ECardType::Attack: return EFantasyAudioCue::Attack;
+		case ECardType::Spell: return EFantasyAudioCue::Spell;
+		case ECardType::Equipment: return EFantasyAudioCue::Equipment;
+		case ECardType::Counter: return EFantasyAudioCue::Counter;
+		case ECardType::Action:
+		default: return EFantasyAudioCue::Defense;
 		}
 	}
 }
@@ -109,6 +129,13 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 			PortalOffset);
 		InitializeFantasyRun();
 	}
+}
+
+void AWorldWalkerGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(EnemyTurnTimer);
+	DestroyWorldChoices();
+	Super::EndPlay(EndPlayReason);
 }
 
 void AWorldWalkerGameModeBase::SpawnMainWorldHub(UWorldDefinition* DestinationWorld)
@@ -314,29 +341,57 @@ void AWorldWalkerGameModeBase::PresentRouteChoices()
 		return;
 	}
 
-	TArray<FString> ChoiceLabels;
+	TArray<FText> ChoiceTitles;
+	TArray<FText> ChoiceDescriptions;
+	TArray<FLinearColor> ChoiceColors;
 	for (const FFantasyRouteNodeChoice& Choice : Progression->GetRouteChoices())
 	{
 		const TCHAR* TypeLabel = TEXT("战斗");
+		FLinearColor ChoiceColor(0.72f, 0.12f, 0.08f, 1.0f);
 		switch (Choice.NodeType)
 		{
-		case EFantasyRouteNodeType::EliteCombat: TypeLabel = TEXT("精英战"); break;
-		case EFantasyRouteNodeType::Event: TypeLabel = TEXT("事件"); break;
-		case EFantasyRouteNodeType::Rest: TypeLabel = TEXT("休整"); break;
-		case EFantasyRouteNodeType::Boss: TypeLabel = TEXT("守关战"); break;
+		case EFantasyRouteNodeType::EliteCombat:
+			TypeLabel = TEXT("精英战");
+			ChoiceColor = FLinearColor(0.58f, 0.12f, 0.78f, 1.0f);
+			break;
+		case EFantasyRouteNodeType::Event:
+			TypeLabel = TEXT("命运事件");
+			ChoiceColor = FLinearColor(0.08f, 0.55f, 0.92f, 1.0f);
+			break;
+		case EFantasyRouteNodeType::Rest:
+			TypeLabel = TEXT("休整");
+			ChoiceColor = FLinearColor(0.12f, 0.72f, 0.36f, 1.0f);
+			break;
+		case EFantasyRouteNodeType::Boss:
+			TypeLabel = TEXT("守关战");
+			ChoiceColor = FLinearColor(1.0f, 0.32f, 0.035f, 1.0f);
+			break;
 		case EFantasyRouteNodeType::Combat:
 		default: break;
 		}
-		ChoiceLabels.Add(FString::Printf(
-			TEXT("【%s】%s\n%s"),
-			TypeLabel,
-			*Choice.DisplayName.ToString(),
-			*Choice.Description.ToString()));
+		ChoiceTitles.Add(FText::FromString(FString::Printf(
+			TEXT("【%s】%s"), TypeLabel, *Choice.DisplayName.ToString())));
+		ChoiceDescriptions.Add(FText::FromString(FString::Printf(
+			TEXT("%s\n走入光柱选择"), *Choice.Description.ToString())));
+		ChoiceColors.Add(ChoiceColor);
 	}
 
 	FantasyRunFlowState = EFantasyRunFlowState::RouteChoice;
-	ActivePlayer->SetCombatLocked(true);
-	Controller->ShowRouteSelection(Progression->BuildRunSummary(), ChoiceLabels);
+	ActivePlayer->SetCombatLocked(false);
+	ExplorationMessage = FString::Printf(
+		TEXT("%s\n前方出现三座命运标记：走入光柱选择下一条路线。"),
+		*Progression->BuildRunSummary());
+	Controller->ExitCombatToExploration(ExplorationMessage);
+	SpawnWorldChoices(false, ChoiceTitles, ChoiceDescriptions, ChoiceColors);
+	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+	{
+		Soundscape->PlayInterfaceCue(EFantasyAudioCue::Route);
+	}
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_3D_ROUTE_CHOICES_READY Count=%d"),
+		ActiveWorldChoices.Num());
 }
 
 void AWorldWalkerGameModeBase::HandleRouteSelection(const int32 ChoiceIndex)
@@ -354,7 +409,82 @@ void AWorldWalkerGameModeBase::HandleRouteSelection(const int32 ChoiceIndex)
 		PresentRouteChoices();
 		return;
 	}
+	DestroyWorldChoices();
 	ActivateRouteNode(SelectedNode);
+}
+
+void AWorldWalkerGameModeBase::SpawnWorldChoices(
+	const bool bEventChoices,
+	const TArray<FText>& Titles,
+	const TArray<FText>& Descriptions,
+	const TArray<FLinearColor>& Colors)
+{
+	DestroyWorldChoices();
+	if (!GetWorld() || !ActivePlayer)
+	{
+		return;
+	}
+
+	const FVector Forward = ActiveFantasyWorld
+		? ActiveFantasyWorld->GetForwardFacingRotation().Vector().GetSafeNormal2D()
+		: ActivePlayer->GetActorForwardVector().GetSafeNormal2D();
+	const FVector Right = FVector::CrossProduct(FVector::UpVector, Forward).GetSafeNormal();
+	const FVector PlayerFeet = ActivePlayer->GetActorLocation() - FVector(0.0f, 0.0f, 88.0f);
+	const float LateralSpacing = Titles.Num() > 2 ? 285.0f : 240.0f;
+	const float CenterOffset = 0.5f * static_cast<float>(Titles.Num() - 1);
+
+	for (int32 ChoiceIndex = 0; ChoiceIndex < Titles.Num(); ++ChoiceIndex)
+	{
+		FVector SpawnLocation = PlayerFeet
+			+ Forward * (bEventChoices ? 520.0f : 620.0f)
+			+ Right * ((static_cast<float>(ChoiceIndex) - CenterOffset) * LateralSpacing);
+		FHitResult GroundHit;
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(W01WorldChoiceGround), false, ActivePlayer);
+		if (GetWorld()->LineTraceSingleByChannel(
+			GroundHit,
+			SpawnLocation + FVector(0.0f, 0.0f, 650.0f),
+			SpawnLocation - FVector(0.0f, 0.0f, 950.0f),
+			ECC_Visibility,
+			QueryParams))
+		{
+			SpawnLocation.Z = GroundHit.ImpactPoint.Z;
+		}
+
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.Owner = this;
+		SpawnParameters.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AFantasyWorldChoiceActor* ChoiceActor = GetWorld()->SpawnActor<AFantasyWorldChoiceActor>(
+			AFantasyWorldChoiceActor::StaticClass(),
+			SpawnLocation,
+			(ActivePlayer->GetActorLocation() - SpawnLocation).Rotation(),
+			SpawnParameters);
+		if (!ChoiceActor)
+		{
+			continue;
+		}
+		ChoiceActor->ConfigureChoice(
+			this,
+			bEventChoices ? EFantasyWorldChoiceKind::Event : EFantasyWorldChoiceKind::Route,
+			ChoiceIndex,
+			Titles[ChoiceIndex],
+			Descriptions.IsValidIndex(ChoiceIndex) ? Descriptions[ChoiceIndex] : FText::GetEmpty(),
+			Colors.IsValidIndex(ChoiceIndex) ? Colors[ChoiceIndex] : FLinearColor::Blue);
+		ActiveWorldChoices.Add(ChoiceActor);
+	}
+}
+
+void AWorldWalkerGameModeBase::DestroyWorldChoices()
+{
+	for (AFantasyWorldChoiceActor* ChoiceActor : ActiveWorldChoices)
+	{
+		if (IsValid(ChoiceActor))
+		{
+			ChoiceActor->SetChoiceEnabled(false);
+			ChoiceActor->Destroy();
+		}
+	}
+	ActiveWorldChoices.Reset();
 }
 
 void AWorldWalkerGameModeBase::ActivateRouteNode(const FFantasyRouteNodeChoice& Node)
@@ -468,11 +598,33 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 
 	CurrentEventId = EventId;
 	FantasyRunFlowState = EFantasyRunFlowState::EventChoice;
-	ActivePlayer->SetCombatLocked(true);
+	ActivePlayer->SetCombatLocked(false);
 	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
 	{
-		Controller->ShowEventSelection(Title, Lore, Choices);
+		Controller->ExitCombatToExploration(FString::Printf(
+			TEXT("%s\n%s\n走入一枚符文，直接刻下选择。"),
+			*Title,
+			*Lore));
 	}
+	TArray<FText> ChoiceTitles;
+	TArray<FText> ChoiceDescriptions;
+	const TArray<FLinearColor> ChoiceColors = {
+		FLinearColor(0.78f, 0.18f, 0.08f, 1.0f),
+		FLinearColor(0.86f, 0.57f, 0.09f, 1.0f),
+		FLinearColor(0.16f, 0.48f, 0.92f, 1.0f)};
+	for (int32 ChoiceIndex = 0; ChoiceIndex < Choices.Num(); ++ChoiceIndex)
+	{
+		ChoiceTitles.Add(FText::FromString(FString::Printf(
+			TEXT("选择 %d"), ChoiceIndex + 1)));
+		ChoiceDescriptions.Add(FText::FromString(Choices[ChoiceIndex]));
+	}
+	SpawnWorldChoices(true, ChoiceTitles, ChoiceDescriptions, ChoiceColors);
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_3D_EVENT_CHOICES_READY Event=%s Count=%d"),
+		*EventId.ToString(),
+		ActiveWorldChoices.Num());
 }
 
 void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
@@ -482,6 +634,7 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 	{
 		return;
 	}
+	DestroyWorldChoices();
 
 	UCombatantComponent* PlayerCombatant = ActivePlayer->GetCombatantComponent();
 	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
@@ -750,6 +903,11 @@ void AWorldWalkerGameModeBase::StartCombat(
 	FantasyRunFlowState = EFantasyRunFlowState::PlayerTurn;
 	ActivePlayer->SetCombatLocked(true);
 	ActiveEnemy->SetInCombat(true);
+	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+	{
+		Soundscape->SetBattleMusicActive(true);
+		Soundscape->PlayInterfaceCue(EFantasyAudioCue::Draw);
+	}
 
 	const FVector FacingDirection = ActiveEnemy->GetActorLocation() - ActivePlayer->GetActorLocation();
 	ActivePlayer->SetActorRotation(FRotator(0.0f, FacingDirection.Rotation().Yaw, 0.0f));
@@ -765,7 +923,8 @@ void AWorldWalkerGameModeBase::StartCombat(
 			EnemyCombatant->GetMaxHealth(),
 			ActiveFantasyEnemyDefinition
 				? ActiveFantasyEnemyDefinition->DisplayName.ToString()
-				: TEXT("未知对手"));
+				: TEXT("未知对手"),
+			GetEnemyPortraitTexture());
 		RefreshCombatUI();
 		Controller->SetCombatMessage(
 			TEXT("你的回合：攻击牌无需资源；行动牌消耗每回合刷新的行动力，咒术消耗战斗内积累的法力。"),
@@ -798,6 +957,10 @@ void AWorldWalkerGameModeBase::HandlePlayCard(const int32 HandIndex)
 		}
 		return;
 	}
+	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+	{
+		Soundscape->PlayCardCue(GetCardAudioCue(Card), false);
+	}
 
 	const int32 EnemyHealthBeforeCard = ActiveEnemy->GetCombatantComponent()->GetCurrentHealth();
 	FString TriggeredCounterName;
@@ -806,6 +969,10 @@ void AWorldWalkerGameModeBase::HandlePlayCard(const int32 HandIndex)
 		if (UCardDefinition* CounterCard = ActiveEnemyDeck->ConsumeNextCounter())
 		{
 			TriggeredCounterName = CounterCard->DisplayName.ToString();
+			if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+			{
+				Soundscape->PlayCardCue(EFantasyAudioCue::Counter, true);
+			}
 			ResolveEnemyCardEffects(CounterCard);
 			ActiveEnemyDeck->FinalizeTriggeredCounter(CounterCard);
 			if (!ActivePlayer->GetCombatantComponent()->IsAlive())
@@ -875,6 +1042,10 @@ void AWorldWalkerGameModeBase::HandleEndPlayerTurn()
 	bWaitingForEnemy = true;
 	FantasyRunFlowState = EFantasyRunFlowState::EnemyTurn;
 	ActiveCardCombat->EndPlayerTurn();
+	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+	{
+		Soundscape->PlayInterfaceCue(EFantasyAudioCue::TurnEnd);
+	}
 	ResolveEndOfTurnPoison(true);
 	SyncRunHealthFromPlayer();
 	RefreshCombatUI();
@@ -911,55 +1082,112 @@ void AWorldWalkerGameModeBase::HandleEnemyTurn()
 	EnemyFantasyState.Block = 0;
 	ApplyEnemyTurnStartEquipment();
 	++CurrentEnemyTurnNumber;
-	FString ResolvedSummary;
+	CurrentEnemyTurnCardNames.Reset();
 	if (ActiveEnemyDeck && ActiveEnemyDeck->IsInitialized())
 	{
-		TArray<FString> PlayedNames;
-		while (UCardDefinition* EnemyCard = ActiveEnemyDeck->PlayNextCard())
-		{
-			PlayedNames.Add(EnemyCard->DisplayName.ToString());
-			if (EnemyCard->CardType == ECardType::Counter)
-			{
-				// Counter effects are armed now and resolved exactly once, before
-				// the player's next card. FinalizeCard moves them to CounterZone.
-				ActiveEnemy->PlayIntentAnimation(EWorldWalkerEnemyAnimationCue::Empower);
-			}
-			else
-			{
-				ResolveEnemyCardEffects(EnemyCard);
-			}
-			ActiveEnemyDeck->FinalizeCard(EnemyCard);
-			if (!ActivePlayer->GetCombatantComponent()->IsAlive())
-			{
-				break;
-			}
-		}
-		ResolvedSummary = PlayedNames.IsEmpty()
-			? TEXT("对手没有可支付的牌，跳过了行动")
-			: FString::Printf(TEXT("对手打出：%s"), *FString::Join(PlayedNames, TEXT("、")));
+		HandleEnemyTurnStep();
+		return;
 	}
-	else if (ActiveFantasyEnemyDefinition
+	if (ActiveFantasyEnemyDefinition
 		&& !ActiveFantasyEnemyDefinition->IntentCycle.IsEmpty())
 	{
 		const FFantasyEnemyIntentStep& Intent =
 			ActiveFantasyEnemyDefinition->IntentCycle[CurrentEnemyIntentIndex];
 		ResolveEnemyIntent(Intent);
+		CurrentEnemyTurnCardNames.Add(Intent.DisplayName.ToString());
 		CurrentEnemyIntentIndex =
 			(CurrentEnemyIntentIndex + 1) % ActiveFantasyEnemyDefinition->IntentCycle.Num();
-		ResolvedSummary = FString::Printf(TEXT("%s 已结算"), *Intent.DisplayName.ToString());
+		SyncRunHealthFromPlayer();
+		RefreshCombatUI();
+		GetWorldTimerManager().SetTimer(
+			EnemyTurnTimer,
+			this,
+			&AWorldWalkerGameModeBase::FinishEnemyTurnSequence,
+			1.05f,
+			false);
+		return;
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("Cannot execute W01 enemy turn: deck and intent fallback are unavailable."));
+	FinishCombat(false);
+}
+
+void AWorldWalkerGameModeBase::HandleEnemyTurnStep()
+{
+	if (!bCombatActive || FantasyRunFlowState != EFantasyRunFlowState::EnemyTurn
+		|| !ActivePlayer || !ActiveEnemy || !ActiveCardCombat || !ActiveEnemyDeck)
+	{
+		return;
+	}
+
+	UCardDefinition* EnemyCard = ActiveEnemyDeck->PlayNextCard();
+	if (!EnemyCard)
+	{
+		FinishEnemyTurnSequence();
+		return;
+	}
+
+	CurrentEnemyTurnCardNames.Add(EnemyCard->DisplayName.ToString());
+	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+	{
+		Soundscape->PlayCardCue(GetCardAudioCue(EnemyCard), true);
+	}
+	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+	{
+		Controller->SetCombatMessage(FString::Printf(
+			TEXT("%s 打出【%s】……"),
+			ActiveFantasyEnemyDefinition
+				? *ActiveFantasyEnemyDefinition->DisplayName.ToString()
+				: TEXT("对手"),
+			*EnemyCard->DisplayName.ToString()), false);
+	}
+
+	if (EnemyCard->CardType == ECardType::Counter)
+	{
+		// The counter is armed now and resolves exactly once before the next
+		// player card. It still receives its own presentation beat here.
+		ActiveEnemy->PlayIntentAnimation(EWorldWalkerEnemyAnimationCue::Empower);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("Cannot execute W01 enemy turn: deck and intent fallback are unavailable."));
-		FinishCombat(false);
-		return;
+		ResolveEnemyCardEffects(EnemyCard);
 	}
+	ActiveEnemyDeck->FinalizeCard(EnemyCard);
 	SyncRunHealthFromPlayer();
 	RefreshCombatUI();
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_ENEMY_CARD_PRESENTED Card=%s Turn=%d Delay=1.05"),
+		*EnemyCard->CardId.ToString(),
+		CurrentEnemyTurnNumber);
 
 	if (!ActivePlayer->GetCombatantComponent()->IsAlive())
 	{
 		FinishCombat(false);
+		return;
+	}
+	if (!ActiveEnemy->GetCombatantComponent()->IsAlive())
+	{
+		if (!TryTriggerEnemyDefeatPassive())
+		{
+			FinishCombat(true);
+		}
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(
+		EnemyTurnTimer,
+		this,
+		&AWorldWalkerGameModeBase::HandleEnemyTurnStep,
+		1.05f,
+		false);
+}
+
+void AWorldWalkerGameModeBase::FinishEnemyTurnSequence()
+{
+	if (!bCombatActive || !ActivePlayer || !ActiveEnemy || !ActiveCardCombat)
+	{
 		return;
 	}
 
@@ -985,9 +1213,18 @@ void AWorldWalkerGameModeBase::HandleEnemyTurn()
 	RefreshCombatUI();
 	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
 	{
+		const FString ResolvedSummary = CurrentEnemyTurnCardNames.IsEmpty()
+			? TEXT("对手没有可支付的牌，跳过了行动")
+			: FString::Printf(
+				TEXT("对手打出：%s"),
+				*FString::Join(CurrentEnemyTurnCardNames, TEXT("、")));
 		Controller->SetCombatMessage(FString::Printf(
 			TEXT("%s。轮到你行动，敌人的下一张牌已经公开。"),
 			*ResolvedSummary), true);
+	}
+	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+	{
+		Soundscape->PlayInterfaceCue(EFantasyAudioCue::Draw);
 	}
 }
 
@@ -998,14 +1235,20 @@ void AWorldWalkerGameModeBase::ResolvePlayerCardEffects(UCardDefinition* Card)
 		return;
 	}
 
-	const bool bHasOpponentDamage = Card->Effects.ContainsByPredicate([](const FFantasyCombatEffectSpec& Effect)
+	switch (Card->CardType)
 	{
-		return Effect.EffectType == EFantasyCombatEffectType::Damage
-			&& Effect.Target == EFantasyCombatTarget::Opponent;
-	});
-	if (bHasOpponentDamage)
-	{
+	case ECardType::Attack:
 		ActivePlayer->PlayFantasyCardAttackAnimation();
+		break;
+	case ECardType::Spell:
+		ActivePlayer->PlayFantasyCardSpellAnimation();
+		break;
+	case ECardType::Action:
+	case ECardType::Equipment:
+	case ECardType::Counter:
+	default:
+		ActivePlayer->PlayFantasyCardUtilityAnimation();
+		break;
 	}
 
 	bool bWeakConsumedForAttack = false;
@@ -1535,6 +1778,7 @@ void AWorldWalkerGameModeBase::FinishCombat(const bool bPlayerWon)
 		? EFantasyRunFlowState::RewardChoice
 		: EFantasyRunFlowState::Defeat;
 	GetWorldTimerManager().ClearTimer(EnemyTurnTimer);
+	CurrentEnemyTurnCardNames.Reset();
 	SyncRunHealthFromPlayer();
 	RefreshCombatUI();
 
@@ -1546,10 +1790,18 @@ void AWorldWalkerGameModeBase::FinishCombat(const bool bPlayerWon)
 
 	if (bPlayerWon)
 	{
+		if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+		{
+			Soundscape->PlayInterfaceCue(EFantasyAudioCue::Reward);
+		}
 		BeginVictoryReward();
 	}
 	else if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
 	{
+		if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+		{
+			Soundscape->SetBattleMusicActive(false);
+		}
 		Controller->ShowCombatResult(false);
 	}
 }
@@ -1661,6 +1913,10 @@ void AWorldWalkerGameModeBase::HandleReturnToExploration()
 		: TEXT("对手");
 	const int32 RewardCount = ActiveCardCombat ? ActiveCardCombat->GetRunRewardCount() : 0;
 	bRewardReadyToLeave = false;
+	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
+	{
+		Soundscape->SetBattleMusicActive(false);
+	}
 	ClearActiveEnemy();
 	CompleteActiveNode(FString::Printf(
 		TEXT("你击败了【%s】，战利品已加入牌组。旅途中累计获得 %d 张卡。"),
@@ -1711,6 +1967,7 @@ void AWorldWalkerGameModeBase::RefreshCombatUI() const
 			ActiveFantasyEnemyDefinition
 				? ActiveFantasyEnemyDefinition->DisplayName.ToString()
 				: TEXT("未知对手"),
+			GetEnemyPortraitTexture(),
 			ActiveCardCombat->GetCurrentActionPoints(),
 			ActiveCardCombat->GetMaxActionPoints(),
 			ActiveCardCombat->GetCurrentMana(),
@@ -1732,6 +1989,30 @@ void AWorldWalkerGameModeBase::RefreshCombatUI() const
 			CardArtworks,
 			CardSchoolTints);
 	}
+}
+
+AFantasyAmbientSoundscape* AWorldWalkerGameModeBase::GetFantasySoundscape() const
+{
+	return ActiveFantasyWorld ? ActiveFantasyWorld->GetAmbientSoundscape() : nullptr;
+}
+
+UTexture2D* AWorldWalkerGameModeBase::GetEnemyPortraitTexture() const
+{
+	if (!ActiveFantasyEnemyDefinition)
+	{
+		return nullptr;
+	}
+	for (const FFantasyEnemyDeckEntry& Entry : ActiveFantasyEnemyDefinition->Deck)
+	{
+		if (Entry.Card && !Entry.Card->Artwork.IsNull())
+		{
+			if (UTexture2D* Artwork = Entry.Card->Artwork.LoadSynchronous())
+			{
+				return Artwork;
+			}
+		}
+	}
+	return nullptr;
 }
 
 AWorldWalkerPlayerController* AWorldWalkerGameModeBase::GetWorldWalkerController() const

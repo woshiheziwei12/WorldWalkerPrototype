@@ -36,7 +36,8 @@ void AWorldWalkerPlayerController::EnterCombat(
 	const int32 PlayerMaxHealth,
 	const int32 EnemyHealth,
 	const int32 EnemyMaxHealth,
-	const FString& EnemyDisplayName)
+	const FString& EnemyDisplayName,
+	UTexture2D* EnemyPortrait)
 {
 	if (HUDWidget)
 	{
@@ -45,7 +46,8 @@ void AWorldWalkerPlayerController::EnterCombat(
 			PlayerMaxHealth,
 			EnemyHealth,
 			EnemyMaxHealth,
-			EnemyDisplayName);
+			EnemyDisplayName,
+			EnemyPortrait);
 	}
 
 	bShowMouseCursor = true;
@@ -61,6 +63,7 @@ void AWorldWalkerPlayerController::RefreshCombat(
 	const int32 EnemyHealth,
 	const int32 EnemyMaxHealth,
 	const FString& EnemyDisplayName,
+	UTexture2D* EnemyPortrait,
 	const int32 CurrentActionPoints,
 	const int32 MaxActionPoints,
 	const int32 CurrentMana,
@@ -86,6 +89,7 @@ void AWorldWalkerPlayerController::RefreshCombat(
 			EnemyHealth,
 			EnemyMaxHealth,
 			EnemyDisplayName,
+			EnemyPortrait,
 			CurrentActionPoints,
 			MaxActionPoints,
 			CurrentMana,
