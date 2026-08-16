@@ -20,17 +20,23 @@ class WORLDWALKERPROTOTYPE_API UWorldWalkerHUDWidget : public UUserWidget
 public:
 	void ShowExploration();
 	void SetExplorationMessage(const FString& Message);
-	void ShowCombat(int32 PlayerHealth, int32 PlayerMaxHealth, int32 EnemyHealth, int32 EnemyMaxHealth);
+	void ShowCombat(
+		int32 PlayerHealth,
+		int32 PlayerMaxHealth,
+		int32 EnemyHealth,
+		int32 EnemyMaxHealth,
+		const FString& EnemyDisplayName);
 	void RefreshCombatState(
 		int32 PlayerHealth,
 		int32 PlayerMaxHealth,
 		int32 EnemyHealth,
 		int32 EnemyMaxHealth,
-		int32 CurrentEnergy,
-		int32 MaxEnergy,
+		const FString& EnemyDisplayName,
+		int32 CurrentActionPoints,
+		int32 MaxActionPoints,
+		int32 CurrentMana,
+		int32 EquipmentCount,
 		int32 CurrentBlock,
-		int32 CurrentValor,
-		int32 MaxValor,
 		int32 DrawPileCount,
 		int32 DiscardPileCount,
 		int32 ExhaustPileCount,
@@ -49,14 +55,35 @@ public:
 		const TArray<UTexture2D*>& CardArtworks,
 		const TArray<FLinearColor>& CardSchoolTints);
 	void ShowRewardConfirmation(const FString& ConfirmationText);
+	void ShowRouteSelection(const FString& RunSummary, const TArray<FString>& ChoiceLabels);
+	void ShowEventSelection(
+		const FString& Title,
+		const FString& Lore,
+		const TArray<FString>& ChoiceLabels);
+	void ShowNodeResolution(const FString& Message, bool bChapterComplete);
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeConstruct() override;
 
 private:
+	enum class EChoicePanelMode : uint8
+	{
+		Hidden,
+		Route,
+		Event,
+		Resolution
+	};
+
 	void BuildWidgetTree();
 	UTextBlock* MakeText(const TCHAR* Name, const FString& Text, int32 FontSize);
+	void ShowChoicePanel(
+		EChoicePanelMode InMode,
+		const FString& Title,
+		const FString& Summary,
+		const FString& Lore,
+		const TArray<FString>& ChoiceLabels);
+	void HandleChoiceClicked(int32 ChoiceIndex);
 
 	UFUNCTION()
 	void HandleCard0Clicked();
@@ -81,11 +108,47 @@ private:
 	UFUNCTION()
 	void HandleRestartClicked();
 
+	UFUNCTION()
+	void HandleChoice0Clicked();
+
+	UFUNCTION()
+	void HandleChoice1Clicked();
+
+	UFUNCTION()
+	void HandleChoice2Clicked();
+
+	UFUNCTION()
+	void HandleChoiceContinueClicked();
+
 	UPROPERTY(Transient)
 	TObjectPtr<UBorder> ExplorationPanel;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> ExplorationText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBorder> ChoicePanel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> ChoiceTitleText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> ChoiceSummaryText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> ChoiceLoreText;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UButton>> ChoiceButtons;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UTextBlock>> ChoiceButtonLabels;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> ChoiceContinueButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> ChoiceContinueLabel;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBorder> CombatPanel;
@@ -151,4 +214,6 @@ private:
 	bool bPlayerCanAct = false;
 	bool bShowingRewardChoices = false;
 	bool bRewardConfirmed = false;
+	bool bChoiceInputLocked = false;
+	EChoicePanelMode ChoicePanelMode = EChoicePanelMode::Hidden;
 };

@@ -36,11 +36,11 @@ public:
 	void ConfigureFantasyWorldForm(bool bEnabled, bool bStartInFantasyForm = true);
 	bool IsFantasyFormActive() const { return bFantasyFormActive; }
 
-	/** Plays the rune knight's sword action, then safely returns to locomotion/idle. */
+	/** Plays the W01 form's card action, then safely returns to locomotion/idle. */
 	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
 	void PlayFantasyCardAttackAnimation();
 
-	/** Plays the rune knight's hit reaction, then safely returns to locomotion/idle. */
+	/** Plays the W01 form's hit reaction, then safely returns to locomotion/idle. */
 	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
 	void PlayFantasyHitReactionAnimation();
 
@@ -55,7 +55,7 @@ private:
 	void TryInteract();
 	void ToggleWorldForm();
 	void ApplyWorldFormVisibility();
-	void LoadFantasyAnimationAssets();
+	bool LoadFantasyPresentationAssets();
 	void RefreshFantasyLocomotionAnimation(bool bForce = false);
 	void PlayFantasyActionAnimation(
 		UAnimSequence* Animation,

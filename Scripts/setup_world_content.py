@@ -32,8 +32,13 @@ W01_ENEMY_ROOT = f"{W01_ROOT}/Data/Enemies"
 W01_CARD_ART_ROOT = (
     f"{W01_ROOT}/ThirdParty/Zonked/FantasyActionIcons/Cards"
 )
+W00_MAP = "/Game/WorldWalker/Worlds/W00_MainWorld/Maps/L_W00_MainWorld_Night"
+W00_DEFINITION = "/Game/WorldWalker/Worlds/W00_MainWorld/Data/DA_W00_MainWorld"
 
-CARD_SPECS = (
+# Historical W01 rune-prototype data is intentionally kept here only so older
+# asset names remain easy to audit during migration.  It is not generated; the
+# classic-mode candidate data below replaces it atomically.
+_LEGACY_CARD_SPECS_DO_NOT_GENERATE = (
     {
         "asset_name": "DA_Card_LongswordSlash",
         "card_id": "LongswordSlash",
@@ -342,7 +347,7 @@ CARD_SPECS = (
     },
 )
 
-ENEMY_SPEC = {
+_LEGACY_ENEMY_SPEC_DO_NOT_GENERATE = {
     "asset_name": "DA_BlackthornOathKnight",
     "enemy_id": "BlackthornOathKnight",
     "display_name": "黑棘誓约骑士",
@@ -411,6 +416,706 @@ ENEMY_SPEC = {
         },
     ),
 }
+
+
+# Reference boundary for the data generated below:
+# - Public research confirms these classic-mode card names, their broad types,
+#   female-knight availability, and each enemy's minimum named-card set.
+# - Public sources do NOT expose an auditable current-version starting-deck
+#   copy list, enemy copies/levels, or complete numeric rules.
+# - Consequently every `copies` value and every value not explicitly cited in
+#   the nearby card comment is WorldWalker prototype tuning. Marker logs repeat
+#   this fact so generated assets cannot be mistaken for an original snapshot.
+CLASSIC_PROTOTYPE_BOUNDARY = (
+    "公开资料核验卡名/职业及部分数值；初始牌份数与未能完整复原的规则为项目调参，"
+    "不声称精确还原《月圆之夜》当前版本。"
+)
+ENEMY_PROTOTYPE_BOUNDARY = (
+    "公开资料核验该对手的最低牌名集合及少量数值；牌组份数、等级和其余数值为项目调参。"
+)
+
+
+def _effect(
+    effect_type,
+    magnitude,
+    target=unreal.FantasyCombatTarget.OPPONENT,
+    status=unreal.FantasyCombatStatus.NONE,
+    piercing=False,
+):
+    return {
+        "effect_type": effect_type,
+        "target": target,
+        "magnitude": magnitude,
+        "status": status,
+        "piercing": piercing,
+    }
+
+
+def _card(
+    asset_name,
+    card_id,
+    display_name,
+    card_type,
+    effects,
+    artwork_name,
+    description,
+    *,
+    card_set_id="W01_EasternHorror",
+    copies=0,
+    reward_eligible=False,
+    action_cost=0,
+    mana_cost=0,
+    energy_cost=0,
+    valor_cost=0,
+    retain=False,
+    exhaust=False,
+    equipment_attack=0,
+    equipment_block=0,
+    equipment_draw=0,
+):
+    return {
+        "asset_name": asset_name,
+        "card_id": card_id,
+        "card_set_id": card_set_id,
+        "display_name": display_name,
+        "description": description,
+        "energy_cost": energy_cost,
+        "action_cost": action_cost,
+        "mana_cost": mana_cost,
+        "use_classic_resources": True,
+        "valor_cost": valor_cost,
+        "card_type": card_type,
+        "school": unreal.CardSchool.NONE,
+        "effects": tuple(effects),
+        "retain": retain,
+        "exhaust": exhaust,
+        "artwork_name": artwork_name,
+        "copies": copies,
+        "reward_eligible": reward_eligible,
+        "equipment_attack": equipment_attack,
+        "equipment_block": equipment_block,
+        "equipment_draw": equipment_draw,
+    }
+
+
+def _player_description(summary, reward=False):
+    source_kind = "经典女骑士公开牌名" if reward else "女骑士初始牌原型候选"
+    return f"【{source_kind}】{summary} {CLASSIC_PROTOTYPE_BOUNDARY}"
+
+
+def _enemy_description(summary):
+    return f"【敌方最低确认牌名】{summary} {ENEMY_PROTOTYPE_BOUNDARY}"
+
+
+# Ten-card female-knight starter *candidate*: all six names are verified as
+# classic player cards available to the female knight.  The 5/1/1/1/1/1 copy
+# distribution is deliberately project-owned tuning because no public source
+# provides a current, auditable exact starting-deck copy list.
+PLAYER_CARD_SPECS = (
+    _card(
+        "DA_Card_LongswordSlash", "Knight_NormalAttack", "普通攻击",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),),
+        "T_Card_LongSwordSlash",
+        _player_description("朴素的无费用攻击。"),
+        copies=5,
+    ),
+    _card(
+        "DA_Card_KiteShieldGuard", "Knight_SwiftAttack", "迅捷攻击",
+        unreal.CardType.ATTACK,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 5),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_LongSwordSlash",
+        _player_description("造成伤害并补充手牌。"),
+        copies=1,
+    ),
+    _card(
+        "DA_Card_ArcaneSpark", "Knight_Focus", "专注",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                2,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_ReadOpening",
+        _player_description("消耗行动力整理手牌。"),
+        action_cost=1,
+        copies=1,
+    ),
+    _card(
+        "DA_Card_ReadTheOpening", "Knight_ShortSword", "短剑",
+        unreal.CardType.EQUIPMENT,
+        (),
+        "T_Card_LongSwordSlash",
+        _player_description("装备后强化攻击牌。"),
+        equipment_attack=1,
+        copies=1,
+    ),
+    _card(
+        "DA_Card_KnightsPrayer", "Knight_RoundShield", "圆盾",
+        unreal.CardType.EQUIPMENT,
+        (),
+        "T_Card_KiteShieldGuard",
+        _player_description("装备后每回合提供格挡。"),
+        equipment_block=4,
+        copies=1,
+    ),
+    _card(
+        "DA_Card_LionheartJudgment", "Knight_StrengthBlessing", "力量祝福",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.APPLY_STATUS,
+                3,
+                unreal.FantasyCombatTarget.SELF,
+                unreal.FantasyCombatStatus.STRENGTH,
+            ),
+        ),
+        "T_Card_LionheartJudgment",
+        _player_description("获得持续力量。"),
+        action_cost=1,
+        copies=1,
+    ),
+)
+
+
+# A verified-name female-knight reward pool.  Effects intentionally use the
+# project's composable effect language instead of copying original rule prose.
+PLAYER_REWARD_CARD_SPECS = (
+    _card(
+        "DA_Card_BlackthornRiposte", "Knight_Crush", "粉碎",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 15),),
+        "T_Card_LongSwordSlash", _player_description("沉重的一击。", True),
+        reward_eligible=True,
+    ),
+    _card(
+        "DA_Card_FreeCompanyBanner", "Knight_DesperateDuel", "舍命相搏",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 9, piercing=True),),
+        "T_Card_LionheartJudgment",
+        _player_description("造成穿刺伤害。", True),
+        reward_eligible=True,
+    ),
+    _card(
+        "DA_Card_DawnAegis", "Knight_DoubleStrike", "二次打击",
+        unreal.CardType.ATTACK,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 2),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                2,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_LongSwordSlash",
+        _player_description("造成 2 点伤害并抽 2 张牌。", True),
+        reward_eligible=True,
+    ),
+    _card(
+        "DA_Card_PilgrimsSanctuary", "Knight_ChargedStrike", "蓄力一击",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 12),),
+        "T_Card_LongSwordSlash", _player_description("蓄势后挥出重击。", True),
+        # The public index confirms damage/removal/action tags but not enough
+        # rule syntax to reproduce the card honestly. Keep the researched name
+        # as a disabled candidate until filtered draw/conditional scaling lands.
+        reward_eligible=False, exhaust=True,
+    ),
+    _card(
+        "DA_Card_RuneCascade", "Knight_SpikedShield", "尖刺盾牌",
+        unreal.CardType.ATTACK,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 5),
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                5,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KiteShieldGuard", _player_description("同时进攻与防守。", True),
+        reward_eligible=False,
+    ),
+    _card(
+        "DA_Card_HourglassHex", "Knight_AbsoluteDefense", "绝对防御",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                6,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KiteShieldGuard", _player_description("防守并补充手牌。", True),
+        reward_eligible=True, action_cost=1,
+    ),
+    _card(
+        "DA_Card_BattleHorn", "Knight_BattleHorn", "战斗号角",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.APPLY_STATUS,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+                unreal.FantasyCombatStatus.STRENGTH,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_LionheartJudgment", _player_description("整备下一轮攻势。", True),
+        reward_eligible=False, action_cost=1, exhaust=True,
+    ),
+    _card(
+        "DA_Card_BraveHeart", "Knight_BraveHeart", "勇敢的心",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.APPLY_STATUS,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+                unreal.FantasyCombatStatus.STRENGTH,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KnightsPrayer", _player_description("鼓起勇气继续行动。", True),
+        reward_eligible=False, action_cost=1,
+    ),
+    _card(
+        "DA_Card_HoldFast", "Knight_HoldFast", "苦守",
+        unreal.CardType.ACTION,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 1, piercing=True),
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                10,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KiteShieldGuard", _player_description("坚守阵线。", True),
+        reward_eligible=True, action_cost=1,
+    ),
+    _card(
+        "DA_Card_Rashomon", "Knight_Rashomon", "罗生门",
+        unreal.CardType.ACTION,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 4),
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                8,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KiteShieldGuard", _player_description("攻防一体。", True),
+        reward_eligible=False, action_cost=1,
+    ),
+    _card(
+        "DA_Card_AngelShelter", "Knight_AngelShelter", "天使庇护",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                10,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KnightsPrayer", _player_description("获得大量格挡。", True),
+        reward_eligible=True, action_cost=1, retain=True,
+    ),
+    _card(
+        "DA_Card_BerserkerAxe", "Knight_BerserkerAxe", "狂战斧",
+        unreal.CardType.EQUIPMENT,
+        (),
+        "T_Card_LongSwordSlash", _player_description("装备后强化攻击。", True),
+        # The indexed rule is attack-card copying, which the current runtime
+        # does not implement. Do not offer a knowingly different substitute.
+        reward_eligible=False, equipment_attack=2,
+    ),
+)
+
+
+ENEMY_CARD_SPECS = (
+    _card(
+        "DA_EnemyCard_ClawStrike", "Enemy_ClawStrike", "爪击",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),),
+        "T_Card_LongSwordSlash", _enemy_description("基础攻击。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_Bash", "Enemy_Bash", "猛击",
+        unreal.CardType.ACTION,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 4),
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                4,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KiteShieldGuard", _enemy_description("攻击并格挡。"),
+        card_set_id="W01_Enemy", action_cost=1,
+    ),
+    _card(
+        "DA_EnemyCard_LifeSteal", "Enemy_LifeSteal", "吸血",
+        unreal.CardType.ACTION,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 3),
+            _effect(
+                unreal.FantasyCombatEffectType.HEAL,
+                3,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KnightsPrayer", _enemy_description("伤害并恢复生命。"),
+        card_set_id="W01_Enemy", action_cost=1,
+    ),
+    _card(
+        "DA_EnemyCard_Mana", "Enemy_Mana", "法力",
+        unreal.CardType.MANA,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.GAIN_MANA,
+                6,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_ArcaneSpark", _enemy_description("积累法力。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_Wisdom", "Enemy_Wisdom", "智慧",
+        unreal.CardType.MANA,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.GAIN_MANA,
+                5,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_ReadOpening", _enemy_description("积累法力并抽牌。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_ElementalWave", "Enemy_ElementalWave", "元素波动",
+        unreal.CardType.SPELL,
+        # BWIKI's preserved numeric fragment gives 2 lightning damage.
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 2),),
+        "T_Card_ArcaneSpark", _enemy_description("释放元素伤害。"),
+        card_set_id="W01_Enemy", mana_cost=2,
+    ),
+    _card(
+        "DA_EnemyCard_FireBlast", "Enemy_FireBlast", "火焰冲击",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 10),),
+        "T_Card_ArcaneSpark", _enemy_description("高法力火焰伤害。"),
+        card_set_id="W01_Enemy", mana_cost=4,
+    ),
+    _card(
+        "DA_EnemyCard_Rush", "Enemy_Rush", "急行",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_ReadOpening", _enemy_description("消耗行动力并抽取一张牌。"),
+        card_set_id="W01_Enemy", action_cost=1,
+    ),
+    _card(
+        "DA_EnemyCard_NoEntry", "Enemy_NoEntry", "禁止通行！",
+        unreal.CardType.COUNTER,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                7,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KiteShieldGuard", _enemy_description("建立防线。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_ShortSword", "Enemy_ShortSword", "短剑",
+        unreal.CardType.EQUIPMENT,
+        (),
+        "T_Card_LongSwordSlash", _enemy_description("装备后强化攻击。"),
+        card_set_id="W01_Enemy", equipment_attack=1,
+    ),
+    _card(
+        "DA_EnemyCard_SwiftAttack", "Enemy_SwiftAttack", "迅捷攻击",
+        unreal.CardType.ATTACK,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 5),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_LongSwordSlash", _enemy_description("攻击并抽牌。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_Flinch", "Enemy_Flinch", "退缩",
+        unreal.CardType.COUNTER,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.BLOCK,
+                5,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_KiteShieldGuard", _enemy_description("防守并补牌。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_Hypnosis", "Enemy_Hypnosis", "催眠",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.DISCARD_RANDOM,
+                1,
+                unreal.FantasyCombatTarget.OPPONENT,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.APPLY_STATUS,
+                1,
+                unreal.FantasyCombatTarget.OPPONENT,
+                unreal.FantasyCombatStatus.WEAK,
+            ),
+        ),
+        "T_Card_ReadOpening", _enemy_description("扰乱手牌并施加虚弱。"),
+        card_set_id="W01_Enemy", action_cost=1,
+    ),
+    _card(
+        "DA_EnemyCard_AcidSpray", "Enemy_AcidSpray", "酸性喷雾",
+        unreal.CardType.ACTION,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.APPLY_STATUS,
+                4,
+                unreal.FantasyCombatTarget.OPPONENT,
+                unreal.FantasyCombatStatus.POISON,
+            ),
+        ),
+        "T_Card_ArcaneSpark", _enemy_description("施加中毒。"),
+        card_set_id="W01_Enemy", action_cost=1,
+    ),
+    _card(
+        "DA_EnemyCard_Repentance", "Enemy_Repentance", "忏悔",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4, piercing=True),),
+        "T_Card_LionheartJudgment", _enemy_description("造成穿刺伤害。"),
+        card_set_id="W01_Enemy", mana_cost=2,
+    ),
+)
+
+
+CARD_SPECS = PLAYER_CARD_SPECS + PLAYER_REWARD_CARD_SPECS + ENEMY_CARD_SPECS
+
+
+def _fallback_intent(intent_id, display_name, effects):
+    return {
+        "intent_id": intent_id,
+        "display_name": display_name,
+        "effects": tuple(effects),
+    }
+
+
+def _enemy(
+    asset_name,
+    enemy_id,
+    display_name,
+    max_health,
+    deck,
+    visual_profile,
+    passive_id,
+    passive_name,
+    passive_rule,
+    fallback_intents,
+    *,
+    max_hand=4,
+    max_action=2,
+    starting_mana=0,
+    cards_per_turn=2,
+    boss=False,
+):
+    return {
+        "asset_name": asset_name,
+        "enemy_id": enemy_id,
+        "display_name": display_name,
+        "max_health": max_health,
+        "deck": tuple(deck),
+        "max_hand_size": max_hand,
+        "max_action_points": max_action,
+        "starting_mana": starting_mana,
+        "cards_per_turn": cards_per_turn,
+        "passive_id": passive_id,
+        "passive_name": passive_name,
+        "passive_description": f"{passive_rule} {ENEMY_PROTOTYPE_BOUNDARY}",
+        "visual_profile": visual_profile,
+        "boss": boss,
+        "intents": tuple(fallback_intents),
+    }
+
+
+ENEMY_SPECS = (
+    _enemy(
+        "DA_Enemy_DrowsyBat", "DrowsyBat", "贪睡蝙蝠", 32,
+        (("Enemy_ClawStrike", 3), ("Enemy_Bash", 2), ("Enemy_LifeSteal", 2)),
+        unreal.FantasyEnemyVisualProfile.BAT,
+        "Drowsy", "贪睡", "首次受到生命伤害后苏醒并获得 1 力量。",
+        (
+            _fallback_intent(
+                "FallbackClaw", "爪击（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),),
+            ),
+        ),
+        max_hand=3, max_action=2, starting_mana=0, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_MagicApprentice", "MagicApprentice", "魔法学徒", 38,
+        (
+            ("Enemy_Mana", 2), ("Enemy_Wisdom", 2),
+            ("Enemy_ElementalWave", 2), ("Enemy_FireBlast", 2),
+        ),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "ApprenticeWisdom", "智慧", "通过【法力】与【智慧】积累法力，再释放高费用法术。",
+        (
+            _fallback_intent(
+                "FallbackFire", "火焰冲击（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 10),),
+            ),
+        ),
+        max_hand=4, max_action=1, starting_mana=0, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_VillageGuard", "VillageGuard", "村庄守卫", 46,
+        (
+            ("Enemy_Rush", 2), ("Enemy_NoEntry", 2),
+            ("Enemy_ShortSword", 1), ("Enemy_SwiftAttack", 3),
+        ),
+        unreal.FantasyEnemyVisualProfile.WARRIOR,
+        "GuardPost", "守关", "战斗开始时获得 6 格挡；装备与防线会强化后续攻击。",
+        (
+            _fallback_intent(
+                "FallbackGuard", "守关斩（兼容意图）",
+                (
+                    _effect(unreal.FantasyCombatEffectType.DAMAGE, 6),
+                    _effect(
+                        unreal.FantasyCombatEffectType.BLOCK,
+                        4,
+                        unreal.FantasyCombatTarget.SELF,
+                    ),
+                ),
+            ),
+        ),
+        max_hand=4, max_action=2, starting_mana=0, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_Hypnotist", "Hypnotist", "催眠师", 44,
+        (("Enemy_Flinch", 2), ("Enemy_Hypnosis", 2), ("Enemy_AcidSpray", 2)),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "Mesmerize", "催眠", "以弃牌、虚弱和中毒干扰玩家回合。",
+        (
+            _fallback_intent(
+                "FallbackHypnosis", "催眠（兼容意图）",
+                (
+                    _effect(
+                        unreal.FantasyCombatEffectType.APPLY_STATUS,
+                        1,
+                        unreal.FantasyCombatTarget.OPPONENT,
+                        unreal.FantasyCombatStatus.WEAK,
+                    ),
+                ),
+            ),
+        ),
+        max_hand=3, max_action=1, starting_mana=0, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_DragonWhelp", "DragonWhelp", "飞龙幼崽", 66,
+        (("Enemy_Mana", 2), ("Enemy_FireBlast", 3), ("Enemy_ElementalWave", 2)),
+        unreal.FantasyEnemyVisualProfile.DRAGON,
+        "DragonScale", "龙鳞", "战斗开始时获得 8 格挡。",
+        (
+            _fallback_intent(
+                "FallbackBreath", "火焰吐息（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 10),),
+            ),
+        ),
+        max_hand=4, max_action=1, starting_mana=2, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_HeadlessKnight", "HeadlessKnight", "无头骑士", 72,
+        (("Enemy_Mana", 2), ("Enemy_FireBlast", 3), ("Enemy_Repentance", 3)),
+        unreal.FantasyEnemyVisualProfile.SKELETON,
+        "RevivalOath", "复生执念", "首次死亡时以半数生命复生，并获得 10 格挡与 2 力量。",
+        (
+            _fallback_intent(
+                "FallbackRepentance", "忏悔斩（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4, piercing=True),),
+            ),
+        ),
+        max_hand=4, max_action=1, starting_mana=2, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_HeadlessKnightBoss", "HeadlessKnightBoss", "无头骑士 · 守关者", 108,
+        (("Enemy_Mana", 3), ("Enemy_FireBlast", 4), ("Enemy_Repentance", 4)),
+        unreal.FantasyEnemyVisualProfile.SKELETON,
+        "AshenRevival", "灰烬复生", "首次死亡时以半数生命复生，并获得 10 格挡与 2 力量。",
+        (
+            _fallback_intent(
+                "FallbackBossCleave", "灰烬重斩（兼容意图）",
+                (
+                    _effect(unreal.FantasyCombatEffectType.DAMAGE, 4, piercing=True),
+                    _effect(
+                        unreal.FantasyCombatEffectType.BLOCK,
+                        6,
+                        unreal.FantasyCombatTarget.SELF,
+                    ),
+                ),
+            ),
+        ),
+        max_hand=5, max_action=2, starting_mana=4, cards_per_turn=3, boss=True,
+    ),
+)
 
 
 def ensure_directory(path):
@@ -493,6 +1198,21 @@ def ensure_world_definition(spec, map_path):
     return definition_path
 
 
+def validate_main_world_dependencies():
+    """Keep this W01 generator read-only with respect to the parallel W00 world."""
+    missing = [
+        path
+        for path in (W00_MAP, W00_DEFINITION)
+        if not unreal.EditorAssetLibrary.does_asset_exist(path)
+    ]
+    if missing:
+        raise RuntimeError(
+            "W00 authored content must be prepared by setup_w00_main_world.py "
+            "before W01 setup; missing: " + ", ".join(missing)
+        )
+    unreal.log("W00 dependencies validated read-only; W01 setup will not save W00 assets.")
+
+
 def make_combat_effect(spec):
     effect = unreal.FantasyCombatEffectSpec()
     effect.set_editor_property("effect_type", spec["effect_type"])
@@ -502,6 +1222,7 @@ def make_combat_effect(spec):
         "status",
         spec.get("status", unreal.FantasyCombatStatus.NONE),
     )
+    effect.set_editor_property("piercing", spec.get("piercing", False))
     return effect
 
 
@@ -527,11 +1248,20 @@ def ensure_card_definition(spec):
         unreal.log(f"Created CardDefinition: {asset_path}")
 
     card.set_editor_property("card_id", unreal.Name(spec["card_id"]))
-    card.set_editor_property("card_set_id", unreal.Name("W01_EasternHorror"))
+    card.set_editor_property(
+        "card_set_id",
+        unreal.Name(spec.get("card_set_id", "W01_EasternHorror")),
+    )
     card.set_editor_property("display_name", spec["display_name"])
     card.set_editor_property("description", spec["description"])
-    card.set_editor_property("energy_cost", spec["energy_cost"])
-    card.set_editor_property("valor_cost", spec["valor_cost"])
+    card.set_editor_property("energy_cost", spec.get("energy_cost", 0))
+    card.set_editor_property("action_cost", spec.get("action_cost", 0))
+    card.set_editor_property("mana_cost", spec.get("mana_cost", 0))
+    card.set_editor_property(
+        "use_classic_resources",
+        spec.get("use_classic_resources", False),
+    )
+    card.set_editor_property("valor_cost", spec.get("valor_cost", 0))
     card.set_editor_property("card_type", spec["card_type"])
     card.set_editor_property("school", spec["school"])
     card.set_editor_property(
@@ -544,6 +1274,18 @@ def ensure_card_definition(spec):
     card.set_editor_property(
         "reward_eligible",
         spec.get("reward_eligible", False),
+    )
+    card.set_editor_property(
+        "equipment_attack_bonus",
+        spec.get("equipment_attack", 0),
+    )
+    card.set_editor_property(
+        "equipment_turn_start_block",
+        spec.get("equipment_block", 0),
+    )
+    card.set_editor_property(
+        "equipment_turn_start_draw",
+        spec.get("equipment_draw", 0),
     )
 
     artwork_name = spec["artwork_name"]
@@ -575,7 +1317,21 @@ def make_enemy_intent(spec):
     return intent
 
 
-def ensure_enemy_definition(spec):
+def make_enemy_deck_entry(card_id, copies, card_assets_by_id):
+    card_path = card_assets_by_id.get(card_id)
+    card = unreal.EditorAssetLibrary.load_asset(card_path) if card_path else None
+    if card is None:
+        raise RuntimeError(
+            f"Enemy deck references unavailable CardDefinition: {card_id}"
+        )
+
+    entry = unreal.FantasyEnemyDeckEntry()
+    entry.set_editor_property("card", card)
+    entry.set_editor_property("copies", copies)
+    return entry
+
+
+def ensure_enemy_definition(spec, card_assets_by_id):
     asset_path = f"{W01_ENEMY_ROOT}/{spec['asset_name']}"
     enemy = (
         unreal.EditorAssetLibrary.load_asset(asset_path)
@@ -605,6 +1361,28 @@ def ensure_enemy_definition(spec):
     enemy.set_editor_property("display_name", spec["display_name"])
     enemy.set_editor_property("max_health", spec["max_health"])
     enemy.set_editor_property(
+        "deck",
+        [
+            make_enemy_deck_entry(card_id, copies, card_assets_by_id)
+            for card_id, copies in spec["deck"]
+        ],
+    )
+    enemy.set_editor_property("max_hand_size", spec["max_hand_size"])
+    enemy.set_editor_property(
+        "max_action_points",
+        spec["max_action_points"],
+    )
+    enemy.set_editor_property("starting_mana", spec["starting_mana"])
+    enemy.set_editor_property("cards_per_turn", spec["cards_per_turn"])
+    enemy.set_editor_property("passive_id", unreal.Name(spec["passive_id"]))
+    enemy.set_editor_property("passive_name", spec["passive_name"])
+    enemy.set_editor_property(
+        "passive_description",
+        spec["passive_description"],
+    )
+    enemy.set_editor_property("visual_profile", spec["visual_profile"])
+    enemy.set_editor_property("boss", spec.get("boss", False))
+    enemy.set_editor_property(
         "intent_cycle",
         [make_enemy_intent(intent) for intent in spec["intents"]],
     )
@@ -613,6 +1391,7 @@ def ensure_enemy_definition(spec):
 
 
 def main():
+    validate_main_world_dependencies()
     for root in (
         "/Game/WorldWalker",
         "/Game/WorldWalker/Core",
@@ -626,35 +1405,59 @@ def main():
         "/Game/WorldWalker/Shared/Audio",
         "/Game/ThirdParty",
         "/Game/ThirdParty/Shared",
-        "/Game/ThirdParty/W00_MainWorld",
         "/Game/ThirdParty/W01_EasternHorror",
     ):
         ensure_directory(root)
 
-    for spec in WORLD_SPECS:
-        ensure_world_directories(spec["root"])
-        map_path = ensure_map(spec)
-        definition_path = ensure_world_definition(spec, map_path)
-        unreal.log(f"World content ready: {spec['world_id']} -> {definition_path}")
+    w01_spec = next(spec for spec in WORLD_SPECS if not spec["is_main"])
+    ensure_world_directories(w01_spec["root"])
+    map_path = ensure_map(w01_spec)
+    definition_path = ensure_world_definition(w01_spec, map_path)
+    unreal.log(f"World content ready: {w01_spec['world_id']} -> {definition_path}")
 
+    card_assets_by_id = {}
     for spec in CARD_SPECS:
         card_path = ensure_card_definition(spec)
+        card_assets_by_id[spec["card_id"]] = card_path
         unreal.log(f"Card content ready: {spec['card_id']} -> {card_path}")
 
     reward_count = sum(
         1 for spec in CARD_SPECS if spec.get("reward_eligible", False)
     )
+    starter_copy_count = sum(spec["copies"] for spec in PLAYER_CARD_SPECS)
     unreal.log(
         "W01_CARD_PROGRESSION_SETUP_COMPLETE "
         f"definitions={len(CARD_SPECS)} rewards={reward_count}"
     )
-
-    enemy_path = ensure_enemy_definition(ENEMY_SPEC)
     unreal.log(
-        f"Enemy content ready: {ENEMY_SPEC['enemy_id']} -> {enemy_path}"
+        "W01_CLASSIC_PLAYER_CARD_SETUP_COMPLETE "
+        f"starter_definitions={len(PLAYER_CARD_SPECS)} "
+        f"starter_copies={starter_copy_count} rewards={reward_count} "
+        "evidence=verified-names copies=project-tuned"
     )
 
-    unreal.EditorAssetLibrary.save_directory("/Game/WorldWalker", only_if_is_dirty=False, recursive=True)
+    enemy_deck_copy_count = sum(
+        copies
+        for enemy_spec in ENEMY_SPECS
+        for _, copies in enemy_spec["deck"]
+    )
+    for enemy_spec in ENEMY_SPECS:
+        enemy_path = ensure_enemy_definition(enemy_spec, card_assets_by_id)
+        unreal.log(
+            f"Enemy content ready: {enemy_spec['enemy_id']} -> {enemy_path}"
+        )
+    unreal.log(
+        "W01_ENEMY_DECK_SETUP_COMPLETE "
+        f"cards={len(ENEMY_CARD_SPECS)} enemies={len(ENEMY_SPECS)} "
+        f"deck_copies={enemy_deck_copy_count} "
+        "evidence=verified-minimum-names copies=project-tuned"
+    )
+
+    unreal.EditorAssetLibrary.save_directory(
+        W01_ROOT,
+        only_if_is_dirty=False,
+        recursive=True,
+    )
     unreal.log("WORLD_WALKER_SETUP_COMPLETE")
 
 

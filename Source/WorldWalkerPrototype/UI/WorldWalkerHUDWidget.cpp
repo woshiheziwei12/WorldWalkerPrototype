@@ -77,6 +77,78 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	ExplorationSlot->SetAlignment(FVector2D(0.5f, 0.0f));
 	ExplorationSlot->SetAutoSize(true);
 
+	ChoicePanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ChoicePanel"));
+	ChoicePanel->SetBrushColor(FLinearColor(0.006f, 0.005f, 0.010f, 0.91f));
+	ChoicePanel->SetHorizontalAlignment(HAlign_Center);
+	ChoicePanel->SetVerticalAlignment(VAlign_Center);
+
+	USizeBox* ChoiceSize = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("ChoiceSize"));
+	ChoiceSize->SetWidthOverride(860.0f);
+	ChoicePanel->SetContent(ChoiceSize);
+
+	UBorder* ChoiceCard = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ChoiceCard"));
+	ChoiceCard->SetBrushColor(FLinearColor(0.055f, 0.020f, 0.028f, 0.985f));
+	ChoiceCard->SetPadding(FMargin(42.0f, 32.0f));
+	ChoiceSize->AddChild(ChoiceCard);
+
+	UVerticalBox* ChoiceBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ChoiceBox"));
+	ChoiceCard->SetContent(ChoiceBox);
+
+	ChoiceTitleText = MakeText(TEXT("ChoiceTitle"), TEXT("月圆之路"), 31);
+	ChoiceTitleText->SetColorAndOpacity(FSlateColor(AntiqueGold));
+	ChoiceBox->AddChildToVerticalBox(ChoiceTitleText)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 9.0f));
+
+	ChoiceSummaryText = MakeText(TEXT("ChoiceSummary"), TEXT("灰烬章节 1/4"), 17);
+	ChoiceSummaryText->SetColorAndOpacity(FSlateColor(MutedParchment));
+	ChoiceSummaryText->SetAutoWrapText(true);
+	ChoiceBox->AddChildToVerticalBox(ChoiceSummaryText)->SetPadding(FMargin(18.0f, 0.0f, 18.0f, 8.0f));
+
+	ChoiceLoreText = MakeText(
+		TEXT("ChoiceLore"),
+		TEXT("月光将道路分成数条命运。你的选择会改变本次旅途。"),
+		19);
+	ChoiceLoreText->SetColorAndOpacity(FSlateColor(Parchment));
+	ChoiceLoreText->SetAutoWrapText(true);
+	ChoiceBox->AddChildToVerticalBox(ChoiceLoreText)->SetPadding(FMargin(18.0f, 4.0f, 18.0f, 16.0f));
+
+	for (int32 ChoiceIndex = 0; ChoiceIndex < 3; ++ChoiceIndex)
+	{
+		const FName ButtonName(*FString::Printf(TEXT("ChapterChoiceButton_%d"), ChoiceIndex));
+		const FString LabelName = FString::Printf(TEXT("ChapterChoiceLabel_%d"), ChoiceIndex);
+		UButton* ChoiceButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), ButtonName);
+		ChoiceButton->SetBackgroundColor(FLinearColor(0.27f, 0.16f, 0.055f, 1.0f));
+		UTextBlock* ChoiceLabel = MakeText(*LabelName, TEXT("未显现的命运"), 18);
+		ChoiceLabel->SetColorAndOpacity(FSlateColor(Parchment));
+		ChoiceLabel->SetAutoWrapText(true);
+		ChoiceButton->AddChild(ChoiceLabel);
+
+		switch (ChoiceIndex)
+		{
+		case 0: ChoiceButton->OnClicked.AddDynamic(this, &UWorldWalkerHUDWidget::HandleChoice0Clicked); break;
+		case 1: ChoiceButton->OnClicked.AddDynamic(this, &UWorldWalkerHUDWidget::HandleChoice1Clicked); break;
+		case 2: ChoiceButton->OnClicked.AddDynamic(this, &UWorldWalkerHUDWidget::HandleChoice2Clicked); break;
+		default: break;
+		}
+
+		ChoiceBox->AddChildToVerticalBox(ChoiceButton)->SetPadding(FMargin(28.0f, 6.0f));
+		ChoiceButtons.Add(ChoiceButton);
+		ChoiceButtonLabels.Add(ChoiceLabel);
+	}
+
+	ChoiceContinueButton = WidgetTree->ConstructWidget<UButton>(
+		UButton::StaticClass(),
+		TEXT("ChoiceContinueButton"));
+	ChoiceContinueButton->SetBackgroundColor(FLinearColor(0.42f, 0.10f, 0.075f, 1.0f));
+	ChoiceContinueLabel = MakeText(TEXT("ChoiceContinueLabel"), TEXT("继续旅途"), 20);
+	ChoiceContinueLabel->SetColorAndOpacity(FSlateColor(Parchment));
+	ChoiceContinueButton->AddChild(ChoiceContinueLabel);
+	ChoiceContinueButton->OnClicked.AddDynamic(this, &UWorldWalkerHUDWidget::HandleChoiceContinueClicked);
+	ChoiceBox->AddChildToVerticalBox(ChoiceContinueButton)->SetPadding(FMargin(210.0f, 14.0f, 210.0f, 0.0f));
+
+	UCanvasPanelSlot* ChoiceSlot = RootCanvas->AddChildToCanvas(ChoicePanel);
+	ChoiceSlot->SetAnchors(FAnchors(0.0f, 0.0f, 1.0f, 1.0f));
+	ChoiceSlot->SetOffsets(FMargin(0.0f));
+
 	CombatPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CombatPanel"));
 	CombatPanel->SetBrushColor(NearBlack);
 	CombatPanel->SetPadding(FMargin(24.0f, 16.0f));
@@ -84,25 +156,25 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	UVerticalBox* CombatBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("CombatBox"));
 	CombatPanel->SetContent(CombatBox);
 
-	UTextBlock* Title = MakeText(TEXT("CombatTitle"), TEXT("灰烬盟誓 · 黑棘决斗"), 27);
+	UTextBlock* Title = MakeText(TEXT("CombatTitle"), TEXT("月圆旅途 · 卡牌战斗"), 27);
 	Title->SetColorAndOpacity(FSlateColor(AntiqueGold));
 	CombatBox->AddChildToVerticalBox(Title)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 7.0f));
 
 	UHorizontalBox* HealthRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("HealthRow"));
 	CombatBox->AddChildToVerticalBox(HealthRow)->SetHorizontalAlignment(HAlign_Center);
 
-	PlayerHealthText = MakeText(TEXT("PlayerHealth"), TEXT("符文骑士 100 / 100"), 20);
+	PlayerHealthText = MakeText(TEXT("PlayerHealth"), TEXT("红斗篷骑士 100 / 100"), 20);
 	PlayerHealthText->SetColorAndOpacity(FSlateColor(Parchment));
 	HealthRow->AddChildToHorizontalBox(PlayerHealthText)->SetPadding(FMargin(24.0f, 2.0f));
 
-	EnemyHealthText = MakeText(TEXT("EnemyHealth"), TEXT("黑棘骑士 92 / 92"), 20);
+	EnemyHealthText = MakeText(TEXT("EnemyHealth"), TEXT("对手 92 / 92"), 20);
 	EnemyHealthText->SetColorAndOpacity(FSlateColor(FLinearColor(0.88f, 0.34f, 0.27f, 1.0f)));
 	HealthRow->AddChildToHorizontalBox(EnemyHealthText)->SetPadding(FMargin(24.0f, 2.0f));
 
 	UHorizontalBox* ResourceRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ResourceRow"));
 	CombatBox->AddChildToVerticalBox(ResourceRow)->SetHorizontalAlignment(HAlign_Center);
 
-	EnergyText = MakeText(TEXT("EnergyText"), TEXT("能量 3 / 3"), 18);
+	EnergyText = MakeText(TEXT("EnergyText"), TEXT("行动力 1 / 1"), 18);
 	EnergyText->SetColorAndOpacity(FSlateColor(FLinearColor(0.44f, 0.69f, 0.94f, 1.0f)));
 	ResourceRow->AddChildToHorizontalBox(EnergyText)->SetPadding(FMargin(18.0f, 1.0f));
 
@@ -110,7 +182,7 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	BlockText->SetColorAndOpacity(FSlateColor(FLinearColor(0.60f, 0.73f, 0.81f, 1.0f)));
 	ResourceRow->AddChildToHorizontalBox(BlockText)->SetPadding(FMargin(18.0f, 1.0f));
 
-	ValorText = MakeText(TEXT("ValorText"), TEXT("英勇 0 / 3"), 18);
+	ValorText = MakeText(TEXT("ValorText"), TEXT("法力 0  |  装备 0 / 3"), 18);
 	ValorText->SetColorAndOpacity(FSlateColor(AntiqueGold));
 	ResourceRow->AddChildToHorizontalBox(ValorText)->SetPadding(FMargin(18.0f, 1.0f));
 
@@ -118,7 +190,7 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	PileText->SetColorAndOpacity(FSlateColor(MutedParchment));
 	ResourceRow->AddChildToHorizontalBox(PileText)->SetPadding(FMargin(18.0f, 2.0f));
 
-	SealTextBlock = MakeText(TEXT("SealText"), TEXT("三印  [钢铁] [圣徽] [奥术]"), 17);
+	SealTextBlock = MakeText(TEXT("SealText"), TEXT("旅途牌组：基础牌"), 17);
 	SealTextBlock->SetColorAndOpacity(FSlateColor(MutedParchment));
 	CombatBox->AddChildToVerticalBox(SealTextBlock)->SetPadding(FMargin(0.0f, 2.0f));
 
@@ -134,7 +206,7 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	UBorder* IntentPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("IntentPanel"));
 	IntentPanel->SetBrushColor(DeepWine);
 	IntentPanel->SetPadding(FMargin(12.0f, 4.0f));
-	IntentTextBlock = MakeText(TEXT("IntentText"), TEXT("下一意图：正在观察敌人……"), 17);
+	IntentTextBlock = MakeText(TEXT("IntentText"), TEXT("敌方公开牌：正在观察敌人……"), 17);
 	IntentTextBlock->SetColorAndOpacity(FSlateColor(Parchment));
 	IntentTextBlock->SetAutoWrapText(true);
 	IntentPanel->SetContent(IntentTextBlock);
@@ -232,13 +304,16 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 
 void UWorldWalkerHUDWidget::ShowExploration()
 {
-	if (!ExplorationPanel || !CombatPanel)
+	if (!ExplorationPanel || !CombatPanel || !ChoicePanel)
 	{
 		return;
 	}
 
 	ExplorationPanel->SetVisibility(ESlateVisibility::HitTestInvisible);
 	CombatPanel->SetVisibility(ESlateVisibility::Collapsed);
+	ChoicePanel->SetVisibility(ESlateVisibility::Collapsed);
+	ChoicePanelMode = EChoicePanelMode::Hidden;
+	bChoiceInputLocked = false;
 	bShowingRewardChoices = false;
 	bRewardConfirmed = false;
 	bPlayerCanAct = false;
@@ -256,10 +331,14 @@ void UWorldWalkerHUDWidget::ShowCombat(
 	const int32 PlayerHealth,
 	const int32 PlayerMaxHealth,
 	const int32 EnemyHealth,
-	const int32 EnemyMaxHealth)
+	const int32 EnemyMaxHealth,
+	const FString& EnemyDisplayName)
 {
 	ExplorationPanel->SetVisibility(ESlateVisibility::Collapsed);
 	CombatPanel->SetVisibility(ESlateVisibility::Visible);
+	ChoicePanel->SetVisibility(ESlateVisibility::Collapsed);
+	ChoicePanelMode = EChoicePanelMode::Hidden;
+	bChoiceInputLocked = false;
 	bShowingRewardChoices = false;
 	bRewardConfirmed = false;
 	RestartButton->SetVisibility(ESlateVisibility::Collapsed);
@@ -267,17 +346,17 @@ void UWorldWalkerHUDWidget::ShowCombat(
 	CardRow->SetVisibility(ESlateVisibility::Visible);
 	EndTurnButton->SetVisibility(ESlateVisibility::Visible);
 	PlayerHealthText->SetText(FText::FromString(FString::Printf(
-		TEXT("符文骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
+		TEXT("红斗篷骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
 	EnemyHealthText->SetText(FText::FromString(FString::Printf(
-		TEXT("黑棘骑士  %d / %d"), EnemyHealth, EnemyMaxHealth)));
-	EnergyText->SetText(FText::FromString(TEXT("能量 --")));
+		TEXT("%s  %d / %d"), *EnemyDisplayName, EnemyHealth, EnemyMaxHealth)));
+	EnergyText->SetText(FText::FromString(TEXT("行动力 --")));
 	BlockText->SetText(FText::FromString(TEXT("格挡 0")));
-	ValorText->SetText(FText::FromString(TEXT("英勇 0 / 3")));
+	ValorText->SetText(FText::FromString(TEXT("法力 0  |  装备 0 / 3")));
 	PileText->SetText(FText::FromString(TEXT("牌堆 --  |  弃牌 0  |  消耗 0")));
-	SealTextBlock->SetText(FText::FromString(TEXT("三印  [钢铁] [圣徽] [奥术]")));
+	SealTextBlock->SetText(FText::FromString(TEXT("旅途牌组：基础牌")));
 	PlayerStatusTextBlock->SetText(FText::FromString(TEXT("我方：无状态")));
 	EnemyStatusTextBlock->SetText(FText::FromString(TEXT("敌方：无状态")));
-	IntentTextBlock->SetText(FText::FromString(TEXT("下一意图：正在观察敌人……")));
+	IntentTextBlock->SetText(FText::FromString(TEXT("敌方公开牌：正在观察敌人……")));
 	CachedCardPlayable.Reset();
 	SetCombatMessage(TEXT("正在整理起始手牌……"), false);
 }
@@ -287,11 +366,12 @@ void UWorldWalkerHUDWidget::RefreshCombatState(
 	const int32 PlayerMaxHealth,
 	const int32 EnemyHealth,
 	const int32 EnemyMaxHealth,
-	const int32 CurrentEnergy,
-	const int32 MaxEnergy,
+	const FString& EnemyDisplayName,
+	const int32 CurrentActionPoints,
+	const int32 MaxActionPoints,
+	const int32 CurrentMana,
+	const int32 EquipmentCount,
 	const int32 CurrentBlock,
-	const int32 CurrentValor,
-	const int32 MaxValor,
 	const int32 DrawPileCount,
 	const int32 DiscardPileCount,
 	const int32 ExhaustPileCount,
@@ -305,28 +385,28 @@ void UWorldWalkerHUDWidget::RefreshCombatState(
 	const TArray<FLinearColor>& CardSchoolTints)
 {
 	PlayerHealthText->SetText(FText::FromString(FString::Printf(
-		TEXT("符文骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
+		TEXT("红斗篷骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
 	EnemyHealthText->SetText(FText::FromString(FString::Printf(
-		TEXT("黑棘骑士  %d / %d"), EnemyHealth, EnemyMaxHealth)));
+		TEXT("%s  %d / %d"), *EnemyDisplayName, EnemyHealth, EnemyMaxHealth)));
 	EnergyText->SetText(FText::FromString(FString::Printf(
-		TEXT("能量  %d / %d"), CurrentEnergy, MaxEnergy)));
+		TEXT("行动力  %d / %d"), CurrentActionPoints, MaxActionPoints)));
 	BlockText->SetText(FText::FromString(FString::Printf(
 		TEXT("格挡  %d"), CurrentBlock)));
 	ValorText->SetText(FText::FromString(FString::Printf(
-		TEXT("英勇  %d / %d"), CurrentValor, MaxValor)));
+		TEXT("法力  %d  |  装备 %d / 3"), CurrentMana, EquipmentCount)));
 	PileText->SetText(FText::FromString(FString::Printf(
 		TEXT("牌堆 %d  |  弃牌 %d  |  消耗 %d"),
 		DrawPileCount,
 		DiscardPileCount,
 		ExhaustPileCount)));
 	SealTextBlock->SetText(FText::FromString(
-		SealText.IsEmpty() ? TEXT("三印：尚未点亮") : SealText));
+		SealText.IsEmpty() ? TEXT("旅途牌组：基础牌") : SealText));
 	PlayerStatusTextBlock->SetText(FText::FromString(FString::Printf(
 		TEXT("我方：%s"), PlayerStatusText.IsEmpty() ? TEXT("无状态") : *PlayerStatusText)));
 	EnemyStatusTextBlock->SetText(FText::FromString(FString::Printf(
 		TEXT("敌方：%s"), EnemyStatusText.IsEmpty() ? TEXT("无状态") : *EnemyStatusText)));
 	IntentTextBlock->SetText(FText::FromString(FString::Printf(
-		TEXT("下一意图：%s"), NextIntentText.IsEmpty() ? TEXT("未知") : *NextIntentText)));
+		TEXT("敌方公开牌：%s"), NextIntentText.IsEmpty() ? TEXT("未知") : *NextIntentText)));
 
 	CachedCardPlayable = CardPlayable;
 	for (int32 CardIndex = 0; CardIndex < CardButtons.Num(); ++CardIndex)
@@ -386,7 +466,7 @@ void UWorldWalkerHUDWidget::ShowCombatResult(const bool bPlayerWon)
 	bShowingRewardChoices = false;
 	bRewardConfirmed = false;
 	SetCombatMessage(
-		bPlayerWon ? TEXT("胜利！黑棘誓约已经破除。") : TEXT("战败。灰烬隘口又吞没了一位立誓者。"),
+		bPlayerWon ? TEXT("胜利！对手已经倒下。") : TEXT("战败。本次旅途将从头开始。"),
 		false);
 	CardRow->SetVisibility(ESlateVisibility::Collapsed);
 	EndTurnButton->SetVisibility(ESlateVisibility::Collapsed);
@@ -407,7 +487,7 @@ void UWorldWalkerHUDWidget::ShowRewardSelection(
 	EndTurnButton->SetVisibility(ESlateVisibility::Collapsed);
 	RestartButton->SetVisibility(ESlateVisibility::Collapsed);
 	CombatMessageText->SetText(FText::FromString(
-		TEXT("胜利！从钢铁、圣徽与奥术战利品中选择一张，加入本次旅途牌组。")));
+		TEXT("胜利！从三张骑士牌中选择一张，加入本次旅途牌组。")));
 
 	for (int32 CardIndex = 0; CardIndex < CardButtons.Num(); ++CardIndex)
 	{
@@ -456,9 +536,93 @@ void UWorldWalkerHUDWidget::ShowRewardConfirmation(const FString& ConfirmationTe
 	CardRow->SetVisibility(ESlateVisibility::Collapsed);
 	EndTurnButton->SetVisibility(ESlateVisibility::Collapsed);
 	CombatMessageText->SetText(FText::FromString(ConfirmationText));
-	RestartButtonLabel->SetText(FText::FromString(TEXT("收下战利品并返回探索")));
+	RestartButtonLabel->SetText(FText::FromString(TEXT("确认战利品并继续路线")));
 	RestartButton->SetVisibility(ESlateVisibility::Visible);
 	RestartButton->SetIsEnabled(true);
+}
+
+void UWorldWalkerHUDWidget::ShowRouteSelection(
+	const FString& RunSummary,
+	const TArray<FString>& ChoiceLabels)
+{
+	ShowChoicePanel(
+		EChoicePanelMode::Route,
+		TEXT("月圆之路 · 选择下一处命运"),
+		RunSummary,
+		TEXT("每次只能踏上一条路。击败对手后，你可以从三张牌中选择一张加入本次旅途牌组。"),
+		ChoiceLabels);
+}
+
+void UWorldWalkerHUDWidget::ShowEventSelection(
+	const FString& Title,
+	const FString& Lore,
+	const TArray<FString>& ChoiceLabels)
+{
+	ShowChoicePanel(
+		EChoicePanelMode::Event,
+		Title.IsEmpty() ? TEXT("月下奇遇") : Title,
+		TEXT("旅途事件 · 选择后立即生效"),
+		Lore,
+		ChoiceLabels);
+}
+
+void UWorldWalkerHUDWidget::ShowNodeResolution(
+	const FString& Message,
+	const bool bChapterComplete)
+{
+	ShowChoicePanel(
+		EChoicePanelMode::Resolution,
+		bChapterComplete ? TEXT("灰烬章节完成") : TEXT("命运已定"),
+		bChapterComplete ? TEXT("月轮见证了这场旅途") : TEXT("前方的道路再次显现"),
+		Message,
+		TArray<FString>());
+	ChoiceContinueLabel->SetText(FText::FromString(
+		bChapterComplete ? TEXT("返回灰烬世界") : TEXT("继续旅途")));
+}
+
+void UWorldWalkerHUDWidget::ShowChoicePanel(
+	const EChoicePanelMode InMode,
+	const FString& Title,
+	const FString& Summary,
+	const FString& Lore,
+	const TArray<FString>& ChoiceLabels)
+{
+	if (!ChoicePanel || !ExplorationPanel || !CombatPanel)
+	{
+		return;
+	}
+
+	ChoicePanelMode = InMode;
+	bChoiceInputLocked = false;
+	ExplorationPanel->SetVisibility(ESlateVisibility::Collapsed);
+	CombatPanel->SetVisibility(ESlateVisibility::Collapsed);
+	ChoicePanel->SetVisibility(ESlateVisibility::Visible);
+	ChoiceTitleText->SetText(FText::FromString(Title));
+	ChoiceSummaryText->SetText(FText::FromString(Summary));
+	ChoiceSummaryText->SetVisibility(
+		Summary.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+	ChoiceLoreText->SetText(FText::FromString(Lore));
+
+	const bool bShowingChoices = InMode == EChoicePanelMode::Route || InMode == EChoicePanelMode::Event;
+	for (int32 ChoiceIndex = 0; ChoiceIndex < ChoiceButtons.Num(); ++ChoiceIndex)
+	{
+		const bool bHasChoice = bShowingChoices && ChoiceLabels.IsValidIndex(ChoiceIndex);
+		ChoiceButtons[ChoiceIndex]->SetVisibility(
+			bHasChoice ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		ChoiceButtons[ChoiceIndex]->SetIsEnabled(bHasChoice);
+		if (bHasChoice)
+		{
+			ChoiceButtonLabels[ChoiceIndex]->SetText(FText::FromString(ChoiceLabels[ChoiceIndex]));
+		}
+	}
+
+	ChoiceContinueButton->SetVisibility(
+		InMode == EChoicePanelMode::Resolution ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	ChoiceContinueButton->SetIsEnabled(InMode == EChoicePanelMode::Resolution);
+	if (InMode != EChoicePanelMode::Resolution)
+	{
+		ChoiceContinueLabel->SetText(FText::FromString(TEXT("继续旅途")));
+	}
 }
 
 void UWorldWalkerHUDWidget::HandleCard0Clicked() { HandleCardClicked(0); }
@@ -466,6 +630,72 @@ void UWorldWalkerHUDWidget::HandleCard1Clicked() { HandleCardClicked(1); }
 void UWorldWalkerHUDWidget::HandleCard2Clicked() { HandleCardClicked(2); }
 void UWorldWalkerHUDWidget::HandleCard3Clicked() { HandleCardClicked(3); }
 void UWorldWalkerHUDWidget::HandleCard4Clicked() { HandleCardClicked(4); }
+
+void UWorldWalkerHUDWidget::HandleChoice0Clicked() { HandleChoiceClicked(0); }
+void UWorldWalkerHUDWidget::HandleChoice1Clicked() { HandleChoiceClicked(1); }
+void UWorldWalkerHUDWidget::HandleChoice2Clicked() { HandleChoiceClicked(2); }
+
+void UWorldWalkerHUDWidget::HandleChoiceClicked(const int32 ChoiceIndex)
+{
+	if (bChoiceInputLocked
+		|| (ChoicePanelMode != EChoicePanelMode::Route && ChoicePanelMode != EChoicePanelMode::Event)
+		|| !ChoiceButtons.IsValidIndex(ChoiceIndex)
+		|| ChoiceButtons[ChoiceIndex]->GetVisibility() != ESlateVisibility::Visible)
+	{
+		return;
+	}
+
+	bChoiceInputLocked = true;
+	for (UButton* ChoiceButton : ChoiceButtons)
+	{
+		if (ChoiceButton)
+		{
+			ChoiceButton->SetIsEnabled(false);
+		}
+	}
+
+	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
+	{
+		if (ChoicePanelMode == EChoicePanelMode::Route)
+		{
+			GameMode->HandleRouteSelection(ChoiceIndex);
+		}
+		else
+		{
+			GameMode->HandleEventSelection(ChoiceIndex);
+		}
+		return;
+	}
+
+	// Keep the prototype recoverable when the widget is previewed without its game mode.
+	bChoiceInputLocked = false;
+	for (UButton* ChoiceButton : ChoiceButtons)
+	{
+		if (ChoiceButton && ChoiceButton->GetVisibility() == ESlateVisibility::Visible)
+		{
+			ChoiceButton->SetIsEnabled(true);
+		}
+	}
+}
+
+void UWorldWalkerHUDWidget::HandleChoiceContinueClicked()
+{
+	if (bChoiceInputLocked || ChoicePanelMode != EChoicePanelMode::Resolution)
+	{
+		return;
+	}
+
+	bChoiceInputLocked = true;
+	ChoiceContinueButton->SetIsEnabled(false);
+	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
+	{
+		GameMode->HandleNodeResolutionContinue();
+		return;
+	}
+
+	bChoiceInputLocked = false;
+	ChoiceContinueButton->SetIsEnabled(true);
+}
 
 void UWorldWalkerHUDWidget::HandleCardClicked(const int32 HandIndex)
 {

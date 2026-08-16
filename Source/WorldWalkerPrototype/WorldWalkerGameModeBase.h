@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Cards/Fantasy/FantasyCombatTypes.h"
+#include "Cards/Fantasy/FantasyRunTypes.h"
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "WorldWalkerGameModeBase.generated.h"
@@ -15,6 +16,8 @@ class AFantasyWorldLayout;
 class UCardCombatComponent;
 class UCardDefinition;
 class UFantasyEnemyDefinition;
+class UFantasyEnemyDeckRuntime;
+class UFantasyCardProgressionSubsystem;
 struct FFantasyEnemyIntentStep;
 class UWorldDefinition;
 
@@ -33,6 +36,9 @@ public:
 	void HandleEndPlayerTurn();
 	void HandleRewardSelection(int32 RewardIndex);
 	void HandleReturnToExploration();
+	void HandleRouteSelection(int32 ChoiceIndex);
+	void HandleEventSelection(int32 ChoiceIndex);
+	void HandleNodeResolutionContinue();
 	void RestartDemo();
 	const FString& GetExplorationMessage() const { return ExplorationMessage; }
 
@@ -43,12 +49,34 @@ private:
 	void SpawnFantasyWorldLayout();
 	void SpawnFantasyBattleArena();
 	void SpawnPortal(UWorldDefinition* DestinationWorld, const FVector& OffsetFromPlayer);
-	void LoadFantasyEnemyDefinition();
+	bool LoadFantasyEnemyDefinition(FName EnemyId);
+	void InitializeFantasyRun();
+	void ResumeOrPresentFantasyRun();
+	void PresentRouteChoices();
+	void ActivateRouteNode(const FFantasyRouteNodeChoice& Node);
+	void PresentEventChoices(FName EventId);
+	void CompleteActiveNode(const FString& ResolutionMessage);
+	void PrepareCombatNode(FName EnemyId);
+	void ClearActiveEnemy();
 	void HandleEnemyTurn();
 	void ResolvePlayerCardEffects(UCardDefinition* Card);
 	void ResolveEnemyIntent(const FFantasyEnemyIntentStep& Intent);
-	int32 ResolveDamageAgainstEnemy(int32 BaseDamage, bool bIsAttack, bool bConsumeWeak);
-	int32 ResolveDamageAgainstPlayer(int32 BaseDamage, bool bConsumeWeak, bool& bPerfectBlock);
+	void ResolveEnemyCardEffects(UCardDefinition* Card);
+	int32 ResolveDamageAgainstEnemy(
+		int32 BaseDamage,
+		bool bIsAttack,
+		bool bConsumeWeak,
+		bool bPiercing = false);
+	int32 ResolveDamageAgainstPlayer(
+		int32 BaseDamage,
+		bool bIsAttack,
+		bool bConsumeWeak,
+		bool bPiercing);
+	void ResolveEndOfTurnPoison(bool bPlayerTurnEnded);
+	void ApplyEnemyTurnStartEquipment();
+	bool TryTriggerEnemyDefeatPassive();
+	void RestoreRunHealthToPlayer();
+	void SyncRunHealthFromPlayer();
 	FString BuildNextIntentText() const;
 	void FinishCombat(bool bPlayerWon);
 	void BeginVictoryReward();
@@ -80,6 +108,9 @@ private:
 	TObjectPtr<UFantasyEnemyDefinition> ActiveFantasyEnemyDefinition;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UFantasyEnemyDeckRuntime> ActiveEnemyDeck;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UWorldDefinition> CurrentWorldDefinition;
 
 	UPROPERTY(Transient)
@@ -90,6 +121,26 @@ private:
 	FFantasyCombatRuntimeState PlayerFantasyState;
 	FFantasyCombatRuntimeState EnemyFantasyState;
 	int32 CurrentEnemyIntentIndex = 0;
+	int32 CurrentEnemyTurnNumber = 0;
+	FName CurrentEventId;
+	bool bEnemyDefeatPassiveConsumed = false;
+	bool bEnemyReactivePassiveTriggered = false;
+
+	enum class EFantasyRunFlowState : uint8
+	{
+		Exploration,
+		RouteChoice,
+		EventChoice,
+		PlayerTurn,
+		EnemyTurn,
+		RewardChoice,
+		RewardConfirmed,
+		Resolution,
+		ChapterComplete,
+		Defeat
+	};
+
+	EFantasyRunFlowState FantasyRunFlowState = EFantasyRunFlowState::Exploration;
 	bool bCombatActive = false;
 	bool bWaitingForEnemy = false;
 	bool bAwaitingRewardSelection = false;

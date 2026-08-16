@@ -34,6 +34,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card", meta=(ClampMin="0"))
 	int32 EnergyCost = 1;
 
+	/** Classic-mode action cards consume this resource; it refreshes each turn. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Classic", meta=(ClampMin="0"))
+	int32 ActionCost = 0;
+
+	/** Spell cards consume persistent combat Mana. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Classic", meta=(ClampMin="0"))
+	int32 ManaCost = 0;
+
+	/** Uses Action/Mana instead of the legacy three-Energy prototype resource. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Classic")
+	bool bUseClassicResources = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card", meta=(ClampMin="0"))
 	int32 ValorCost = 0;
 
@@ -65,6 +77,16 @@ public:
 	/** Reward cards never enter the starter deck until the player claims them after a W01 victory. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression")
 	bool bRewardEligible = false;
+
+	/** Equipment remains in a persistent zone and contributes these passive values. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Classic", meta=(ClampMin="0"))
+	int32 EquipmentAttackBonus = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Classic", meta=(ClampMin="0"))
+	int32 EquipmentTurnStartBlock = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Classic", meta=(ClampMin="0"))
+	int32 EquipmentTurnStartDraw = 0;
 
 	static const FPrimaryAssetType PrimaryAssetType;
 };

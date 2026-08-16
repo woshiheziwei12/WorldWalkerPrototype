@@ -106,12 +106,12 @@ bool UCardCombatComponent::LoadStartingDeck(const FName CardSetId)
 
 	for (UCardDefinition* Card : Definitions)
 	{
-		for (int32 CopyIndex = 0; CopyIndex < Card->StartingDeckCopies; ++CopyIndex)
-		{
-			StartingDeck.Add(Card);
-		}
 		const int32 RewardCopies = Progression ? Progression->GetGrantedCopies(Card->CardId) : 0;
-		for (int32 CopyIndex = 0; CopyIndex < RewardCopies; ++CopyIndex)
+		const int32 RemovedCopies = Progression ? Progression->GetRemovedCopies(Card->CardId) : 0;
+		const int32 EffectiveCopies = FMath::Max(
+			0,
+			Card->StartingDeckCopies + RewardCopies - RemovedCopies);
+		for (int32 CopyIndex = 0; CopyIndex < EffectiveCopies; ++CopyIndex)
 		{
 			StartingDeck.Add(Card);
 		}
@@ -160,7 +160,11 @@ bool UCardCombatComponent::StartBattle(const FName CardSetId)
 	Hand.Reset();
 	DiscardPile.Reset();
 	ExhaustPile.Reset();
+	EquipmentZone.Reset();
 	CurrentEnergy = 0;
+	CurrentActionPoints = 0;
+	CurrentMana = 0;
+	CurrentTurnHandLimit = MaxHandSize;
 	CurrentValor = 0;
 	CurrentBlock = 0;
 	LitSchoolMask = 0;
@@ -175,15 +179,28 @@ void UCardCombatComponent::StartPlayerTurn()
 {
 	CurrentBlock = 0;
 	CurrentEnergy = MaxEnergy;
+	CurrentActionPoints = MaxActionPoints;
 	LitSchoolMask = 0;
 	bResonanceTriggeredThisTurn = false;
 	bLastCardTriggeredResonance = false;
-	DrawCards(MaxHandSize - Hand.Num());
+	int32 EquipmentDraw = 0;
+	for (const UCardDefinition* Equipment : EquipmentZone)
+	{
+		if (!Equipment)
+		{
+			continue;
+		}
+		CurrentBlock += FMath::Max(0, Equipment->EquipmentTurnStartBlock);
+		EquipmentDraw += FMath::Max(0, Equipment->EquipmentTurnStartDraw);
+	}
+	CurrentTurnHandLimit = MaxHandSize + EquipmentDraw;
+	DrawCards(CurrentTurnHandLimit - Hand.Num());
 }
 
 void UCardCombatComponent::EndPlayerTurn()
 {
 	CurrentEnergy = 0;
+	CurrentActionPoints = 0;
 	for (int32 HandIndex = Hand.Num() - 1; HandIndex >= 0; --HandIndex)
 	{
 		UCardDefinition* Card = Hand[HandIndex];
@@ -208,9 +225,17 @@ bool UCardCombatComponent::IsCardPlayable(const int32 HandIndex) const
 
 bool UCardCombatComponent::IsCardPlayable(const UCardDefinition* Card) const
 {
-	return Card
-		&& Card->EnergyCost <= CurrentEnergy
-		&& Card->ValorCost <= CurrentValor;
+	if (!Card || Card->ValorCost > CurrentValor)
+	{
+		return false;
+	}
+
+	if (Card->bUseClassicResources)
+	{
+		return Card->ActionCost <= CurrentActionPoints
+			&& Card->ManaCost <= CurrentMana;
+	}
+	return Card->EnergyCost <= CurrentEnergy;
 }
 
 bool UCardCombatComponent::CanPlayCard(const int32 HandIndex) const
@@ -227,7 +252,15 @@ UCardDefinition* UCardCombatComponent::PlayCard(const int32 HandIndex)
 	}
 
 	UCardDefinition* Card = Hand[HandIndex];
-	CurrentEnergy -= Card->EnergyCost;
+	if (Card->bUseClassicResources)
+	{
+		CurrentActionPoints -= Card->ActionCost;
+		CurrentMana -= Card->ManaCost;
+	}
+	else
+	{
+		CurrentEnergy -= Card->EnergyCost;
+	}
 	CurrentValor -= Card->ValorCost;
 	Hand.RemoveAt(HandIndex);
 	RegisterPlayedSchool(Card->School);
@@ -246,6 +279,15 @@ void UCardCombatComponent::FinalizePlayedCard(UCardDefinition* Card)
 	if (Card->bExhaust)
 	{
 		ExhaustPile.Add(Card);
+	}
+	else if (Card->CardType == ECardType::Equipment)
+	{
+		if (EquipmentZone.Num() >= MaxEquipmentSlots)
+		{
+			DiscardPile.Add(EquipmentZone[0]);
+			EquipmentZone.RemoveAt(0, 1, EAllowShrinking::No);
+		}
+		EquipmentZone.Add(Card);
 	}
 	else
 	{
@@ -268,10 +310,7 @@ bool UCardCombatComponent::HasAnyPlayableCard() const
 TArray<UCardDefinition*> UCardCombatComponent::BuildRewardChoices(const int32 ChoiceCount) const
 {
 	const int32 SafeChoiceCount = FMath::Max(0, ChoiceCount);
-	TArray<UCardDefinition*> SteelCards;
-	TArray<UCardDefinition*> FaithCards;
-	TArray<UCardDefinition*> ArcaneCards;
-	TArray<UCardDefinition*> RemainingCards;
+	TArray<UCardDefinition*> RewardPool;
 
 	for (UCardDefinition* Card : LoadCardDefinitions(FantasyCardSetId))
 	{
@@ -280,40 +319,14 @@ TArray<UCardDefinition*> UCardCombatComponent::BuildRewardChoices(const int32 Ch
 			continue;
 		}
 
-		switch (Card->School)
-		{
-		case ECardSchool::Steel: SteelCards.Add(Card); break;
-		case ECardSchool::Faith: FaithCards.Add(Card); break;
-		case ECardSchool::Arcane: ArcaneCards.Add(Card); break;
-		case ECardSchool::None:
-		default: RemainingCards.Add(Card); break;
-		}
+		RewardPool.Add(Card);
 	}
 
-	ShuffleCards(SteelCards);
-	ShuffleCards(FaithCards);
-	ShuffleCards(ArcaneCards);
+	ShuffleCards(RewardPool);
 	TArray<UCardDefinition*> Choices;
-	if (!SteelCards.IsEmpty() && Choices.Num() < SafeChoiceCount)
+	while (Choices.Num() < SafeChoiceCount && !RewardPool.IsEmpty())
 	{
-		Choices.Add(SteelCards.Pop(EAllowShrinking::No));
-	}
-	if (!FaithCards.IsEmpty() && Choices.Num() < SafeChoiceCount)
-	{
-		Choices.Add(FaithCards.Pop(EAllowShrinking::No));
-	}
-	if (!ArcaneCards.IsEmpty() && Choices.Num() < SafeChoiceCount)
-	{
-		Choices.Add(ArcaneCards.Pop(EAllowShrinking::No));
-	}
-
-	RemainingCards.Append(SteelCards);
-	RemainingCards.Append(FaithCards);
-	RemainingCards.Append(ArcaneCards);
-	ShuffleCards(RemainingCards);
-	while (Choices.Num() < SafeChoiceCount && !RemainingCards.IsEmpty())
-	{
-		Choices.Add(RemainingCards.Pop(EAllowShrinking::No));
+		Choices.Add(RewardPool.Pop(EAllowShrinking::No));
 	}
 
 	UE_LOG(
@@ -322,13 +335,18 @@ TArray<UCardDefinition*> UCardCombatComponent::BuildRewardChoices(const int32 Ch
 		TEXT("W01 victory reward choices prepared. Requested=%d Offered=%d RewardPool=%d"),
 		SafeChoiceCount,
 		Choices.Num(),
-		Choices.Num() + RemainingCards.Num());
+		Choices.Num() + RewardPool.Num());
 	return Choices;
 }
 
 bool UCardCombatComponent::GrantRewardCard(UCardDefinition* Card)
 {
-	if (!Card || !Card->bRewardEligible || Card->CardSetId != FantasyCardSetId
+	return Card && Card->bRewardEligible && GrantRunCard(Card);
+}
+
+bool UCardCombatComponent::GrantRunCard(UCardDefinition* Card)
+{
+	if (!Card || Card->CardSetId != FantasyCardSetId
 		|| !GetWorld() || !GetWorld()->GetGameInstance())
 	{
 		return false;
@@ -345,6 +363,50 @@ bool UCardCombatComponent::GrantRewardCard(UCardDefinition* Card)
 	return true;
 }
 
+UCardDefinition* UCardCombatComponent::FindCardDefinition(const FName CardId) const
+{
+	if (CardId.IsNone())
+	{
+		return nullptr;
+	}
+
+	for (UCardDefinition* Card : LoadCardDefinitions(FantasyCardSetId))
+	{
+		if (Card && Card->CardId == CardId)
+		{
+			return Card;
+		}
+	}
+	return nullptr;
+}
+
+bool UCardCombatComponent::RemoveCardFromRun(const FName CardId)
+{
+	if (CardId.IsNone() || StartingDeck.Num() <= 1 || !GetWorld() || !GetWorld()->GetGameInstance())
+	{
+		return false;
+	}
+
+	const int32 DeckIndex = StartingDeck.IndexOfByPredicate([CardId](const UCardDefinition* Card)
+	{
+		return Card && Card->CardId == CardId;
+	});
+	if (DeckIndex == INDEX_NONE)
+	{
+		return false;
+	}
+
+	UFantasyCardProgressionSubsystem* Progression =
+		GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
+	if (!Progression || !Progression->RemoveCardCopy(CardId))
+	{
+		return false;
+	}
+
+	StartingDeck.RemoveAt(DeckIndex);
+	return true;
+}
+
 int32 UCardCombatComponent::GetRunRewardCount() const
 {
 	const UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
@@ -353,11 +415,21 @@ int32 UCardCombatComponent::GetRunRewardCount() const
 	return Progression ? Progression->GetTotalGrantedCopies() : 0;
 }
 
+int32 UCardCombatComponent::GetRunRemovedCount() const
+{
+	const UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	return Progression ? Progression->GetTotalRemovedCopies() : 0;
+}
+
 int32 UCardCombatComponent::DrawCards(const int32 Count)
 {
 	const int32 RequestedCount = FMath::Max(0, Count);
 	const int32 InitialHandSize = Hand.Num();
-	for (int32 DrawIndex = 0; DrawIndex < RequestedCount && Hand.Num() < MaxHandSize; ++DrawIndex)
+	for (int32 DrawIndex = 0;
+		DrawIndex < RequestedCount && Hand.Num() < CurrentTurnHandLimit;
+		++DrawIndex)
 	{
 		if (DrawPile.IsEmpty())
 		{
@@ -378,6 +450,50 @@ int32 UCardCombatComponent::AddValor(const int32 Amount)
 	const int32 PreviousValor = CurrentValor;
 	CurrentValor = FMath::Clamp(CurrentValor + FMath::Max(0, Amount), 0, MaxValor);
 	return CurrentValor - PreviousValor;
+}
+
+int32 UCardCombatComponent::AddActionPoints(const int32 Amount)
+{
+	const int32 Previous = CurrentActionPoints;
+	CurrentActionPoints = FMath::Max(0, CurrentActionPoints + FMath::Max(0, Amount));
+	return CurrentActionPoints - Previous;
+}
+
+int32 UCardCombatComponent::AddMana(const int32 Amount)
+{
+	const int32 Previous = CurrentMana;
+	CurrentMana = FMath::Max(0, CurrentMana + FMath::Max(0, Amount));
+	return CurrentMana - Previous;
+}
+
+int32 UCardCombatComponent::DiscardRandomCards(const int32 Count)
+{
+	const int32 Requested = FMath::Max(0, Count);
+	int32 Discarded = 0;
+	while (Discarded < Requested && !Hand.IsEmpty())
+	{
+		const int32 HandIndex = FMath::RandRange(0, Hand.Num() - 1);
+		if (Hand[HandIndex])
+		{
+			DiscardPile.Add(Hand[HandIndex]);
+		}
+		Hand.RemoveAt(HandIndex, 1, EAllowShrinking::No);
+		++Discarded;
+	}
+	return Discarded;
+}
+
+int32 UCardCombatComponent::GetEquipmentAttackBonus() const
+{
+	int32 Bonus = 0;
+	for (const UCardDefinition* Equipment : EquipmentZone)
+	{
+		if (Equipment)
+		{
+			Bonus += FMath::Max(0, Equipment->EquipmentAttackBonus);
+		}
+	}
+	return Bonus;
 }
 
 void UCardCombatComponent::AddBlock(const int32 Amount)

@@ -198,21 +198,13 @@ void AWorldWalkerCharacter::ConfigureFantasyWorldForm(
 {
 	bFantasyFormAvailable = bEnabled;
 
-	if (bFantasyFormAvailable && !FantasyFormMesh->GetSkeletalMeshAsset())
+	if (bFantasyFormAvailable && !LoadFantasyPresentationAssets())
 	{
-		static const TCHAR* FantasyMeshPath =
-			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_Warrior.SK_W01_Warrior");
-		if (USkeletalMesh* FantasyMesh = LoadObject<USkeletalMesh>(nullptr, FantasyMeshPath))
-		{
-			FantasyFormMesh->SetSkeletalMeshAsset(FantasyMesh);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("W01 fantasy player mesh is not imported yet: %s"), FantasyMeshPath);
-		}
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("W01 player presentation unavailable; the prototype body remains visible."));
 	}
-
-	LoadFantasyAnimationAssets();
 
 	bFantasyFormActive = bFantasyFormAvailable && bStartInFantasyForm;
 	ApplyWorldFormVisibility();
@@ -234,7 +226,7 @@ void AWorldWalkerCharacter::ToggleWorldForm()
 		LogTemp,
 		Display,
 		TEXT("W01 active form changed to %s."),
-		bFantasyFormActive ? TEXT("Rune Knight") : TEXT("World Walker"));
+		bFantasyFormActive ? TEXT("Red Hood Rogue") : TEXT("World Walker"));
 }
 
 void AWorldWalkerCharacter::ApplyWorldFormVisibility()
@@ -252,32 +244,96 @@ void AWorldWalkerCharacter::ApplyWorldFormVisibility()
 	}
 }
 
-void AWorldWalkerCharacter::LoadFantasyAnimationAssets()
+bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 {
-	static const TCHAR* IdlePath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Idle.SK_W01_WarriorCharacterArmature_Idle");
-	static const TCHAR* WalkPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Walk.SK_W01_WarriorCharacterArmature_Walk");
-	static const TCHAR* RunPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Run.SK_W01_WarriorCharacterArmature_Run");
-	static const TCHAR* AttackPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Sword_Attack.SK_W01_WarriorCharacterArmature_Sword_Attack");
-	static const TCHAR* HitPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_RecieveHit.SK_W01_WarriorCharacterArmature_RecieveHit");
-
-	FantasyIdleAnimation = LoadObject<UAnimSequence>(nullptr, IdlePath);
-	FantasyWalkAnimation = LoadObject<UAnimSequence>(nullptr, WalkPath);
-	FantasyRunAnimation = LoadObject<UAnimSequence>(nullptr, RunPath);
-	FantasyAttackAnimation = LoadObject<UAnimSequence>(nullptr, AttackPath);
-	FantasyHitReactionAnimation = LoadObject<UAnimSequence>(nullptr, HitPath);
-
-	if (!FantasyIdleAnimation || !FantasyWalkAnimation || !FantasyRunAnimation)
+	struct FPlayerPresentationProfile
 	{
+		const TCHAR* Name;
+		const TCHAR* MeshPath;
+		const TCHAR* IdlePath;
+		const TCHAR* WalkPath;
+		const TCHAR* RunPath;
+		const TCHAR* AttackPath;
+		const TCHAR* HitPath;
+	};
+
+	static const FPlayerPresentationProfile Profiles[] =
+	{
+		{
+			TEXT("Rogue"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_Rogue.SK_W01_Rogue"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Idle.SK_W01_RogueCharacterArmature_Idle"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Walk.SK_W01_RogueCharacterArmature_Walk"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Run.SK_W01_RogueCharacterArmature_Run"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Dagger_Attack.SK_W01_RogueCharacterArmature_Dagger_Attack"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_RecieveHit.SK_W01_RogueCharacterArmature_RecieveHit"),
+		},
+		{
+			TEXT("WarriorFallback"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_Warrior.SK_W01_Warrior"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Idle.SK_W01_WarriorCharacterArmature_Idle"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Walk.SK_W01_WarriorCharacterArmature_Walk"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Run.SK_W01_WarriorCharacterArmature_Run"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Sword_Attack.SK_W01_WarriorCharacterArmature_Sword_Attack"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_RecieveHit.SK_W01_WarriorCharacterArmature_RecieveHit"),
+		},
+	};
+
+	FantasyFormMesh->SetSkeletalMeshAsset(nullptr);
+	FantasyIdleAnimation = nullptr;
+	FantasyWalkAnimation = nullptr;
+	FantasyRunAnimation = nullptr;
+	FantasyAttackAnimation = nullptr;
+	FantasyHitReactionAnimation = nullptr;
+
+	for (int32 ProfileIndex = 0; ProfileIndex < UE_ARRAY_COUNT(Profiles); ++ProfileIndex)
+	{
+		const FPlayerPresentationProfile& Profile = Profiles[ProfileIndex];
+		USkeletalMesh* PresentationMesh = LoadObject<USkeletalMesh>(nullptr, Profile.MeshPath);
+		UAnimSequence* Idle = LoadObject<UAnimSequence>(nullptr, Profile.IdlePath);
+		UAnimSequence* Walk = LoadObject<UAnimSequence>(nullptr, Profile.WalkPath);
+		UAnimSequence* Run = LoadObject<UAnimSequence>(nullptr, Profile.RunPath);
+		UAnimSequence* Attack = LoadObject<UAnimSequence>(nullptr, Profile.AttackPath);
+		UAnimSequence* Hit = LoadObject<UAnimSequence>(nullptr, Profile.HitPath);
+
+		const bool bAllAssetsLoaded = PresentationMesh && Idle && Walk && Run && Attack && Hit;
+		const bool bSkeletonsMatch = bAllAssetsLoaded && PresentationMesh->GetSkeleton()
+			&& Idle->GetSkeleton() == PresentationMesh->GetSkeleton()
+			&& Walk->GetSkeleton() == PresentationMesh->GetSkeleton()
+			&& Run->GetSkeleton() == PresentationMesh->GetSkeleton()
+			&& Attack->GetSkeleton() == PresentationMesh->GetSkeleton()
+			&& Hit->GetSkeleton() == PresentationMesh->GetSkeleton();
+		if (!bSkeletonsMatch)
+		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("W01_PRESENTATION_PROFILE_REJECTED Owner=Player Profile=%s Reason=%s"),
+				Profile.Name,
+				bAllAssetsLoaded ? TEXT("skeleton-mismatch") : TEXT("missing"));
+			continue;
+		}
+
+		FantasyFormMesh->SetSkeletalMeshAsset(PresentationMesh);
+		FantasyIdleAnimation = Idle;
+		FantasyWalkAnimation = Walk;
+		FantasyRunAnimation = Run;
+		FantasyAttackAnimation = Attack;
+		FantasyHitReactionAnimation = Hit;
+		FantasyFormMesh->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
+		FantasyFormMesh->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+		FantasyFormMesh->SetRelativeScale3D(FVector(0.52f));
+
 		UE_LOG(
 			LogTemp,
-			Warning,
-			TEXT("W01 rune knight locomotion animation set is incomplete; missing sequences will fall back safely."));
+			Display,
+			TEXT("W01_PLAYER_PRESENTATION_READY Profile=%s Mesh=1 Animations=5/5 Fallback=%d"),
+			Profile.Name,
+			ProfileIndex > 0 ? 1 : 0);
+		return true;
 	}
+
+	return false;
 }
 
 void AWorldWalkerCharacter::RefreshFantasyLocomotionAnimation(const bool bForce)

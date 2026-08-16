@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Cards/Fantasy/FantasyRunTypes.h"
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FantasyCardProgressionSubsystem.generated.h"
@@ -7,9 +8,9 @@
 class UCardDefinition;
 
 /**
- * Keeps W01 deck rewards alive while the player travels between maps in the
- * current run.  Card definitions remain the source of truth; this subsystem
- * stores only stable CardIds and awarded copy counts.
+ * Keeps the W01 classic-mode run alive while the player travels between maps.
+ * Card/enemy definitions remain the content source of truth; this subsystem
+ * stores only stable IDs, deck deltas, and the current chapter route state.
  */
 UCLASS()
 class WORLDWALKERPROTOTYPE_API UFantasyCardProgressionSubsystem : public UGameInstanceSubsystem
@@ -17,12 +18,57 @@ class WORLDWALKERPROTOTYPE_API UFantasyCardProgressionSubsystem : public UGameIn
 	GENERATED_BODY()
 
 public:
+	void EnsureRunStarted();
+	void ResetRun();
+
 	bool GrantCard(const UCardDefinition* Card);
+	bool RemoveCardCopy(FName CardId);
 	int32 GetGrantedCopies(FName CardId) const;
+	int32 GetRemovedCopies(FName CardId) const;
 	int32 GetTotalGrantedCopies() const;
+	int32 GetTotalRemovedCopies() const;
 	FString BuildRunSummary() const;
 
+	const TArray<FFantasyRouteNodeChoice>& GetRouteChoices();
+	bool SelectRouteChoice(int32 ChoiceIndex, FFantasyRouteNodeChoice& OutChoice);
+	bool CompleteActiveNode();
+	bool HasActiveNode() const { return bHasActiveNode; }
+	const FFantasyRouteNodeChoice& GetActiveNode() const { return ActiveNode; }
+	int32 GetChapterDepth() const { return ChapterDepth; }
+	bool IsChapterComplete() const { return bChapterComplete; }
+	void AddPendingBattleBoon(int32 Block, int32 Valor);
+	void ConsumePendingBattleBoon(int32& OutBlock, int32& OutValor);
+	void RecordRunHealth(int32 CurrentHealth, int32 MaxHealth);
+	int32 GetCurrentRunHealth() const { return CurrentRunHealth; }
+	int32 GetRunMaxHealth() const { return RunMaxHealth; }
+
 private:
+	void RebuildRouteChoices();
+	void AddRouteChoice(
+		FName NodeId,
+		const TCHAR* DisplayName,
+		const TCHAR* Description,
+		EFantasyRouteNodeType NodeType,
+		FName PayloadId);
+
 	UPROPERTY(Transient)
 	TMap<FName, int32> GrantedCardCopies;
+
+	UPROPERTY(Transient)
+	TMap<FName, int32> RemovedCardCopies;
+
+	UPROPERTY(Transient)
+	TArray<FFantasyRouteNodeChoice> RouteChoices;
+
+	UPROPERTY(Transient)
+	FFantasyRouteNodeChoice ActiveNode;
+
+	int32 ChapterDepth = 0;
+	bool bRunStarted = false;
+	bool bHasActiveNode = false;
+	bool bChapterComplete = false;
+	int32 PendingBattleBlock = 0;
+	int32 PendingBattleValor = 0;
+	int32 CurrentRunHealth = 100;
+	int32 RunMaxHealth = 100;
 };

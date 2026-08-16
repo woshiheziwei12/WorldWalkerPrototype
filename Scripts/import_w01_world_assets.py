@@ -17,17 +17,22 @@ Source roots can be overridden before Unreal starts:
     ``import_w01_fantasy_assets.py``.
 
 ``WORLDWALKER_W01_MATERIAL_REPAIR_ONLY``
-    Set to ``1`` to rebuild and bind the eight character materials without
+    Set to ``1`` to rebuild and bind the ten character materials without
     reimporting any FBX.  The normal full import still performs the same repair
     after importing the environment and NPC assets.
+
+``WORLDWALKER_W01_CHARACTER_ROSTER_ONLY``
+    Set to ``1`` to import only the red-hood Rogue player profile and repair
+    all character materials.  This avoids reimporting the environment or the
+    upstream Wizard FBX during a character-only iteration.
 
 The script may download four small OpenGameArt archives when their extracted
 sources are absent.  Downloads go only to the configured source roots, never
 to Content/.  SHA-256 is checked before extraction and selected FBX/PNG files
 are checked once more immediately before import.  After FBX import it also
-builds eight explicit texture-sample materials and binds them to the Warrior,
-Cleric, Wizard and Ranger meshes; this compensates for the source FBX files not
-referencing their separately distributed PNG textures.
+builds ten explicit texture-sample materials and binds them to the Rogue,
+Warrior, Cleric, Wizard and Ranger meshes; this compensates for the source FBX
+files not referencing their separately distributed PNG textures.
 """
 
 from __future__ import annotations
@@ -45,6 +50,7 @@ import unreal
 WORLD_SOURCE_ROOT_ENV = "WORLDWALKER_W01_WORLD_ASSET_ROOT"
 RPG_SOURCE_ROOT_ENV = "WORLDWALKER_W01_ASSET_ROOT"
 MATERIAL_REPAIR_ONLY_ENV = "WORLDWALKER_W01_MATERIAL_REPAIR_ONLY"
+CHARACTER_ROSTER_ONLY_ENV = "WORLDWALKER_W01_CHARACTER_ROSTER_ONLY"
 
 DEFAULT_WORLD_SOURCE_ROOT = (
     Path(tempfile.gettempdir()) / "WorldWalker_W01_WorldAssets"
@@ -312,6 +318,42 @@ STATIC_MESH_SPECS = (
 )
 
 
+PLAYER_SPECS = (
+    {
+        "label": "Rogue",
+        "source": (
+            "rpg_characters/RPG Characters - Nov 2020/FBX/Rogue.fbx"
+        ),
+        "sha256": (
+            "5B9BC7A1EC778D0C83F44609971E6C538480B6EF2A3F9CDDE5853DEE5E24586E"
+        ),
+        "asset_name": "SK_W01_Rogue",
+        "textures": (
+            {
+                "source": (
+                    "rpg_characters/RPG Characters - Nov 2020/Textures/"
+                    "Rogue_Texture.png"
+                ),
+                "asset_name": "Rogue_Texture",
+                "sha256": (
+                    "540694206878779AA43F8F17524062E88BEA35D2BB666B3F2081D23079A081D3"
+                ),
+            },
+            {
+                "source": (
+                    "rpg_characters/RPG Characters - Nov 2020/Textures/"
+                    "Rogue_Dagger_Texture.png"
+                ),
+                "asset_name": "Rogue_Dagger_Texture",
+                "sha256": (
+                    "B4C25A611639BB03C7AA454C2C6D053BDC34FCF0A622E88212E6A6F085816EC6"
+                ),
+            },
+        ),
+    },
+)
+
+
 NPC_SPECS = (
     {
         "label": "Cleric",
@@ -420,6 +462,38 @@ NPC_SPECS = (
 # mesh slots deterministically.  Warrior is repaired here as well because it
 # comes from the same pack and has the same source-data issue.
 CHARACTER_MATERIAL_SPECS = (
+    {
+        "label": "Rogue",
+        "mesh_asset_name": "SK_W01_Rogue",
+        "bindings": (
+            {
+                "slot_names": ("Rogue_Texture",),
+                "slot_fallback_index": 0,
+                "source": (
+                    "rpg_characters/RPG Characters - Nov 2020/Textures/"
+                    "Rogue_Texture.png"
+                ),
+                "texture_asset_name": "Rogue_Texture",
+                "sha256": (
+                    "540694206878779AA43F8F17524062E88BEA35D2BB666B3F2081D23079A081D3"
+                ),
+                "material_asset_name": "M_W01_Rogue_Body",
+            },
+            {
+                "slot_names": ("Rogue_Dagger_Texture",),
+                "slot_fallback_index": 1,
+                "source": (
+                    "rpg_characters/RPG Characters - Nov 2020/Textures/"
+                    "Rogue_Dagger_Texture.png"
+                ),
+                "texture_asset_name": "Rogue_Dagger_Texture",
+                "sha256": (
+                    "B4C25A611639BB03C7AA454C2C6D053BDC34FCF0A622E88212E6A6F085816EC6"
+                ),
+                "material_asset_name": "M_W01_Rogue_Weapon",
+            },
+        ),
+    },
     {
         "label": "Warrior",
         "mesh_asset_name": "SK_W01_Warrior",
@@ -634,9 +708,16 @@ def _safe_extract_zip(archive: Path, destination: Path) -> None:
         source_zip.extractall(destination)
 
 
-def _prepare_sources(world_root: Path, rpg_root: Path) -> None:
+def _prepare_sources(
+    world_root: Path,
+    rpg_root: Path,
+    *,
+    include_world: bool,
+) -> None:
     roots = {"world": world_root, "rpg": rpg_root}
     for spec in ARCHIVE_SPECS:
+        if spec["root"] == "world" and not include_world:
+            continue
         root = roots[str(spec["root"])]
         sentinel = root / str(spec["sentinel"])
         if sentinel.is_file():
@@ -1140,7 +1221,10 @@ def _animation_paths(destination: str, mesh_asset_name: str) -> list[str]:
     return sorted(results)
 
 
-def _import_npc(rpg_root: Path, spec: dict[str, object]) -> tuple[str, list[str]]:
+def _import_character(
+    rpg_root: Path,
+    spec: dict[str, object],
+) -> tuple[str, list[str]]:
     source = _verified_source(rpg_root, spec, str(spec["label"]))
     asset_name = str(spec["asset_name"])
     destination = f"{RPG_DESTINATION}/{spec['label']}"
@@ -1176,31 +1260,45 @@ def _import_npc(rpg_root: Path, spec: dict[str, object]) -> tuple[str, list[str]
     ]
     if missing_suffixes:
         raise RuntimeError(
-            f"NPC {spec['label']} is missing required animations "
+            f"Character {spec['label']} is missing required animations "
             f"{missing_suffixes}; imported={animations}"
         )
 
-    unreal.log(f"W01 NPC mesh ready: {object_path}")
+    unreal.log(f"W01 character mesh ready: {object_path}")
     for animation in animations:
-        unreal.log(f"W01 NPC animation ready: {animation}")
+        unreal.log(f"W01 character animation ready: {animation}")
     return object_path, animations
 
 
 def main() -> None:
     world_root = _world_source_root()
     rpg_root = _rpg_source_root()
-    _prepare_sources(world_root, rpg_root)
+    material_repair_only = os.environ.get(
+        MATERIAL_REPAIR_ONLY_ENV,
+        "",
+    ).strip().casefold() in {"1", "true", "yes"}
+    character_roster_only = os.environ.get(
+        CHARACTER_ROSTER_ONLY_ENV,
+        "",
+    ).strip().casefold() in {"1", "true", "yes"}
+    if material_repair_only and character_roster_only:
+        raise RuntimeError(
+            f"{MATERIAL_REPAIR_ONLY_ENV} and {CHARACTER_ROSTER_ONLY_ENV} "
+            "cannot both be enabled"
+        )
+
+    _prepare_sources(
+        world_root,
+        rpg_root,
+        include_world=not (material_repair_only or character_roster_only),
+    )
     _ensure_directory(DESTINATION_ROOT)
 
     # A visual-QA repair does not need to reimport the FBX files.  In
     # particular, the upstream Wizard FBX contains one empty child mesh that
     # Interchange reports as an error even though the usable skeletal mesh and
     # animations were already saved.  This mode only regenerates and binds the
-    # deterministic texture materials to the existing four character meshes.
-    material_repair_only = os.environ.get(
-        MATERIAL_REPAIR_ONLY_ENV,
-        "",
-    ).strip().casefold() in {"1", "true", "yes"}
+    # deterministic texture materials to the existing five character meshes.
     if material_repair_only:
         repaired_material_paths = _repair_character_materials(rpg_root)
         expected_material_count = sum(
@@ -1218,12 +1316,41 @@ def main() -> None:
         )
         return
 
+    if character_roster_only:
+        player_results = [
+            _import_character(rpg_root, spec) for spec in PLAYER_SPECS
+        ]
+        repaired_material_paths = _repair_character_materials(rpg_root)
+        expected_material_count = sum(
+            len(spec["bindings"]) for spec in CHARACTER_MATERIAL_SPECS
+        )
+        unreal.EditorAssetLibrary.save_directory(
+            RPG_DESTINATION,
+            only_if_is_dirty=False,
+            recursive=True,
+        )
+        unreal.log(
+            "W01_RPG_CHARACTER_IMPORT_COMPLETE "
+            f"player={len(player_results)}/{len(PLAYER_SPECS)} "
+            f"animations={sum(len(result[1]) for result in player_results)} "
+            f"materials={len(repaired_material_paths)}/"
+            f"{expected_material_count}"
+        )
+        return
+
     environment_paths = [
         _import_static_mesh(world_root, spec)
         for spec in STATIC_MESH_SPECS
     ]
-    npc_results = [_import_npc(rpg_root, spec) for spec in NPC_SPECS]
-    animation_count = sum(len(result[1]) for result in npc_results)
+    player_results = [
+        _import_character(rpg_root, spec) for spec in PLAYER_SPECS
+    ]
+    npc_results = [
+        _import_character(rpg_root, spec) for spec in NPC_SPECS
+    ]
+    animation_count = sum(
+        len(result[1]) for result in player_results + npc_results
+    )
     repaired_material_paths = _repair_character_materials(rpg_root)
     expected_material_count = sum(
         len(spec["bindings"]) for spec in CHARACTER_MATERIAL_SPECS
@@ -1237,6 +1364,7 @@ def main() -> None:
     unreal.log(
         "W01_WORLD_ASSET_IMPORT_COMPLETE "
         f"environment={len(environment_paths)}/{len(STATIC_MESH_SPECS)} "
+        f"player={len(player_results)}/{len(PLAYER_SPECS)} "
         f"npcs={len(npc_results)}/{len(NPC_SPECS)} "
         f"animations={animation_count} "
         f"materials={len(repaired_material_paths)}/{expected_material_count} "

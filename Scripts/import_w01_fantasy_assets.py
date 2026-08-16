@@ -5,10 +5,13 @@ Run this file from Unreal Editor's Python environment.  The default source is
 starting Unreal Editor to point at a persistent copy of the same extracted
 directory.
 
-The six card textures are required.  Warrior and Skeleton FBX imports are
-best-effort so an FBX importer/version issue cannot prevent the card art from
-being prepared.  Every import uses a stable destination name and replaces the
-existing asset instead of creating a numbered duplicate.
+The six card textures are required.  Warrior, Skeleton, Bat, Dragon and Slime
+FBX imports are best-effort so an FBX importer/version issue cannot prevent the
+card art from being prepared.  Every import uses a stable destination name and
+replaces the existing asset instead of creating a numbered duplicate.
+
+Set ``WORLDWALKER_W01_OPPONENT_ROSTER_ONLY=1`` to import only Bat, Dragon and
+Slime without replacing the already validated Warrior/Skeleton or card art.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ import unreal
 
 
 SOURCE_ROOT_ENV = "WORLDWALKER_W01_ASSET_ROOT"
+OPPONENT_ROSTER_ONLY_ENV = "WORLDWALKER_W01_OPPONENT_ROSTER_ONLY"
 DEFAULT_SOURCE_ROOT = Path(tempfile.gettempdir()) / "WorldWalker_W01_Assets"
 
 DESTINATION_ROOT = (
@@ -114,6 +118,60 @@ MODEL_SPECS = (
         "asset_name": "SK_W01_Blackthorn",
         "object_path": BLACKTHORN_OBJECT_PATH,
         "supporting_textures": (),
+    },
+    {
+        "label": "Bat",
+        "source": (
+            "animated_monsters/Animated Monster Pack by @Quaternius/"
+            "FBX/Bat.fbx"
+        ),
+        "sha256": "B31B1F94800C4FBD9204C42BD8853D91C0DF16E27612AE6C0D6168C6BC64BE51",
+        "destination": (
+            f"{DESTINATION_ROOT}/Quaternius/Monsters/Bat"
+        ),
+        "asset_name": "SK_W01_Bat",
+        "object_path": (
+            f"{DESTINATION_ROOT}/Quaternius/Monsters/Bat/"
+            "SK_W01_Bat.SK_W01_Bat"
+        ),
+        "supporting_textures": (),
+        "roster_addition": True,
+    },
+    {
+        "label": "Dragon",
+        "source": (
+            "animated_monsters/Animated Monster Pack by @Quaternius/"
+            "FBX/Dragon.fbx"
+        ),
+        "sha256": "31A334A1C5918B4F4480CD5F6C542B3AEA9B8F00A70AEB7FEEFD7F70528780CC",
+        "destination": (
+            f"{DESTINATION_ROOT}/Quaternius/Monsters/Dragon"
+        ),
+        "asset_name": "SK_W01_Dragon",
+        "object_path": (
+            f"{DESTINATION_ROOT}/Quaternius/Monsters/Dragon/"
+            "SK_W01_Dragon.SK_W01_Dragon"
+        ),
+        "supporting_textures": (),
+        "roster_addition": True,
+    },
+    {
+        "label": "Slime",
+        "source": (
+            "animated_monsters/Animated Monster Pack by @Quaternius/"
+            "FBX/Slime.fbx"
+        ),
+        "sha256": "7F5E9DD33FD800344984ADA5A0DB855F2EABD6F2EE1E501BDB35D81AA3791DF8",
+        "destination": (
+            f"{DESTINATION_ROOT}/Quaternius/Monsters/Slime"
+        ),
+        "asset_name": "SK_W01_Slime",
+        "object_path": (
+            f"{DESTINATION_ROOT}/Quaternius/Monsters/Slime/"
+            "SK_W01_Slime.SK_W01_Slime"
+        ),
+        "supporting_textures": (),
+        "roster_addition": True,
     },
 )
 
@@ -291,7 +349,11 @@ def _import_skeletal_mesh(root: Path, spec: dict[str, object]) -> str:
         _make_skeletal_import_options(),
     )
 
-    mesh = unreal.EditorAssetLibrary.load_asset(expected_path)
+    mesh = (
+        unreal.EditorAssetLibrary.load_asset(expected_path)
+        if unreal.EditorAssetLibrary.does_asset_exist(expected_path)
+        else None
+    )
     if mesh is None or not isinstance(mesh, unreal.SkeletalMesh):
         mesh = _find_imported_skeletal_mesh(imported_paths)
         if mesh is not None:
@@ -336,19 +398,30 @@ def main() -> None:
 
     _ensure_directory(DESTINATION_ROOT)
 
+    opponent_roster_only = os.environ.get(
+        OPPONENT_ROSTER_ONLY_ENV,
+        "",
+    ).strip().casefold() in {"1", "true", "yes"}
+
     imported_cards = []
-    for card_spec in CARD_TEXTURES:
-        imported_cards.append(
-            _import_texture(
-                source_root,
-                card_spec,
-                CARD_DESTINATION,
-                configure_for_ui=True,
+    if not opponent_roster_only:
+        for card_spec in CARD_TEXTURES:
+            imported_cards.append(
+                _import_texture(
+                    source_root,
+                    card_spec,
+                    CARD_DESTINATION,
+                    configure_for_ui=True,
+                )
             )
-        )
 
     imported_models = []
-    for model_spec in MODEL_SPECS:
+    selected_model_specs = tuple(
+        spec
+        for spec in MODEL_SPECS
+        if not opponent_roster_only or spec.get("roster_addition", False)
+    )
+    for model_spec in selected_model_specs:
         try:
             imported_models.append(
                 _import_skeletal_mesh(source_root, model_spec)
@@ -366,6 +439,13 @@ def main() -> None:
         only_if_is_dirty=False,
         recursive=True,
     )
+    if opponent_roster_only:
+        unreal.log(
+            "W01_OPPONENT_ROSTER_IMPORT_COMPLETE "
+            f"models={len(imported_models)}/{len(selected_model_specs)}"
+        )
+        return
+
     unreal.log(
         "W01_FANTASY_ASSET_IMPORT_COMPLETE "
         f"cards={len(imported_cards)}/{len(CARD_TEXTURES)} "

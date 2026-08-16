@@ -15,17 +15,23 @@ class WORLDWALKERPROTOTYPE_API AWorldWalkerPlayerController : public APlayerCont
 public:
 	virtual void BeginPlay() override;
 
-	void EnterCombat(int32 PlayerHealth, int32 PlayerMaxHealth, int32 EnemyHealth, int32 EnemyMaxHealth);
+	void EnterCombat(
+		int32 PlayerHealth,
+		int32 PlayerMaxHealth,
+		int32 EnemyHealth,
+		int32 EnemyMaxHealth,
+		const FString& EnemyDisplayName);
 	void RefreshCombat(
 		int32 PlayerHealth,
 		int32 PlayerMaxHealth,
 		int32 EnemyHealth,
 		int32 EnemyMaxHealth,
-		int32 CurrentEnergy,
-		int32 MaxEnergy,
+		const FString& EnemyDisplayName,
+		int32 CurrentActionPoints,
+		int32 MaxActionPoints,
+		int32 CurrentMana,
+		int32 EquipmentCount,
 		int32 CurrentBlock,
-		int32 CurrentValor,
-		int32 MaxValor,
 		int32 DrawPileCount,
 		int32 DiscardPileCount,
 		int32 ExhaustPileCount,
@@ -44,6 +50,12 @@ public:
 		const TArray<UTexture2D*>& CardArtworks,
 		const TArray<FLinearColor>& CardSchoolTints);
 	void ShowRewardConfirmation(const FString& ConfirmationText);
+	void ShowRouteSelection(const FString& RunSummary, const TArray<FString>& ChoiceLabels);
+	void ShowEventSelection(
+		const FString& Title,
+		const FString& Lore,
+		const TArray<FString>& ChoiceLabels);
+	void ShowNodeResolution(const FString& Message, bool bChapterComplete);
 	void ExitCombatToExploration(const FString& ConfirmationText);
 
 private:

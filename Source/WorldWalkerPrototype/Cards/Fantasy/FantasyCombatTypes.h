@@ -9,7 +9,13 @@ enum class ECardType : uint8
 	Attack,
 	Skill,
 	Spell,
-	Oath
+	Oath,
+	Action,
+	Mana,
+	Equipment,
+	Counter,
+	Prayer,
+	Special
 };
 
 UENUM(BlueprintType)
@@ -37,7 +43,10 @@ enum class EFantasyCombatEffectType : uint8
 	Draw,
 	ApplyStatus,
 	RemoveStatus,
-	GainValor
+	GainValor,
+	GainAction,
+	GainMana,
+	DiscardRandom
 };
 
 UENUM(BlueprintType)
@@ -46,7 +55,8 @@ enum class EFantasyCombatStatus : uint8
 	None,
 	Exposed,
 	Weak,
-	Strength
+	Strength,
+	Poison
 };
 
 USTRUCT(BlueprintType)
@@ -65,6 +75,10 @@ struct WORLDWALKERPROTOTYPE_API FFantasyCombatEffectSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect")
 	EFantasyCombatStatus Status = EFantasyCombatStatus::None;
+
+	/** Piercing damage bypasses temporary Block but still receives other modifiers. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect")
+	bool bPiercing = false;
 
 	FString BuildRulesFragment() const;
 };
@@ -85,6 +99,9 @@ struct WORLDWALKERPROTOTYPE_API FFantasyCombatRuntimeState
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status")
 	int32 Strength = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status")
+	int32 Poison = 0;
 
 	void AddStatus(EFantasyCombatStatus Status, int32 Amount);
 	void RemoveStatus(EFantasyCombatStatus Status, int32 Amount);
