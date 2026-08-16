@@ -10,6 +10,8 @@ class AFantasyAmbientWispField;
 class AFantasyFateAltar;
 class APostProcessVolume;
 class AFantasyNPC;
+class AWorldWalkerCharacter;
+class UBoxComponent;
 class UMaterialInterface;
 class UInstancedStaticMeshComponent;
 class UPointLightComponent;
@@ -35,13 +37,16 @@ public:
 	FVector GetBattleAnchorLocation() const;
 	FVector GetReturnPortalLocation() const;
 	FRotator GetForwardFacingRotation() const;
+	FVector ConstrainChoiceCenterToPlayableArea(const FVector& DesiredWorldCenter) const;
 	AFantasyAmbientSoundscape* GetAmbientSoundscape() const { return AmbientSoundscape; }
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 private:
 	void BuildGroundAndRoad();
+	void BuildWorldBoundaries();
 	void BuildVillageDistrict();
 	void BuildCampAndLandmarks();
 	void BuildBattleApproach();
@@ -70,6 +75,12 @@ private:
 		UStaticMesh* FallbackMesh,
 		const FLinearColor& FallbackTint);
 	void ApplyTint(UStaticMeshComponent* Component, const FLinearColor& Color) const;
+	void AddBoundaryWall(
+		const FString& ComponentName,
+		const FVector& LocalLocation,
+		const FVector& BoxExtent);
+	void CapturePlayerRecoveryPoint();
+	void RecoverFallenPlayer();
 
 	UPROPERTY(VisibleAnywhere, Category="World")
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -90,6 +101,9 @@ private:
 	TArray<TObjectPtr<UStaticMeshComponent>> EnvironmentMeshes;
 
 	UPROPERTY(Transient)
+	TArray<TObjectPtr<UBoxComponent>> BoundaryWalls;
+
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPointLightComponent>> TorchLights;
 
 	UPROPERTY(Transient)
@@ -103,6 +117,15 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AFantasyFateAltar> FateAltar;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AWorldWalkerCharacter> ProtectedPlayer;
+
+	UPROPERTY(Transient)
+	FTransform PlayerRecoveryTransform;
+
+	UPROPERTY(Transient)
+	FRotator PlayerRecoveryControlRotation = FRotator::ZeroRotator;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AExponentialHeightFog> SpawnedFog;
@@ -124,6 +147,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMesh> ConeFallback;
+
+	bool bHasPlayerRecoveryPoint = false;
 
 	static const FVector BattleAnchorLocalLocation;
 	static const FVector ReturnPortalLocalLocation;

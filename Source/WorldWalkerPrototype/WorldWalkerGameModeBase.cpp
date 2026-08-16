@@ -432,11 +432,15 @@ void AWorldWalkerGameModeBase::SpawnWorldChoices(
 	const FVector PlayerFeet = ActivePlayer->GetActorLocation() - FVector(0.0f, 0.0f, 88.0f);
 	const float LateralSpacing = Titles.Num() > 2 ? 285.0f : 240.0f;
 	const float CenterOffset = 0.5f * static_cast<float>(Titles.Num() - 1);
+	const FVector DesiredChoiceCenter = PlayerFeet
+		+ Forward * (bEventChoices ? 520.0f : 620.0f);
+	const FVector ChoiceCenter = ActiveFantasyWorld
+		? ActiveFantasyWorld->ConstrainChoiceCenterToPlayableArea(DesiredChoiceCenter)
+		: DesiredChoiceCenter;
 
 	for (int32 ChoiceIndex = 0; ChoiceIndex < Titles.Num(); ++ChoiceIndex)
 	{
-		FVector SpawnLocation = PlayerFeet
-			+ Forward * (bEventChoices ? 520.0f : 620.0f)
+		FVector SpawnLocation = ChoiceCenter
 			+ Right * ((static_cast<float>(ChoiceIndex) - CenterOffset) * LateralSpacing);
 		FHitResult GroundHit;
 		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(W01WorldChoiceGround), false, ActivePlayer);
@@ -448,6 +452,16 @@ void AWorldWalkerGameModeBase::SpawnWorldChoices(
 			QueryParams))
 		{
 			SpawnLocation.Z = GroundHit.ImpactPoint.Z;
+		}
+		else if (ActiveFantasyWorld)
+		{
+			SpawnLocation.Z = ActiveFantasyWorld->GetActorLocation().Z;
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("W01 choice ground trace missed; using authored platform height. Index=%d Location=%s"),
+				ChoiceIndex,
+				*SpawnLocation.ToCompactString());
 		}
 
 		FActorSpawnParameters SpawnParameters;

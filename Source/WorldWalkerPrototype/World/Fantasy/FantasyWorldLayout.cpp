@@ -1,6 +1,8 @@
 #include "World/Fantasy/FantasyWorldLayout.h"
 
 #include "Characters/FantasyNPC.h"
+#include "Characters/WorldWalkerCharacter.h"
+#include "Components/BoxComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -21,6 +23,9 @@
 #include "Engine/TextureCube.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
+#include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "TimerManager.h"
@@ -46,7 +51,8 @@ namespace
 
 AFantasyWorldLayout::AFantasyWorldLayout()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickInterval = 0.10f;
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
 
@@ -124,6 +130,7 @@ AFantasyWorldLayout::AFantasyWorldLayout()
 void AFantasyWorldLayout::BeginPlay()
 {
 	Super::BeginPlay();
+	CapturePlayerRecoveryPoint();
 
 	CubeFallback = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
 	CylinderFallback = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -196,6 +203,7 @@ void AFantasyWorldLayout::BeginPlay()
 
 	ConfigureWorldAtmosphere();
 	BuildGroundAndRoad();
+	BuildWorldBoundaries();
 	BuildVillageDistrict();
 	BuildCampAndLandmarks();
 	BuildBattleApproach();
@@ -216,6 +224,12 @@ void AFantasyWorldLayout::BeginPlay()
 		EnvironmentMeshes.Num(),
 		TorchLights.Num(),
 		Residents.Num());
+}
+
+void AFantasyWorldLayout::Tick(const float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	RecoverFallenPlayer();
 }
 
 void AFantasyWorldLayout::SpawnWorldAmbienceAndEvent()
@@ -280,6 +294,16 @@ FVector AFantasyWorldLayout::GetReturnPortalLocation() const
 FRotator AFantasyWorldLayout::GetForwardFacingRotation() const
 {
 	return GetActorRotation();
+}
+
+FVector AFantasyWorldLayout::ConstrainChoiceCenterToPlayableArea(
+	const FVector& DesiredWorldCenter) const
+{
+	FVector LocalCenter = GetActorTransform().InverseTransformPosition(DesiredWorldCenter);
+	LocalCenter.X = FMath::Clamp(LocalCenter.X, 420.0f, 4300.0f);
+	LocalCenter.Y = FMath::Clamp(LocalCenter.Y, -620.0f, 620.0f);
+	LocalCenter.Z = 0.0f;
+	return GetActorTransform().TransformPosition(LocalCenter);
 }
 
 void AFantasyWorldLayout::ConfigureWorldAtmosphere()
@@ -472,14 +496,17 @@ void AFantasyWorldLayout::BuildGroundAndRoad()
 		DistantGround->SetMaterial(0, GroundMaterial);
 	}
 
-	for (int32 GroundIndex = 0; GroundIndex < 3; ++GroundIndex)
+	// Five overlapping collision slabs keep every chapter's physical choices on
+	// solid ground.  The previous three slabs ended at X=2775, while choices
+	// presented after a courtyard fight started around X=2940.
+	for (int32 GroundIndex = 0; GroundIndex < 5; ++GroundIndex)
 	{
 		UStaticMeshComponent* Ground = AddEnvironmentMesh(
 			FString::Printf(TEXT("Ground_%d"), GroundIndex),
 			TEXT(""),
 			FVector(static_cast<float>(GroundIndex) * 1100.0f, 0.0f, -12.0f),
 			FRotator::ZeroRotator,
-			FVector(11.5f, 21.0f, 0.28f),
+			FVector(11.5f, 28.0f, 0.28f),
 			true,
 			CubeFallback,
 			GroundTint);
@@ -489,7 +516,7 @@ void AFantasyWorldLayout::BuildGroundAndRoad()
 		}
 	}
 
-	for (int32 StoneIndex = 0; StoneIndex < 20; ++StoneIndex)
+	for (int32 StoneIndex = 0; StoneIndex < 39; ++StoneIndex)
 	{
 		const float X = 80.0f + static_cast<float>(StoneIndex) * 112.0f;
 		const float Y = (StoneIndex % 2 == 0 ? -1.0f : 1.0f) * 20.0f;
@@ -508,6 +535,59 @@ void AFantasyWorldLayout::BuildGroundAndRoad()
 			RoadStone->SetMaterial(0, RoadMaterial);
 		}
 	}
+}
+
+void AFantasyWorldLayout::BuildWorldBoundaries()
+{
+	// Low dark-stone parapets make the playable edge legible. Taller invisible
+	// blockers immediately behind them prevent jumping past the presentation.
+	const FLinearColor BoundaryTint(0.040f, 0.038f, 0.060f, 1.0f);
+	const FVector LongBoundaryScale(56.0f, 0.42f, 0.72f);
+	const FVector EndBoundaryScale(0.42f, 28.0f, 0.72f);
+	for (int32 Side = -1; Side <= 1; Side += 2)
+	{
+		UStaticMeshComponent* SideParapet = AddEnvironmentMesh(
+			FString::Printf(TEXT("PlayableBoundarySide_%d"), Side),
+			TEXT(""),
+			FVector(2200.0f, static_cast<float>(Side) * 1360.0f, 36.0f),
+			FRotator::ZeroRotator,
+			LongBoundaryScale,
+			true,
+			CubeFallback,
+			BoundaryTint);
+		if (SideParapet && GroundMaterial)
+		{
+			SideParapet->SetMaterial(0, GroundMaterial);
+		}
+	}
+	for (int32 End = -1; End <= 1; End += 2)
+	{
+		const float X = End < 0 ? -600.0f : 5000.0f;
+		UStaticMeshComponent* EndParapet = AddEnvironmentMesh(
+			FString::Printf(TEXT("PlayableBoundaryEnd_%d"), End),
+			TEXT(""),
+			FVector(X, 0.0f, 36.0f),
+			FRotator::ZeroRotator,
+			EndBoundaryScale,
+			true,
+			CubeFallback,
+			BoundaryTint);
+		if (EndParapet && GroundMaterial)
+		{
+			EndParapet->SetMaterial(0, GroundMaterial);
+		}
+	}
+
+	AddBoundaryWall(TEXT("BoundaryBlockNorth"), FVector(2200.0f, 1405.0f, 220.0f), FVector(2850.0f, 45.0f, 300.0f));
+	AddBoundaryWall(TEXT("BoundaryBlockSouth"), FVector(2200.0f, -1405.0f, 220.0f), FVector(2850.0f, 45.0f, 300.0f));
+	AddBoundaryWall(TEXT("BoundaryBlockFront"), FVector(5045.0f, 0.0f, 220.0f), FVector(45.0f, 1450.0f, 300.0f));
+	AddBoundaryWall(TEXT("BoundaryBlockBack"), FVector(-645.0f, 0.0f, 220.0f), FVector(45.0f, 1450.0f, 300.0f));
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_PLAYABLE_BOUNDARY_READY GroundSlabs=5 BoundsX=-600..5000 BoundsY=-1405..1405 Walls=%d"),
+		BoundaryWalls.Num());
 }
 
 void AFantasyWorldLayout::BuildVillageDistrict()
@@ -567,7 +647,7 @@ void AFantasyWorldLayout::BuildCampAndLandmarks()
 	const FString Grass = EnvironmentAssetPath(TEXT("SM_W01_Grass"));
 	const FString Rock = EnvironmentAssetPath(TEXT("SM_W01_Rock"));
 
-	for (int32 PathIndex = 0; PathIndex < 9; ++PathIndex)
+	for (int32 PathIndex = 0; PathIndex < 19; ++PathIndex)
 	{
 		AddEnvironmentMesh(
 			FString::Printf(TEXT("ImportedRoad_%02d"), PathIndex), *Path,
@@ -848,6 +928,97 @@ void AFantasyWorldLayout::FinalizeReturnPortalPresentation()
 		}
 		break;
 	}
+}
+
+void AFantasyWorldLayout::AddBoundaryWall(
+	const FString& ComponentName,
+	const FVector& LocalLocation,
+	const FVector& BoxExtent)
+{
+	UBoxComponent* Boundary = NewObject<UBoxComponent>(this, FName(*ComponentName));
+	if (!Boundary)
+	{
+		return;
+	}
+
+	AddInstanceComponent(Boundary);
+	Boundary->SetupAttachment(SceneRoot);
+	Boundary->SetRelativeLocation(LocalLocation);
+	Boundary->SetBoxExtent(BoxExtent);
+	Boundary->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Boundary->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Boundary->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	Boundary->SetHiddenInGame(true);
+	Boundary->RegisterComponent();
+	BoundaryWalls.Add(Boundary);
+}
+
+void AFantasyWorldLayout::CapturePlayerRecoveryPoint()
+{
+	ProtectedPlayer = Cast<AWorldWalkerCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+	if (!ProtectedPlayer)
+	{
+		return;
+	}
+
+	PlayerRecoveryTransform = ProtectedPlayer->GetActorTransform();
+	if (const AController* Controller = ProtectedPlayer->GetController())
+	{
+		PlayerRecoveryControlRotation = Controller->GetControlRotation();
+	}
+	bHasPlayerRecoveryPoint = true;
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_PLAYER_RECOVERY_READY Location=%s FallThreshold=-420"),
+		*PlayerRecoveryTransform.GetLocation().ToCompactString());
+}
+
+void AFantasyWorldLayout::RecoverFallenPlayer()
+{
+	if (!IsValid(ProtectedPlayer))
+	{
+		CapturePlayerRecoveryPoint();
+	}
+	if (!bHasPlayerRecoveryPoint || !IsValid(ProtectedPlayer))
+	{
+		return;
+	}
+
+	const FVector LocalPlayerLocation = GetActorTransform().InverseTransformPosition(
+		ProtectedPlayer->GetActorLocation());
+	if (LocalPlayerLocation.Z >= -420.0f)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* Movement = ProtectedPlayer->GetCharacterMovement();
+	const bool bMovementWasDisabled = Movement && Movement->MovementMode == MOVE_None;
+	if (Movement)
+	{
+		Movement->StopMovementImmediately();
+	}
+	ProtectedPlayer->SetActorTransform(
+		PlayerRecoveryTransform,
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics);
+	if (Movement && !bMovementWasDisabled)
+	{
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+	if (AController* Controller = ProtectedPlayer->GetController())
+	{
+		Controller->SetControlRotation(PlayerRecoveryControlRotation);
+	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("W01_FALL_RECOVERY TriggerZ=%.1f Respawn=%s"),
+		LocalPlayerLocation.Z,
+		*PlayerRecoveryTransform.GetLocation().ToCompactString());
 }
 
 UStaticMeshComponent* AFantasyWorldLayout::AddEnvironmentMesh(
