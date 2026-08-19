@@ -1,6 +1,46 @@
 #include "Cards/Fantasy/FantasyCardProgressionSubsystem.h"
 
 #include "Cards/CardDefinition.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+
+const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M1-v1"));
+
+bool UFantasyCardProgressionSubsystem::ConfigureRun(
+	const int32 InRouteSeed,
+	const FString& InContentVersion)
+{
+	if (bRunStarted || InContentVersion.IsEmpty())
+	{
+		return false;
+	}
+	RouteSeed = InRouteSeed;
+	ContentVersion = InContentVersion;
+	bRunConfigurationResolved = true;
+	return true;
+}
+
+void UFantasyCardProgressionSubsystem::ResolveRunConfiguration()
+{
+	if (bRunConfigurationResolved)
+	{
+		return;
+	}
+
+	RouteSeed = DefaultRouteSeed;
+	ContentVersion = DefaultContentVersion;
+	FParse::Value(FCommandLine::Get(), TEXT("W01RouteSeed="), RouteSeed);
+	FString ParsedContentVersion;
+	if (FParse::Value(
+		FCommandLine::Get(),
+		TEXT("W01ContentVersion="),
+		ParsedContentVersion)
+		&& !ParsedContentVersion.IsEmpty())
+	{
+		ContentVersion = ParsedContentVersion;
+	}
+	bRunConfigurationResolved = true;
+}
 
 bool UFantasyCardProgressionSubsystem::SelectProfession(
 	const EFantasyPlayerProfession Profession)
@@ -37,6 +77,7 @@ void UFantasyCardProgressionSubsystem::EnsureRunStarted()
 		return;
 	}
 
+	ResolveRunConfiguration();
 	bRunStarted = true;
 	ChapterDepth = 0;
 	bHasActiveNode = false;
@@ -48,9 +89,11 @@ void UFantasyCardProgressionSubsystem::EnsureRunStarted()
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("W01_RUN_STARTED Chapter=1 Depth=0 Profession=%s Choices=%d"),
+		TEXT("W01_RUN_STARTED Chapter=1 Depth=0 Profession=%s Choices=%d RouteSeed=%d ContentVersion=%s"),
 		*GetProfessionDisplayName(),
-		RouteChoices.Num());
+		RouteChoices.Num(),
+		RouteSeed,
+		*ContentVersion);
 }
 
 void UFantasyCardProgressionSubsystem::ResetRun()
@@ -69,6 +112,17 @@ void UFantasyCardProgressionSubsystem::ResetRun()
 	RunMaxHealth = 100;
 	CurrentRunHealth = RunMaxHealth;
 	UE_LOG(LogTemp, Display, TEXT("W01_RUN_RESET"));
+}
+
+FString UFantasyCardProgressionSubsystem::BuildRouteChoiceSignature() const
+{
+	TArray<FString> NodeIds;
+	NodeIds.Reserve(RouteChoices.Num());
+	for (const FFantasyRouteNodeChoice& Choice : RouteChoices)
+	{
+		NodeIds.Add(Choice.NodeId.ToString());
+	}
+	return FString::Join(NodeIds, TEXT("|"));
 }
 
 bool UFantasyCardProgressionSubsystem::GrantCard(const UCardDefinition* Card)
@@ -375,13 +429,34 @@ void UFantasyCardProgressionSubsystem::RebuildRouteChoices()
 			TEXT("HeadlessKnightBoss"));
 		break;
 	}
+	ApplyDeterministicRouteOrder();
 
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("W01_ROUTE_CHOICES_READY Depth=%d Choices=%d"),
+		TEXT("W01_ROUTE_CHOICES_READY Depth=%d Choices=%d RouteSeed=%d ContentVersion=%s Signature=%s"),
 		ChapterDepth,
-		RouteChoices.Num());
+		RouteChoices.Num(),
+		RouteSeed,
+		*ContentVersion,
+		*BuildRouteChoiceSignature());
+}
+
+void UFantasyCardProgressionSubsystem::ApplyDeterministicRouteOrder()
+{
+	if (RouteChoices.Num() < 2)
+	{
+		return;
+	}
+
+	const uint32 SeedHash = HashCombineFast(
+		GetTypeHash(RouteSeed),
+		HashCombineFast(GetTypeHash(ContentVersion), GetTypeHash(ChapterDepth)));
+	FRandomStream Stream(static_cast<int32>(SeedHash));
+	for (int32 Index = RouteChoices.Num() - 1; Index > 0; --Index)
+	{
+		RouteChoices.Swap(Index, Stream.RandRange(0, Index));
+	}
 }
 
 void UFantasyCardProgressionSubsystem::AddRouteChoice(

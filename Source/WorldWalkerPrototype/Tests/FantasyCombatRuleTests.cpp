@@ -5,7 +5,48 @@
 #include "Cards/CardDefinition.h"
 #include "Cards/Fantasy/FantasyEnemyDeckRuntime.h"
 #include "Cards/Fantasy/FantasyEnemyDefinition.h"
+#include "Cards/Fantasy/FantasyCardProgressionSubsystem.h"
 #include "Cards/Fantasy/FantasyRunTypes.h"
+#include "Engine/GameInstance.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FFantasyDeterministicRouteTest,
+	"WorldWalker.W01.Run.DeterministicRoutes",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FFantasyDeterministicRouteTest::RunTest(const FString& Parameters)
+{
+	auto BuildSignatures = [](const int32 RouteSeed)
+	{
+		TArray<FString> Signatures;
+		UGameInstance* GameInstance = NewObject<UGameInstance>();
+		UFantasyCardProgressionSubsystem* Progression =
+			NewObject<UFantasyCardProgressionSubsystem>(GameInstance);
+		Progression->ConfigureRun(RouteSeed, TEXT("W01-M1-test"));
+		Progression->SelectProfession(EFantasyPlayerProfession::Mage);
+		Progression->EnsureRunStarted();
+		for (int32 Depth = 0; Depth < Progression->GetTotalRouteDepths(); ++Depth)
+		{
+			Signatures.Add(Progression->BuildRouteChoiceSignature());
+			FFantasyRouteNodeChoice Selected;
+			if (!Progression->SelectRouteChoice(0, Selected)
+				|| !Progression->CompleteActiveNode())
+			{
+				Signatures.Add(TEXT("INVALID"));
+				break;
+			}
+		}
+		return Signatures;
+	};
+
+	const TArray<FString> FirstRun = BuildSignatures(314159);
+	const TArray<FString> Replay = BuildSignatures(314159);
+	const TArray<FString> DifferentSeed = BuildSignatures(271828);
+	TestEqual(TEXT("A complete chapter exposes six route layers"), FirstRun.Num(), 6);
+	TestTrue(TEXT("Same Seed and content version reproduce all route layers"), Replay == FirstRun);
+	TestTrue(TEXT("A different Seed changes the route ordering"), DifferentSeed != FirstRun);
+	return true;
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FFantasyFastCombatTimingTest,

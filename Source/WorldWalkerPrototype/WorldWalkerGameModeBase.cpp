@@ -262,9 +262,18 @@ void AWorldWalkerGameModeBase::HandleM0RunAutomationStep()
 			M0AutomationDeckViewPhase = 2;
 			return;
 		}
-		// Fight at depth 0, take safe event/rest choices at depths 1-4, then fight the boss.
-		HandleRouteSelection(
-			Progression->GetChapterDepth() > 0 && Progression->GetChapterDepth() < 5 ? 2 : 0);
+		// Fight at depth 0, take a safe event/rest choice at depths 1-4, then fight the boss.
+		for (int32 ChoiceIndex = 0; ChoiceIndex < Progression->GetRouteChoices().Num(); ++ChoiceIndex)
+		{
+			const bool bNeedsCombat = Progression->GetChapterDepth() == 0
+				|| Progression->GetChapterDepth() >= 5;
+			if (Progression->GetRouteChoices()[ChoiceIndex].IsCombat() == bNeedsCombat)
+			{
+				HandleRouteSelection(ChoiceIndex);
+				return;
+			}
+		}
+		FailM0RunAutomation(TEXT("no route choice matched the automation policy"));
 		return;
 
 	case EFantasyRunFlowState::EventChoice:

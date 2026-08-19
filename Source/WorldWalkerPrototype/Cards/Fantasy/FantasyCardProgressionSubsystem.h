@@ -18,12 +18,20 @@ class WORLDWALKERPROTOTYPE_API UFantasyCardProgressionSubsystem : public UGameIn
 	GENERATED_BODY()
 
 public:
+	static constexpr int32 DefaultRouteSeed = 104729;
+	static const FString DefaultContentVersion;
+
 	bool SelectProfession(EFantasyPlayerProfession Profession);
 	bool HasSelectedProfession() const { return SelectedProfession != EFantasyPlayerProfession::None; }
 	EFantasyPlayerProfession GetSelectedProfession() const { return SelectedProfession; }
 	FString GetProfessionDisplayName() const;
 	void EnsureRunStarted();
 	void ResetRun();
+	/** May only change the reproducibility contract before a run starts. */
+	bool ConfigureRun(int32 InRouteSeed, const FString& InContentVersion);
+	int32 GetRouteSeed() const { return RouteSeed; }
+	const FString& GetContentVersion() const { return ContentVersion; }
+	FString BuildRouteChoiceSignature() const;
 
 	bool GrantCard(const UCardDefinition* Card);
 	bool RemoveCardCopy(FName CardId);
@@ -48,6 +56,8 @@ public:
 	int32 GetRunMaxHealth() const { return RunMaxHealth; }
 
 private:
+	void ResolveRunConfiguration();
+	void ApplyDeterministicRouteOrder();
 	void RebuildRouteChoices();
 	void AddRouteChoice(
 		FName NodeId,
@@ -78,4 +88,7 @@ private:
 	int32 PendingBattleValor = 0;
 	int32 CurrentRunHealth = 100;
 	int32 RunMaxHealth = 100;
+	int32 RouteSeed = DefaultRouteSeed;
+	FString ContentVersion = DefaultContentVersion;
+	bool bRunConfigurationResolved = false;
 };
