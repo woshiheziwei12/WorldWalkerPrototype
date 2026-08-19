@@ -28,6 +28,9 @@
 
 namespace
 {
+	bool GM0AutomationInjectedDefeat = false;
+	bool GM0AutomationCompletedRun = false;
+
 	FLinearColor GetCardSchoolTint(const ECardSchool School)
 	{
 		switch (School)
@@ -62,6 +65,18 @@ AWorldWalkerGameModeBase::AWorldWalkerGameModeBase()
 {
 	DefaultPawnClass = AWorldWalkerCharacter::StaticClass();
 	PlayerControllerClass = AWorldWalkerPlayerController::StaticClass();
+	bM0RunAutomationEnabled = FParse::Param(
+		FCommandLine::Get(),
+		TEXT("W01M0RunAutomation"));
+	FString AutomationProfession;
+	if (FParse::Value(
+		FCommandLine::Get(),
+		TEXT("W01M0Profession="),
+		AutomationProfession)
+		&& AutomationProfession.Equals(TEXT("Knight"), ESearchCase::IgnoreCase))
+	{
+		M0AutomationProfession = EFantasyPlayerProfession::Knight;
+	}
 	CombatTiming = FFantasyCombatTiming::ForAutomationMode(
 		FParse::Param(FCommandLine::Get(), TEXT("W01FastCombat")));
 }
@@ -90,6 +105,13 @@ void AWorldWalkerGameModeBase::BeginPlay()
 		ActivePortal ? TEXT("spawned") : TEXT("none"),
 		ActiveHub ? TEXT("spawned") : TEXT("none"),
 		ActiveFantasyWorld ? TEXT("spawned") : TEXT("none"));
+
+	if (bM0RunAutomationEnabled)
+	{
+		GetWorldTimerManager().SetTimerForNextTick(
+			this,
+			&AWorldWalkerGameModeBase::InitializeM0RunAutomation);
+	}
 }
 
 void AWorldWalkerGameModeBase::InitializeWorldContent()
@@ -154,8 +176,211 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 void AWorldWalkerGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearTimer(EnemyTurnTimer);
+	GetWorldTimerManager().ClearTimer(M0RunAutomationTimer);
 	DestroyWorldChoices();
 	Super::EndPlay(EndPlayReason);
+}
+
+void AWorldWalkerGameModeBase::InitializeM0RunAutomation()
+{
+	if (!bM0RunAutomationEnabled || !CurrentWorldDefinition)
+	{
+		FailM0RunAutomation(TEXT("current world definition is unavailable"));
+		return;
+	}
+
+	if (CurrentWorldDefinition->WorldId == UWorldTravelSubsystem::MainWorldId)
+	{
+		if (!GM0AutomationCompletedRun)
+		{
+			FailM0RunAutomation(TEXT("entered W00 before completing the W01 chapter"));
+			return;
+		}
+		UE_LOG(
+			LogTemp,
+			Display,
+			TEXT("W01_M0_AUTOMATION_WORLD_RETURNED World=W00_MainWorld Result=Success"));
+		FPlatformMisc::RequestExitWithStatus(false, 0);
+		return;
+	}
+
+	if (CurrentWorldDefinition->WorldId != UWorldTravelSubsystem::EasternHorrorWorldId)
+	{
+		FailM0RunAutomation(FString::Printf(
+			TEXT("unsupported world %s"),
+			*CurrentWorldDefinition->WorldId.ToString()));
+		return;
+	}
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_M0_AUTOMATION_STARTED Profession=%s RetryPhase=%d"),
+		M0AutomationProfession == EFantasyPlayerProfession::Knight ? TEXT("Knight") : TEXT("Mage"),
+		GM0AutomationInjectedDefeat ? 1 : 0);
+	GetWorldTimerManager().SetTimer(
+		M0RunAutomationTimer,
+		this,
+		&AWorldWalkerGameModeBase::HandleM0RunAutomationStep,
+		0.01f,
+		true);
+}
+
+void AWorldWalkerGameModeBase::HandleM0RunAutomationStep()
+{
+	if (++M0AutomationStepCount > 30000)
+	{
+		FailM0RunAutomation(TEXT("step limit exceeded"));
+		return;
+	}
+
+	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	if (!Progression || !ActivePlayer)
+	{
+		return;
+	}
+
+	switch (FantasyRunFlowState)
+	{
+	case EFantasyRunFlowState::ProfessionChoice:
+		HandleProfessionSelection(
+			M0AutomationProfession == EFantasyPlayerProfession::Mage ? 0 : 1);
+		return;
+
+	case EFantasyRunFlowState::RouteChoice:
+		if (M0AutomationDeckViewPhase == 0)
+		{
+			HandleDeckViewToggle();
+			M0AutomationDeckViewPhase = 1;
+			return;
+		}
+		if (M0AutomationDeckViewPhase == 1)
+		{
+			HandleDeckViewToggle();
+			M0AutomationDeckViewPhase = 2;
+			return;
+		}
+		// Fight at depth 0, take safe event/rest choices at depths 1-4, then fight the boss.
+		HandleRouteSelection(
+			Progression->GetChapterDepth() > 0 && Progression->GetChapterDepth() < 5 ? 2 : 0);
+		return;
+
+	case EFantasyRunFlowState::EventChoice:
+		// Choice 0 always restores health or is otherwise the safest deterministic branch.
+		HandleEventSelection(0);
+		return;
+
+	case EFantasyRunFlowState::Exploration:
+		if (Progression->HasActiveNode() && Progression->GetActiveNode().IsCombat()
+			&& ActiveEnemy && !bCombatActive)
+		{
+			StartCombat(ActivePlayer, ActiveEnemy);
+		}
+		return;
+
+	case EFantasyRunFlowState::PlayerTurn:
+		if (!GM0AutomationInjectedDefeat)
+		{
+			GM0AutomationInjectedDefeat = true;
+			bM0AutomationRestartPending = true;
+			ActivePlayer->GetCombatantComponent()->ReceiveDamage(
+				ActivePlayer->GetCombatantComponent()->GetMaxHealth() + 1000);
+			UE_LOG(
+				LogTemp,
+				Display,
+				TEXT("W01_M0_AUTOMATION_DEFEAT_INJECTED Result=Defeat"));
+			FinishCombat(false);
+			return;
+		}
+		if (!ActiveCardCombat)
+		{
+			FailM0RunAutomation(TEXT("player card component disappeared during combat"));
+			return;
+		}
+		for (int32 HandIndex = 0; HandIndex < ActiveCardCombat->GetHand().Num(); ++HandIndex)
+		{
+			if (ActiveCardCombat->IsCardPlayable(HandIndex))
+			{
+				HandlePlayCard(HandIndex);
+				return;
+			}
+		}
+		HandleEndPlayerTurn();
+		return;
+
+	case EFantasyRunFlowState::EnemyTurn:
+		return;
+
+	case EFantasyRunFlowState::RewardChoice:
+		if (M0AutomationRewardCount++ == 0)
+		{
+			HandleRewardSelection(0);
+		}
+		else
+		{
+			HandleRewardSkip();
+		}
+		return;
+
+	case EFantasyRunFlowState::RewardConfirmed:
+		HandleReturnToExploration();
+		return;
+
+	case EFantasyRunFlowState::Resolution:
+		HandleNodeResolutionContinue();
+		return;
+
+	case EFantasyRunFlowState::Defeat:
+		if (!bM0AutomationRestartPending)
+		{
+			FailM0RunAutomation(TEXT("automatic player lost after the injected retry"));
+			return;
+		}
+		bM0AutomationRestartPending = false;
+		UE_LOG(LogTemp, Display, TEXT("W01_M0_AUTOMATION_RETRY_REQUESTED"));
+		RestartDemo();
+		return;
+
+	case EFantasyRunFlowState::ChapterComplete:
+		GM0AutomationCompletedRun = true;
+		GetWorldTimerManager().ClearTimer(M0RunAutomationTimer);
+		UE_LOG(
+			LogTemp,
+			Display,
+			TEXT("W01_M0_AUTOMATION_CHAPTER_COMPLETE Profession=%s Depth=%d Rewards=%d Removed=%d"),
+			*Progression->GetProfessionDisplayName(),
+			Progression->GetChapterDepth(),
+			Progression->GetTotalGrantedCopies(),
+			Progression->GetTotalRemovedCopies());
+		HandleNodeResolutionContinue();
+		if (UWorldTravelSubsystem* TravelSubsystem = GetGameInstance()
+			? GetGameInstance()->GetSubsystem<UWorldTravelSubsystem>()
+			: nullptr)
+		{
+			if (TravelSubsystem->TravelToWorld(
+				TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::MainWorldId)))
+			{
+				return;
+			}
+		}
+		FailM0RunAutomation(TEXT("return travel to W00 was rejected"));
+		return;
+	}
+}
+
+void AWorldWalkerGameModeBase::FailM0RunAutomation(const FString& Reason)
+{
+	GetWorldTimerManager().ClearTimer(M0RunAutomationTimer);
+	UE_LOG(
+		LogTemp,
+		Error,
+		TEXT("W01_M0_AUTOMATION_FAILED Reason=%s Flow=%d Steps=%d"),
+		*Reason,
+		static_cast<int32>(FantasyRunFlowState),
+		M0AutomationStepCount);
+	FPlatformMisc::RequestExitWithStatus(true, 1);
 }
 
 void AWorldWalkerGameModeBase::SpawnMainWorldHub(UWorldDefinition* DestinationWorld)

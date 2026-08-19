@@ -97,6 +97,9 @@ private:
 	FString BuildNextIntentText() const;
 	void FinishCombat(bool bPlayerWon);
 	void BeginVictoryReward();
+	void InitializeM0RunAutomation();
+	void HandleM0RunAutomationStep();
+	void FailM0RunAutomation(const FString& Reason);
 	void RefreshCombatUI() const;
 	AFantasyAmbientSoundscape* GetFantasySoundscape() const;
 	UTexture2D* GetEnemyPortraitTexture() const;
@@ -139,6 +142,7 @@ private:
 	TArray<TObjectPtr<UCardDefinition>> PendingRewardChoices;
 
 	FTimerHandle EnemyTurnTimer;
+	FTimerHandle M0RunAutomationTimer;
 	TArray<FString> CurrentEnemyTurnCardNames;
 	FString ExplorationMessage = TEXT("WASD Move | Mouse Look | Space Jump | E Interact");
 	FFantasyCombatRuntimeState PlayerFantasyState;
@@ -149,6 +153,12 @@ private:
 	FName CurrentEventId;
 	bool bEnemyDefeatPassiveConsumed = false;
 	bool bEnemyReactivePassiveTriggered = false;
+	bool bM0RunAutomationEnabled = false;
+	bool bM0AutomationRestartPending = false;
+	int32 M0AutomationDeckViewPhase = 0;
+	int32 M0AutomationRewardCount = 0;
+	int32 M0AutomationStepCount = 0;
+	EFantasyPlayerProfession M0AutomationProfession = EFantasyPlayerProfession::Mage;
 
 	enum class EFantasyRunFlowState : uint8
 	{
