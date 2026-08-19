@@ -39,7 +39,10 @@ public:
 	void HandlePlayCard(int32 HandIndex);
 	void HandleEndPlayerTurn();
 	void HandleRewardSelection(int32 RewardIndex);
+	void HandleRewardSkip();
 	void HandleReturnToExploration();
+	void HandleProfessionSelection(int32 ChoiceIndex);
+	void HandleDeckViewToggle();
 	void HandleRouteSelection(int32 ChoiceIndex);
 	void HandleEventSelection(int32 ChoiceIndex);
 	void HandleNodeResolutionContinue();
@@ -55,6 +58,8 @@ private:
 	void SpawnPortal(UWorldDefinition* DestinationWorld, const FVector& OffsetFromPlayer);
 	bool LoadFantasyEnemyDefinition(FName EnemyId);
 	void InitializeFantasyRun();
+	void PresentProfessionChoices();
+	void BeginSelectedProfessionRun();
 	void ResumeOrPresentFantasyRun();
 	void PresentRouteChoices();
 	void SpawnWorldChoices(
@@ -147,6 +152,7 @@ private:
 	enum class EFantasyRunFlowState : uint8
 	{
 		Exploration,
+		ProfessionChoice,
 		RouteChoice,
 		EventChoice,
 		PlayerTurn,
@@ -163,4 +169,7 @@ private:
 	bool bWaitingForEnemy = false;
 	bool bAwaitingRewardSelection = false;
 	bool bRewardReadyToLeave = false;
+	bool bRewardWasSkipped = false;
+	bool bDeckViewerOpen = false;
+	bool bRestoreMovementAfterDeckViewer = false;
 };

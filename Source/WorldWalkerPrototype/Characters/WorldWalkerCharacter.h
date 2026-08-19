@@ -11,6 +11,7 @@ class UAnimSequence;
 class USkeletalMeshComponent;
 class USpringArmComponent;
 class UStaticMeshComponent;
+enum class EFantasyPlayerProfession : uint8;
 
 enum class EWorldWalkerFantasyAnimationState : uint8
 {
@@ -36,6 +37,7 @@ public:
 	UCardCombatComponent* GetCardCombatComponent() const { return CardCombatComponent; }
 	void SetCombatLocked(bool bLocked);
 	void ConfigureFantasyWorldForm(bool bEnabled, bool bStartInFantasyForm = true);
+	void ConfigureFantasyProfession(EFantasyPlayerProfession Profession);
 	bool IsFantasyFormActive() const { return bFantasyFormActive; }
 
 	/** Plays the W01 form's card action, then safely returns to locomotion/idle. */
@@ -118,6 +120,7 @@ private:
 	bool bFantasyFormAvailable = false;
 	bool bFantasyFormActive = false;
 	bool bFantasyActionPlaying = false;
+	EFantasyPlayerProfession RequestedFantasyProfession;
 	float FantasyActionEndTime = 0.0f;
 	EWorldWalkerFantasyAnimationState CurrentFantasyAnimationState =
 		EWorldWalkerFantasyAnimationState::None;

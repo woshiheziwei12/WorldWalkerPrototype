@@ -3,6 +3,7 @@
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Cards/CardCombatComponent.h"
+#include "Cards/Fantasy/FantasyRunTypes.h"
 #include "Combat/CombatantComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -18,6 +19,7 @@
 
 AWorldWalkerCharacter::AWorldWalkerCharacter()
 {
+	RequestedFantasyProfession = EFantasyPlayerProfession::Knight;
 	PrimaryActorTick.bCanEverTick = true;
 
 	GetCapsuleComponent()->InitCapsuleSize(42.0f, 88.0f);
@@ -211,6 +213,20 @@ void AWorldWalkerCharacter::ConfigureFantasyWorldForm(
 	RefreshFantasyLocomotionAnimation(true);
 }
 
+void AWorldWalkerCharacter::ConfigureFantasyProfession(
+	const EFantasyPlayerProfession Profession)
+{
+	RequestedFantasyProfession = Profession == EFantasyPlayerProfession::Mage
+		? EFantasyPlayerProfession::Mage
+		: EFantasyPlayerProfession::Knight;
+	if (bFantasyFormAvailable)
+	{
+		LoadFantasyPresentationAssets();
+		ApplyWorldFormVisibility();
+		RefreshFantasyLocomotionAnimation(true);
+	}
+}
+
 void AWorldWalkerCharacter::ToggleWorldForm()
 {
 	if (bCombatLocked || !bFantasyFormAvailable)
@@ -226,7 +242,11 @@ void AWorldWalkerCharacter::ToggleWorldForm()
 		LogTemp,
 		Display,
 		TEXT("W01 active form changed to %s."),
-		bFantasyFormActive ? TEXT("Red Hood Rogue") : TEXT("World Walker"));
+		bFantasyFormActive
+			? (RequestedFantasyProfession == EFantasyPlayerProfession::Mage
+				? TEXT("Little Witch Wizard")
+				: TEXT("Red Hood Knight"))
+			: TEXT("World Walker"));
 }
 
 void AWorldWalkerCharacter::ApplyWorldFormVisibility()
@@ -262,6 +282,17 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 	static const FPlayerPresentationProfile Profiles[] =
 	{
 		{
+			TEXT("Wizard"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_Wizard.SK_W01_Wizard"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_WizardCharacterArmature_Idle.SK_W01_WizardCharacterArmature_Idle"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_WizardCharacterArmature_Walk.SK_W01_WizardCharacterArmature_Walk"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_WizardCharacterArmature_Run.SK_W01_WizardCharacterArmature_Run"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_WizardCharacterArmature_Staff_Attack.SK_W01_WizardCharacterArmature_Staff_Attack"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_WizardCharacterArmature_PickUp.SK_W01_WizardCharacterArmature_PickUp"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_WizardCharacterArmature_Spell1.SK_W01_WizardCharacterArmature_Spell1"),
+			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Wizard/SK_W01_WizardCharacterArmature_RecieveHit_Attacking.SK_W01_WizardCharacterArmature_RecieveHit_Attacking"),
+		},
+		{
 			TEXT("Rogue"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_Rogue.SK_W01_Rogue"),
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_RogueCharacterArmature_Idle.SK_W01_RogueCharacterArmature_Idle"),
@@ -294,7 +325,8 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 	FantasySpellAnimation = nullptr;
 	FantasyHitReactionAnimation = nullptr;
 
-	for (int32 ProfileIndex = 0; ProfileIndex < UE_ARRAY_COUNT(Profiles); ++ProfileIndex)
+	const int32 FirstProfileIndex = RequestedFantasyProfession == EFantasyPlayerProfession::Mage ? 0 : 1;
+	for (int32 ProfileIndex = FirstProfileIndex; ProfileIndex < UE_ARRAY_COUNT(Profiles); ++ProfileIndex)
 	{
 		const FPlayerPresentationProfile& Profile = Profiles[ProfileIndex];
 		USkeletalMesh* PresentationMesh = LoadObject<USkeletalMesh>(nullptr, Profile.MeshPath);
@@ -344,7 +376,7 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 			Display,
 			TEXT("W01_PLAYER_PRESENTATION_READY Profile=%s Mesh=1 Animations=7/7 Fallback=%d"),
 			Profile.Name,
-			ProfileIndex > 0 ? 1 : 0);
+			ProfileIndex > FirstProfileIndex ? 1 : 0);
 		return true;
 	}
 

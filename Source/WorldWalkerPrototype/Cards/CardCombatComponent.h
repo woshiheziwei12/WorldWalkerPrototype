@@ -72,6 +72,7 @@ public:
 	int32 GetStartingDeckCount() const { return StartingDeck.Num(); }
 	int32 GetRunRewardCount() const;
 	int32 GetRunRemovedCount() const;
+	FString BuildCurrentDeckSummary() const;
 	FName GetLoadedCardSetId() const { return LoadedCardSetId; }
 
 	bool IsSchoolLit(ECardSchool School) const;

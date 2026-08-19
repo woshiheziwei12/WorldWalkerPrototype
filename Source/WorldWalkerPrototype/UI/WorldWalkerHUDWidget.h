@@ -9,6 +9,7 @@ class UButton;
 class UHorizontalBox;
 class UImage;
 class UProgressBar;
+class UScrollBox;
 class UTextBlock;
 class UTexture2D;
 class UVerticalBox;
@@ -58,21 +59,28 @@ public:
 		const TArray<UTexture2D*>& CardArtworks,
 		const TArray<FLinearColor>& CardSchoolTints);
 	void ShowRewardConfirmation(const FString& ConfirmationText);
+	void ShowProfessionSelection(const TArray<FString>& ChoiceLabels);
 	void ShowRouteSelection(const FString& RunSummary, const TArray<FString>& ChoiceLabels);
 	void ShowEventSelection(
 		const FString& Title,
 		const FString& Lore,
 		const TArray<FString>& ChoiceLabels);
 	void ShowNodeResolution(const FString& Message, bool bChapterComplete);
+	void SetPlayerDisplayName(const FString& DisplayName);
+	void SetDeckAccessEnabled(bool bEnabled);
+	void ShowDeckViewer(const FString& Title, const FString& DeckSummary);
+	void HideDeckViewer();
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
+	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual void NativeConstruct() override;
 
 private:
 	enum class EChoicePanelMode : uint8
 	{
 		Hidden,
+		Profession,
 		Route,
 		Event,
 		Resolution
@@ -87,6 +95,12 @@ private:
 		const FString& Lore,
 		const TArray<FString>& ChoiceLabels);
 	void HandleChoiceClicked(int32 ChoiceIndex);
+
+	UFUNCTION()
+	void HandleDeckAccessClicked();
+
+	UFUNCTION()
+	void HandleDeckCloseClicked();
 
 	UFUNCTION()
 	void HandleCard0Clicked();
@@ -152,6 +166,21 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> ChoiceContinueLabel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> DeckAccessButton;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBorder> DeckPanel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> DeckTitleText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> DeckListText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> DeckCloseButton;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBorder> CombatPanel;
@@ -227,5 +256,6 @@ private:
 	bool bShowingRewardChoices = false;
 	bool bRewardConfirmed = false;
 	bool bChoiceInputLocked = false;
+	FString PlayerDisplayName = TEXT("女骑士");
 	EChoicePanelMode ChoicePanelMode = EChoicePanelMode::Hidden;
 };

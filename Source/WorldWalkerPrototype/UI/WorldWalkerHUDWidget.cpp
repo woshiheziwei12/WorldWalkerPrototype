@@ -9,12 +9,14 @@
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
+#include "Components/ScrollBox.h"
 #include "Components/SizeBox.h"
 #include "Components/Spacer.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Engine/Texture2D.h"
+#include "InputCoreTypes.h"
 #include "WorldWalkerGameModeBase.h"
 
 TSharedRef<SWidget> UWorldWalkerHUDWidget::RebuildWidget()
@@ -27,6 +29,20 @@ TSharedRef<SWidget> UWorldWalkerHUDWidget::RebuildWidget()
 	}
 
 	return Super::RebuildWidget();
+}
+
+FReply UWorldWalkerHUDWidget::NativeOnKeyDown(
+	const FGeometry& InGeometry,
+	const FKeyEvent& InKeyEvent)
+{
+	if (DeckPanel
+		&& DeckPanel->GetVisibility() == ESlateVisibility::Visible
+		&& InKeyEvent.GetKey() == EKeys::Tab)
+	{
+		HandleDeckAccessClicked();
+		return FReply::Handled();
+	}
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UWorldWalkerHUDWidget::NativeConstruct()
@@ -340,11 +356,78 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	CombatSlot->SetAnchors(FAnchors(0.5f, 0.95f));
 	CombatSlot->SetAlignment(FVector2D(0.5f, 1.0f));
 	CombatSlot->SetSize(FVector2D(1220.0f, 760.0f));
+
+	DeckAccessButton = WidgetTree->ConstructWidget<UButton>(
+		UButton::StaticClass(), TEXT("DeckAccessButton"));
+	DeckAccessButton->SetBackgroundColor(FLinearColor(0.30f, 0.18f, 0.055f, 0.96f));
+	UTextBlock* DeckAccessLabel = MakeText(
+		TEXT("DeckAccessLabel"), TEXT("查看牌组 [Tab]"), 17);
+	DeckAccessLabel->SetColorAndOpacity(FSlateColor(Parchment));
+	DeckAccessButton->AddChild(DeckAccessLabel);
+	DeckAccessButton->OnClicked.AddDynamic(this, &UWorldWalkerHUDWidget::HandleDeckAccessClicked);
+	UCanvasPanelSlot* DeckAccessSlot = RootCanvas->AddChildToCanvas(DeckAccessButton);
+	DeckAccessSlot->SetAnchors(FAnchors(0.98f, 0.035f));
+	DeckAccessSlot->SetAlignment(FVector2D(1.0f, 0.0f));
+	DeckAccessSlot->SetSize(FVector2D(180.0f, 44.0f));
+	DeckAccessSlot->SetZOrder(50);
+	DeckAccessButton->SetVisibility(ESlateVisibility::Collapsed);
+
+	DeckPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DeckPanel"));
+	DeckPanel->SetBrushColor(FLinearColor(0.006f, 0.005f, 0.010f, 0.94f));
+	DeckPanel->SetHorizontalAlignment(HAlign_Center);
+	DeckPanel->SetVerticalAlignment(VAlign_Center);
+
+	USizeBox* DeckWindowSize = WidgetTree->ConstructWidget<USizeBox>(
+		USizeBox::StaticClass(), TEXT("DeckWindowSize"));
+	DeckWindowSize->SetWidthOverride(940.0f);
+	DeckWindowSize->SetHeightOverride(690.0f);
+	DeckPanel->SetContent(DeckWindowSize);
+
+	UBorder* DeckWindow = WidgetTree->ConstructWidget<UBorder>(
+		UBorder::StaticClass(), TEXT("DeckWindow"));
+	DeckWindow->SetBrushColor(FLinearColor(0.055f, 0.020f, 0.028f, 0.99f));
+	DeckWindow->SetPadding(FMargin(36.0f, 26.0f));
+	DeckWindowSize->AddChild(DeckWindow);
+
+	UVerticalBox* DeckBox = WidgetTree->ConstructWidget<UVerticalBox>(
+		UVerticalBox::StaticClass(), TEXT("DeckBox"));
+	DeckWindow->SetContent(DeckBox);
+	DeckTitleText = MakeText(TEXT("DeckTitleText"), TEXT("当前牌组"), 30);
+	DeckTitleText->SetColorAndOpacity(FSlateColor(AntiqueGold));
+	DeckBox->AddChildToVerticalBox(DeckTitleText)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+
+	USizeBox* DeckScrollSize = WidgetTree->ConstructWidget<USizeBox>(
+		USizeBox::StaticClass(), TEXT("DeckScrollSize"));
+	DeckScrollSize->SetHeightOverride(535.0f);
+	UScrollBox* DeckScroll = WidgetTree->ConstructWidget<UScrollBox>(
+		UScrollBox::StaticClass(), TEXT("DeckScroll"));
+	DeckListText = MakeText(TEXT("DeckListText"), TEXT("当前牌组为空。"), 17);
+	DeckListText->SetJustification(ETextJustify::Left);
+	DeckListText->SetAutoWrapText(true);
+	DeckListText->SetColorAndOpacity(FSlateColor(Parchment));
+	DeckScroll->AddChild(DeckListText);
+	DeckScrollSize->AddChild(DeckScroll);
+	DeckBox->AddChildToVerticalBox(DeckScrollSize);
+
+	DeckCloseButton = WidgetTree->ConstructWidget<UButton>(
+		UButton::StaticClass(), TEXT("DeckCloseButton"));
+	DeckCloseButton->SetBackgroundColor(FLinearColor(0.42f, 0.10f, 0.075f, 1.0f));
+	UTextBlock* DeckCloseLabel = MakeText(TEXT("DeckCloseLabel"), TEXT("关闭牌组"), 19);
+	DeckCloseLabel->SetColorAndOpacity(FSlateColor(Parchment));
+	DeckCloseButton->AddChild(DeckCloseLabel);
+	DeckCloseButton->OnClicked.AddDynamic(this, &UWorldWalkerHUDWidget::HandleDeckCloseClicked);
+	DeckBox->AddChildToVerticalBox(DeckCloseButton)->SetPadding(FMargin(300.0f, 12.0f, 300.0f, 0.0f));
+
+	UCanvasPanelSlot* DeckPanelSlot = RootCanvas->AddChildToCanvas(DeckPanel);
+	DeckPanelSlot->SetAnchors(FAnchors(0.0f, 0.0f, 1.0f, 1.0f));
+	DeckPanelSlot->SetOffsets(FMargin(0.0f));
+	DeckPanelSlot->SetZOrder(100);
+	DeckPanel->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UWorldWalkerHUDWidget::ShowExploration()
 {
-	if (!ExplorationPanel || !CombatPanel || !ChoicePanel)
+	if (!ExplorationPanel || !CombatPanel || !ChoicePanel || !DeckPanel)
 	{
 		return;
 	}
@@ -352,6 +435,7 @@ void UWorldWalkerHUDWidget::ShowExploration()
 	ExplorationPanel->SetVisibility(ESlateVisibility::HitTestInvisible);
 	CombatPanel->SetVisibility(ESlateVisibility::Collapsed);
 	ChoicePanel->SetVisibility(ESlateVisibility::Collapsed);
+	DeckPanel->SetVisibility(ESlateVisibility::Collapsed);
 	ChoicePanelMode = EChoicePanelMode::Hidden;
 	bChoiceInputLocked = false;
 	bShowingRewardChoices = false;
@@ -378,6 +462,7 @@ void UWorldWalkerHUDWidget::ShowCombat(
 	ExplorationPanel->SetVisibility(ESlateVisibility::Collapsed);
 	CombatPanel->SetVisibility(ESlateVisibility::Visible);
 	ChoicePanel->SetVisibility(ESlateVisibility::Collapsed);
+	DeckPanel->SetVisibility(ESlateVisibility::Collapsed);
 	ChoicePanelMode = EChoicePanelMode::Hidden;
 	bChoiceInputLocked = false;
 	bShowingRewardChoices = false;
@@ -387,7 +472,7 @@ void UWorldWalkerHUDWidget::ShowCombat(
 	CardRow->SetVisibility(ESlateVisibility::Visible);
 	EndTurnButton->SetVisibility(ESlateVisibility::Visible);
 	PlayerHealthText->SetText(FText::FromString(FString::Printf(
-		TEXT("红斗篷骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
+		TEXT("%s  %d / %d"), *PlayerDisplayName, PlayerHealth, PlayerMaxHealth)));
 	EnemyHealthText->SetText(FText::FromString(FString::Printf(
 		TEXT("%s  %d / %d"), *EnemyDisplayName, EnemyHealth, EnemyMaxHealth)));
 	PlayerHealthBar->SetPercent(PlayerMaxHealth > 0
@@ -443,7 +528,7 @@ void UWorldWalkerHUDWidget::RefreshCombatState(
 	const TArray<FLinearColor>& CardSchoolTints)
 {
 	PlayerHealthText->SetText(FText::FromString(FString::Printf(
-		TEXT("红斗篷骑士  %d / %d"), PlayerHealth, PlayerMaxHealth)));
+		TEXT("%s  %d / %d"), *PlayerDisplayName, PlayerHealth, PlayerMaxHealth)));
 	EnemyHealthText->SetText(FText::FromString(FString::Printf(
 		TEXT("%s  %d / %d"), *EnemyDisplayName, EnemyHealth, EnemyMaxHealth)));
 	PlayerHealthBar->SetPercent(PlayerMaxHealth > 0
@@ -554,9 +639,11 @@ void UWorldWalkerHUDWidget::ShowRewardSelection(
 	CachedCardPlayable.Init(true, CardLabels.Num());
 	CardRow->SetVisibility(ESlateVisibility::Visible);
 	EndTurnButton->SetVisibility(ESlateVisibility::Collapsed);
-	RestartButton->SetVisibility(ESlateVisibility::Collapsed);
+	RestartButtonLabel->SetText(FText::FromString(TEXT("跳过，不加入卡牌")));
+	RestartButton->SetVisibility(ESlateVisibility::Visible);
+	RestartButton->SetIsEnabled(true);
 	CombatMessageText->SetText(FText::FromString(
-		TEXT("胜利！从三张骑士牌中选择一张，加入本次旅途牌组。")));
+		TEXT("胜利！从三张职业牌中选择一张加入旅途牌组，也可以跳过。")));
 
 	for (int32 CardIndex = 0; CardIndex < CardButtons.Num(); ++CardIndex)
 	{
@@ -595,6 +682,16 @@ void UWorldWalkerHUDWidget::ShowRewardSelection(
 		}
 		CardButtons[CardIndex]->SetIsEnabled(true);
 	}
+}
+
+void UWorldWalkerHUDWidget::ShowProfessionSelection(const TArray<FString>& ChoiceLabels)
+{
+	ShowChoicePanel(
+		EChoicePanelMode::Profession,
+		TEXT("选择经典职业"),
+		TEXT("所有职业共用同一关卡；初始牌组和战后卡池各自独立。"),
+		TEXT("本轮优先开放法师（小女巫）与女骑士。选择后开始本次旅途。"),
+		ChoiceLabels);
 }
 
 void UWorldWalkerHUDWidget::ShowRewardConfirmation(const FString& ConfirmationText)
@@ -672,7 +769,9 @@ void UWorldWalkerHUDWidget::ShowChoicePanel(
 		Summary.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	ChoiceLoreText->SetText(FText::FromString(Lore));
 
-	const bool bShowingChoices = InMode == EChoicePanelMode::Route || InMode == EChoicePanelMode::Event;
+	const bool bShowingChoices = InMode == EChoicePanelMode::Profession
+		|| InMode == EChoicePanelMode::Route
+		|| InMode == EChoicePanelMode::Event;
 	for (int32 ChoiceIndex = 0; ChoiceIndex < ChoiceButtons.Num(); ++ChoiceIndex)
 	{
 		const bool bHasChoice = bShowingChoices && ChoiceLabels.IsValidIndex(ChoiceIndex);
@@ -707,7 +806,9 @@ void UWorldWalkerHUDWidget::HandleChoice2Clicked() { HandleChoiceClicked(2); }
 void UWorldWalkerHUDWidget::HandleChoiceClicked(const int32 ChoiceIndex)
 {
 	if (bChoiceInputLocked
-		|| (ChoicePanelMode != EChoicePanelMode::Route && ChoicePanelMode != EChoicePanelMode::Event)
+		|| (ChoicePanelMode != EChoicePanelMode::Profession
+			&& ChoicePanelMode != EChoicePanelMode::Route
+			&& ChoicePanelMode != EChoicePanelMode::Event)
 		|| !ChoiceButtons.IsValidIndex(ChoiceIndex)
 		|| ChoiceButtons[ChoiceIndex]->GetVisibility() != ESlateVisibility::Visible)
 	{
@@ -725,7 +826,11 @@ void UWorldWalkerHUDWidget::HandleChoiceClicked(const int32 ChoiceIndex)
 
 	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
 	{
-		if (ChoicePanelMode == EChoicePanelMode::Route)
+		if (ChoicePanelMode == EChoicePanelMode::Profession)
+		{
+			GameMode->HandleProfessionSelection(ChoiceIndex);
+		}
+		else if (ChoicePanelMode == EChoicePanelMode::Route)
 		{
 			GameMode->HandleRouteSelection(ChoiceIndex);
 		}
@@ -793,7 +898,11 @@ void UWorldWalkerHUDWidget::HandleRestartClicked()
 {
 	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
 	{
-		if (bRewardConfirmed)
+		if (bShowingRewardChoices)
+		{
+			GameMode->HandleRewardSkip();
+		}
+		else if (bRewardConfirmed)
 		{
 			GameMode->HandleReturnToExploration();
 		}
@@ -802,4 +911,50 @@ void UWorldWalkerHUDWidget::HandleRestartClicked()
 			GameMode->RestartDemo();
 		}
 	}
+}
+
+void UWorldWalkerHUDWidget::SetPlayerDisplayName(const FString& DisplayName)
+{
+	PlayerDisplayName = DisplayName.IsEmpty() ? TEXT("旅人") : DisplayName;
+}
+
+void UWorldWalkerHUDWidget::SetDeckAccessEnabled(const bool bEnabled)
+{
+	if (DeckAccessButton)
+	{
+		DeckAccessButton->SetVisibility(
+			bEnabled ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
+}
+
+void UWorldWalkerHUDWidget::ShowDeckViewer(const FString& Title, const FString& DeckSummary)
+{
+	if (!DeckPanel || !DeckTitleText || !DeckListText)
+	{
+		return;
+	}
+	DeckTitleText->SetText(FText::FromString(Title));
+	DeckListText->SetText(FText::FromString(DeckSummary));
+	DeckPanel->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UWorldWalkerHUDWidget::HideDeckViewer()
+{
+	if (DeckPanel)
+	{
+		DeckPanel->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UWorldWalkerHUDWidget::HandleDeckAccessClicked()
+{
+	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
+	{
+		GameMode->HandleDeckViewToggle();
+	}
+}
+
+void UWorldWalkerHUDWidget::HandleDeckCloseClicked()
+{
+	HandleDeckAccessClicked();
 }

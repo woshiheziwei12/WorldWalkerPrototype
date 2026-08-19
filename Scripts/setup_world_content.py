@@ -472,7 +472,15 @@ def _card(
     equipment_attack=0,
     equipment_block=0,
     equipment_draw=0,
+    profession=None,
+    school=unreal.CardSchool.NONE,
 ):
+    if profession is None:
+        profession = (
+            unreal.FantasyPlayerProfession.KNIGHT
+            if card_set_id == "W01_EasternHorror"
+            else unreal.FantasyPlayerProfession.NONE
+        )
     return {
         "asset_name": asset_name,
         "card_id": card_id,
@@ -485,7 +493,8 @@ def _card(
         "use_classic_resources": True,
         "valor_cost": valor_cost,
         "card_type": card_type,
-        "school": unreal.CardSchool.NONE,
+        "school": school,
+        "profession": profession,
         "effects": tuple(effects),
         "retain": retain,
         "exhaust": exhaust,
@@ -498,8 +507,12 @@ def _card(
     }
 
 
-def _player_description(summary, reward=False):
-    source_kind = "经典女骑士公开牌名" if reward else "女骑士初始牌原型候选"
+def _player_description(summary, reward=False, profession="女骑士"):
+    source_kind = (
+        f"经典{profession}公开牌名"
+        if reward
+        else f"{profession}初始牌原型候选"
+    )
     return f"【{source_kind}】{summary} {CLASSIC_PROTOTYPE_BOUNDARY}"
 
 
@@ -758,6 +771,182 @@ PLAYER_REWARD_CARD_SPECS = (
 )
 
 
+# The mage is the classic-mode Little Witch profession. Names and the numeric
+# fragments below come from the verified card index. Starter copies and rules
+# that the public index does not fully preserve remain explicit project tuning.
+MAGE_CARD_SPECS = (
+    _card(
+        "DA_Card_MageNormalAttack", "Mage_NormalAttack", "普通攻击",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),),
+        "T_Card_LongSwordSlash",
+        _player_description("基础攻击。", profession="小女巫"),
+        copies=3, profession=unreal.FantasyPlayerProfession.MAGE,
+    ),
+    _card(
+        "DA_Card_MageMana", "Mage_Mana", "法力",
+        unreal.CardType.MANA,
+        (_effect(
+            unreal.FantasyCombatEffectType.GAIN_MANA,
+            6,
+            unreal.FantasyCombatTarget.SELF,
+        ),),
+        "T_Card_ArcaneSpark",
+        _player_description("获得 6 点法力。", profession="小女巫"),
+        copies=2, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageWisdom", "Mage_Wisdom", "智慧",
+        unreal.CardType.MANA,
+        (
+            _effect(
+                unreal.FantasyCombatEffectType.GAIN_MANA,
+                5,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+            _effect(
+                unreal.FantasyCombatEffectType.DRAW,
+                1,
+                unreal.FantasyCombatTarget.SELF,
+            ),
+        ),
+        "T_Card_ReadOpening",
+        _player_description("获得 5 点法力并抽 1 张牌。", profession="小女巫"),
+        copies=1, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageFireSeed", "Mage_FireSeed", "火苗",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4),),
+        "T_Card_ArcaneSpark",
+        _player_description(
+            "公开索引保留 2、2 点火属性片段；当前合并为 4 点伤害。",
+            profession="小女巫",
+        ),
+        copies=1, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageFireBlast", "Mage_FireBlast", "火焰冲击",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 10),),
+        "T_Card_ArcaneSpark",
+        _player_description("消耗 4 法力造成 10 点伤害。", profession="小女巫"),
+        copies=2, mana_cost=4,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageFocus", "Mage_Focus", "专注",
+        unreal.CardType.ACTION,
+        (_effect(
+            unreal.FantasyCombatEffectType.DRAW,
+            2,
+            unreal.FantasyCombatTarget.SELF,
+        ),),
+        "T_Card_ReadOpening",
+        _player_description("消耗 1 行动力抽 2 张牌。", profession="小女巫"),
+        copies=1, action_cost=1,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+)
+
+
+MAGE_REWARD_CARD_SPECS = (
+    _card(
+        "DA_Card_MageManaSource", "Mage_ManaSource", "法力源泉",
+        unreal.CardType.MANA,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 5, unreal.FantasyCombatTarget.SELF),),
+        "T_Card_ArcaneSpark",
+        _player_description("获得 5 点法力。", True, "小女巫"),
+        reward_eligible=True, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageManaTide", "Mage_ManaTide", "法力之潮",
+        unreal.CardType.MANA,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 12, unreal.FantasyCombatTarget.SELF),),
+        "T_Card_ArcaneSpark",
+        _player_description("获得 12 点法力。", True, "小女巫"),
+        reward_eligible=True, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageSpellProphecy", "Mage_SpellProphecy", "法术预言",
+        unreal.CardType.MANA,
+        (
+            _effect(unreal.FantasyCombatEffectType.GAIN_MANA, 5, unreal.FantasyCombatTarget.SELF),
+            _effect(unreal.FantasyCombatEffectType.DRAW, 1, unreal.FantasyCombatTarget.SELF),
+        ),
+        "T_Card_ReadOpening",
+        _player_description("获得 5 点法力并抽 1 张牌。", True, "小女巫"),
+        reward_eligible=True, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageFireball", "Mage_Fireball", "火球",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 18),),
+        "T_Card_ArcaneSpark",
+        _player_description("消耗 7 法力造成 18 点伤害。", True, "小女巫"),
+        reward_eligible=True, mana_cost=7,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MagePyroblast", "Mage_Pyroblast", "炎爆术",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 30),),
+        "T_Card_ArcaneSpark",
+        _player_description("消耗 9 法力造成 30 点伤害。", True, "小女巫"),
+        reward_eligible=True, mana_cost=9,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageAcidSpray", "Mage_AcidSpray", "酸性喷雾",
+        unreal.CardType.SPELL,
+        (_effect(
+            unreal.FantasyCombatEffectType.APPLY_STATUS,
+            4,
+            unreal.FantasyCombatTarget.OPPONENT,
+            unreal.FantasyCombatStatus.POISON,
+        ),),
+        "T_Card_ArcaneSpark",
+        _player_description("消耗 4 法力施加 4 层中毒。", True, "小女巫"),
+        reward_eligible=True, mana_cost=4,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageIceShield", "Mage_IceShield", "冰盾",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.BLOCK, 6, unreal.FantasyCombatTarget.SELF),),
+        "T_Card_KiteShieldGuard",
+        _player_description("消耗 4 法力获得 6 格挡。", True, "小女巫"),
+        reward_eligible=True, mana_cost=4,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+    _card(
+        "DA_Card_MageWindStone", "Mage_WindStone", "风之石",
+        unreal.CardType.SPELL,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 4),
+            _effect(unreal.FantasyCombatEffectType.DRAW, 1, unreal.FantasyCombatTarget.SELF),
+        ),
+        "T_Card_ReadOpening",
+        _player_description("消耗 1 法力造成 4 点伤害并抽 1 张牌。", True, "小女巫"),
+        reward_eligible=True, mana_cost=1,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+    ),
+)
+
+
 ENEMY_CARD_SPECS = (
     _card(
         "DA_EnemyCard_ClawStrike", "Enemy_ClawStrike", "爪击",
@@ -945,10 +1134,59 @@ ENEMY_CARD_SPECS = (
         "T_Card_LionheartJudgment", _enemy_description("造成穿刺伤害。"),
         card_set_id="W01_Enemy", mana_cost=2,
     ),
+    _card(
+        "DA_EnemyCard_FireSeed", "Enemy_FireSeed", "火苗",
+        unreal.CardType.ATTACK,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4),),
+        "T_Card_ArcaneSpark",
+        _enemy_description("公开索引保留 2、2 点火属性片段；当前合并为 4 点伤害。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_ManaTotem", "Enemy_ManaTotem", "法力图腾",
+        unreal.CardType.MANA,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 4, unreal.FantasyCombatTarget.SELF),),
+        "T_Card_ArcaneSpark",
+        _enemy_description("当前作为一次性 4 法力来源；图腾持续规则待图鉴核验。"),
+        card_set_id="W01_Enemy",
+    ),
+    _card(
+        "DA_EnemyCard_Heal", "Enemy_Heal", "治愈",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.HEAL, 7, unreal.FantasyCombatTarget.SELF),),
+        "T_Card_KnightsPrayer",
+        _enemy_description("消耗法力恢复 7 点生命。"),
+        card_set_id="W01_Enemy", mana_cost=1,
+    ),
+    _card(
+        "DA_EnemyCard_WindStone", "Enemy_WindStone", "风之石",
+        unreal.CardType.SPELL,
+        (
+            _effect(unreal.FantasyCombatEffectType.DAMAGE, 4),
+            _effect(unreal.FantasyCombatEffectType.DRAW, 1, unreal.FantasyCombatTarget.SELF),
+        ),
+        "T_Card_ReadOpening",
+        _enemy_description("消耗法力造成伤害并抽牌。"),
+        card_set_id="W01_Enemy", mana_cost=1,
+    ),
+    _card(
+        "DA_EnemyCard_CrystalBall", "Enemy_CrystalBall", "水晶球",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DRAW, 1, unreal.FantasyCombatTarget.SELF),),
+        "T_Card_ReadOpening",
+        _enemy_description("原牌含复制语义；当前只保留抽牌，复制机制后续补齐。"),
+        card_set_id="W01_Enemy", mana_cost=2,
+    ),
 )
 
 
-CARD_SPECS = PLAYER_CARD_SPECS + PLAYER_REWARD_CARD_SPECS + ENEMY_CARD_SPECS
+CARD_SPECS = (
+    PLAYER_CARD_SPECS
+    + PLAYER_REWARD_CARD_SPECS
+    + MAGE_CARD_SPECS
+    + MAGE_REWARD_CARD_SPECS
+    + ENEMY_CARD_SPECS
+)
 
 
 def _fallback_intent(intent_id, display_name, effects):
@@ -1094,6 +1332,74 @@ ENEMY_SPECS = (
             ),
         ),
         max_hand=4, max_action=1, starting_mana=2, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_Scarecrow", "Scarecrow", "稻草人", 55,
+        (
+            ("Enemy_Mana", 2), ("Enemy_FireBlast", 2),
+            ("Enemy_ElementalWave", 2), ("Enemy_FireSeed", 2),
+            ("Enemy_ManaTotem", 1),
+        ),
+        unreal.FantasyEnemyVisualProfile.SLIME,
+        "", "", "以法力和火焰牌推进战斗。",
+        (
+            _fallback_intent(
+                "FallbackFireSeed", "火苗（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4),),
+            ),
+        ),
+        max_hand=4, max_action=1, starting_mana=0, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_FortuneTeller", "FortuneTeller", "女占卜师", 58,
+        (
+            ("Enemy_Wisdom", 2), ("Enemy_ElementalWave", 2),
+            ("Enemy_Heal", 2), ("Enemy_WindStone", 2),
+            ("Enemy_CrystalBall", 1),
+        ),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "FortuneWisdom", "智慧", "积累法力、抽牌并以治愈维持战线。",
+        (
+            _fallback_intent(
+                "FallbackWindStone", "风之石（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4),),
+            ),
+        ),
+        max_hand=4, max_action=1, starting_mana=0, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_ScarecrowElite", "ScarecrowElite", "稻草人 · 精英", 86,
+        (
+            ("Enemy_Mana", 3), ("Enemy_FireBlast", 3),
+            ("Enemy_ElementalWave", 2), ("Enemy_FireSeed", 3),
+            ("Enemy_ManaTotem", 1),
+        ),
+        unreal.FantasyEnemyVisualProfile.SLIME,
+        "AshenKindling", "余烬", "章节后段版本；牌名集合不变，生命和份数为项目调参。",
+        (
+            _fallback_intent(
+                "FallbackEliteFire", "余烬火苗（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),),
+            ),
+        ),
+        max_hand=5, max_action=1, starting_mana=2, cards_per_turn=3,
+    ),
+    _enemy(
+        "DA_Enemy_FortuneTellerElite", "FortuneTellerElite", "女占卜师 · 精英", 90,
+        (
+            ("Enemy_Wisdom", 3), ("Enemy_ElementalWave", 2),
+            ("Enemy_Heal", 2), ("Enemy_WindStone", 3),
+            ("Enemy_CrystalBall", 2),
+        ),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "DeepFortune", "深层预言", "章节后段版本；牌名集合不变，生命和份数为项目调参。",
+        (
+            _fallback_intent(
+                "FallbackEliteWind", "预言风石（兼容意图）",
+                (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),),
+            ),
+        ),
+        max_hand=5, max_action=1, starting_mana=3, cards_per_turn=3,
     ),
     _enemy(
         "DA_Enemy_HeadlessKnightBoss", "HeadlessKnightBoss", "无头骑士 · 守关者", 108,
@@ -1264,6 +1570,7 @@ def ensure_card_definition(spec):
     card.set_editor_property("valor_cost", spec.get("valor_cost", 0))
     card.set_editor_property("card_type", spec["card_type"])
     card.set_editor_property("school", spec["school"])
+    card.set_editor_property("profession", spec["profession"])
     card.set_editor_property(
         "effects",
         [make_combat_effect(effect) for effect in spec["effects"]],
@@ -1424,16 +1731,38 @@ def main():
     reward_count = sum(
         1 for spec in CARD_SPECS if spec.get("reward_eligible", False)
     )
-    starter_copy_count = sum(spec["copies"] for spec in PLAYER_CARD_SPECS)
+    knight_starter_copy_count = sum(spec["copies"] for spec in PLAYER_CARD_SPECS)
+    mage_starter_copy_count = sum(spec["copies"] for spec in MAGE_CARD_SPECS)
+    knight_reward_count = sum(
+        1 for spec in PLAYER_REWARD_CARD_SPECS
+        if spec.get("reward_eligible", False)
+    )
+    mage_reward_count = sum(
+        1 for spec in MAGE_REWARD_CARD_SPECS
+        if spec.get("reward_eligible", False)
+    )
     unreal.log(
         "W01_CARD_PROGRESSION_SETUP_COMPLETE "
         f"definitions={len(CARD_SPECS)} rewards={reward_count}"
     )
     unreal.log(
         "W01_CLASSIC_PLAYER_CARD_SETUP_COMPLETE "
-        f"starter_definitions={len(PLAYER_CARD_SPECS)} "
-        f"starter_copies={starter_copy_count} rewards={reward_count} "
+        f"professions=2 starter_definitions="
+        f"{len(PLAYER_CARD_SPECS) + len(MAGE_CARD_SPECS)} "
+        f"starter_copies={knight_starter_copy_count + mage_starter_copy_count} "
+        f"rewards={reward_count} "
         "evidence=verified-names copies=project-tuned"
+    )
+    unreal.log(
+        "W01_MAGE_CARD_SETUP_COMPLETE "
+        f"starter_definitions={len(MAGE_CARD_SPECS)} "
+        f"starter_copies={mage_starter_copy_count} rewards={mage_reward_count} "
+        "profession=LittleWitch evidence=verified-names copies=project-tuned"
+    )
+    unreal.log(
+        "W01_KNIGHT_CARD_SETUP_COMPLETE "
+        f"starter_definitions={len(PLAYER_CARD_SPECS)} "
+        f"starter_copies={knight_starter_copy_count} rewards={knight_reward_count}"
     )
 
     enemy_deck_copy_count = sum(

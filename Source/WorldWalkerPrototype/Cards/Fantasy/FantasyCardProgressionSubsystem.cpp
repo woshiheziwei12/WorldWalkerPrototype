@@ -2,9 +2,37 @@
 
 #include "Cards/CardDefinition.h"
 
+bool UFantasyCardProgressionSubsystem::SelectProfession(
+	const EFantasyPlayerProfession Profession)
+{
+	if (bRunStarted || Profession == EFantasyPlayerProfession::None)
+	{
+		return false;
+	}
+
+	SelectedProfession = Profession;
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_PROFESSION_SELECTED Profession=%s"),
+		*GetProfessionDisplayName());
+	return true;
+}
+
+FString UFantasyCardProgressionSubsystem::GetProfessionDisplayName() const
+{
+	switch (SelectedProfession)
+	{
+	case EFantasyPlayerProfession::Mage: return TEXT("法师（小女巫）");
+	case EFantasyPlayerProfession::Knight: return TEXT("女骑士");
+	case EFantasyPlayerProfession::None:
+	default: return TEXT("尚未选择");
+	}
+}
+
 void UFantasyCardProgressionSubsystem::EnsureRunStarted()
 {
-	if (bRunStarted)
+	if (bRunStarted || !HasSelectedProfession())
 	{
 		return;
 	}
@@ -20,7 +48,8 @@ void UFantasyCardProgressionSubsystem::EnsureRunStarted()
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("W01_RUN_STARTED Chapter=1 Depth=0 Choices=%d"),
+		TEXT("W01_RUN_STARTED Chapter=1 Depth=0 Profession=%s Choices=%d"),
+		*GetProfessionDisplayName(),
 		RouteChoices.Num());
 }
 
@@ -30,6 +59,7 @@ void UFantasyCardProgressionSubsystem::ResetRun()
 	RemovedCardCopies.Reset();
 	RouteChoices.Reset();
 	ActiveNode = FFantasyRouteNodeChoice();
+	SelectedProfession = EFantasyPlayerProfession::None;
 	ChapterDepth = 0;
 	bRunStarted = false;
 	bHasActiveNode = false;
@@ -113,8 +143,9 @@ int32 UFantasyCardProgressionSubsystem::GetTotalRemovedCopies() const
 FString UFantasyCardProgressionSubsystem::BuildRunSummary() const
 {
 	return FString::Printf(
-		TEXT("灰烬章节 %d/4 · 生命 %d/%d · 获得 %d 张 · 移除 %d 张"),
-		FMath::Clamp(ChapterDepth + 1, 1, 4),
+		TEXT("经典第一章 · %s · 路程 %d/6 · 生命 %d/%d · 获得 %d 张 · 移除 %d 张"),
+		*GetProfessionDisplayName(),
+		FMath::Clamp(ChapterDepth + 1, 1, GetTotalRouteDepths()),
 		CurrentRunHealth,
 		RunMaxHealth,
 		GetTotalGrantedCopies(),
@@ -274,21 +305,63 @@ void UFantasyCardProgressionSubsystem::RebuildRouteChoices()
 
 	case 2:
 		AddRouteChoice(
-			TEXT("D2_DragonWhelp"),
+			TEXT("D2_Scarecrow"),
+			TEXT("稻草人"),
+			TEXT("最低确认牌名：法力、火焰冲击、元素波动、火苗、法力图腾。"),
+			EFantasyRouteNodeType::Combat,
+			TEXT("Scarecrow"));
+		AddRouteChoice(
+			TEXT("D2_FortuneTeller"),
+			TEXT("女占卜师"),
+			TEXT("最低确认牌名：智慧、元素波动、治愈、风之石、水晶球。"),
+			EFantasyRouteNodeType::Combat,
+			TEXT("FortuneTeller"));
+		AddRouteChoice(
+			TEXT("D2_ExileCamp"),
+			TEXT("流亡者营火"),
+			TEXT("休整恢复生命，或带着临时护甲进入下一战。"),
+			EFantasyRouteNodeType::Rest,
+			TEXT("ExileCamp"));
+		break;
+
+	case 3:
+		AddRouteChoice(
+			TEXT("D3_DragonWhelp"),
 			TEXT("飞龙幼崽 · 精英"),
 			TEXT("最低确认牌名：法力、火焰冲击、元素波动。"),
 			EFantasyRouteNodeType::EliteCombat,
 			TEXT("DragonWhelp"));
 		AddRouteChoice(
-			TEXT("D2_HeadlessKnight"),
+			TEXT("D3_HeadlessKnight"),
 			TEXT("无头骑士 · 精英"),
 			TEXT("最低确认牌名：法力、火焰冲击、忏悔。"),
 			EFantasyRouteNodeType::EliteCombat,
 			TEXT("HeadlessKnight"));
 		AddRouteChoice(
-			TEXT("D2_ExileCamp"),
+			TEXT("D3_MoonlitWell"),
+			TEXT("月下古井"),
+			TEXT("恢复、牺牲换取职业牌或移除一张基础攻击。"),
+			EFantasyRouteNodeType::Event,
+			TEXT("MoonlitWell"));
+		break;
+
+	case 4:
+		AddRouteChoice(
+			TEXT("D4_ScarecrowElite"),
+			TEXT("稻草人 · 精英"),
+			TEXT("同一最低确认牌名集合，使用更高生命的章节后段版本。"),
+			EFantasyRouteNodeType::EliteCombat,
+			TEXT("ScarecrowElite"));
+		AddRouteChoice(
+			TEXT("D4_FortuneTellerElite"),
+			TEXT("女占卜师 · 精英"),
+			TEXT("同一最低确认牌名集合，使用更高生命的章节后段版本。"),
+			EFantasyRouteNodeType::EliteCombat,
+			TEXT("FortuneTellerElite"));
+		AddRouteChoice(
+			TEXT("D4_ExileCamp"),
 			TEXT("流亡者营火"),
-			TEXT("休整恢复生命，或带着临时护甲进入守关战。"),
+			TEXT("守关战前最后一次休整。"),
 			EFantasyRouteNodeType::Rest,
 			TEXT("ExileCamp"));
 		break;

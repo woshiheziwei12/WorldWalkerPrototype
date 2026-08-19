@@ -114,10 +114,6 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 		ExplorationMessage = TEXT("灰烬王国 · 月圆旅途\n选择路线→挑战/事件→战后三选一→章节守关者");
 		ActivePlayer->ConfigureFantasyWorldForm(true, true);
 		ActiveCardCombat = ActivePlayer->GetCardCombatComponent();
-		if (ActiveCardCombat)
-		{
-			ActiveCardCombat->LoadStartingDeck();
-		}
 		SpawnFantasyWorldLayout();
 		SpawnFantasyBattleArena();
 		const FVector GroundOrigin = ActivePlayer->GetActorLocation() - FVector(0.0f, 0.0f, 88.0f);
@@ -127,7 +123,9 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 		SpawnPortal(
 			TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::MainWorldId),
 			PortalOffset);
-		InitializeFantasyRun();
+		GetWorldTimerManager().SetTimerForNextTick(
+			this,
+			&AWorldWalkerGameModeBase::InitializeFantasyRun);
 	}
 }
 
@@ -287,15 +285,147 @@ void AWorldWalkerGameModeBase::InitializeFantasyRun()
 		return;
 	}
 
-	if (UFantasyCardProgressionSubsystem* Progression =
-		GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>())
+	UFantasyCardProgressionSubsystem* Progression =
+		GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
+	if (!Progression)
 	{
-		Progression->EnsureRunStarted();
+		return;
+	}
+	if (!Progression->HasSelectedProfession())
+	{
+		PresentProfessionChoices();
+		return;
+	}
+	BeginSelectedProfessionRun();
+}
+
+void AWorldWalkerGameModeBase::PresentProfessionChoices()
+{
+	FantasyRunFlowState = EFantasyRunFlowState::ProfessionChoice;
+	if (ActivePlayer)
+	{
+		ActivePlayer->SetCombatLocked(true);
+	}
+	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+	{
+		Controller->SetDeckAccessEnabled(false);
+		Controller->ShowProfessionSelection({
+			TEXT("法师（小女巫）\n法力牌积累资源，以火焰、寒冰和毒系咒术终结战斗"),
+			TEXT("女骑士\n免费攻击、行动牌与装备构成稳定攻防")});
+	}
+	UE_LOG(LogTemp, Display, TEXT("W01_PROFESSION_CHOICES_READY Count=2"));
+}
+
+void AWorldWalkerGameModeBase::HandleProfessionSelection(const int32 ChoiceIndex)
+{
+	if (FantasyRunFlowState != EFantasyRunFlowState::ProfessionChoice || !GetGameInstance())
+	{
+		return;
+	}
+	const EFantasyPlayerProfession Profession = ChoiceIndex == 0
+		? EFantasyPlayerProfession::Mage
+		: ChoiceIndex == 1
+			? EFantasyPlayerProfession::Knight
+			: EFantasyPlayerProfession::None;
+	UFantasyCardProgressionSubsystem* Progression =
+		GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
+	if (!Progression || !Progression->SelectProfession(Profession))
+	{
+		PresentProfessionChoices();
+		return;
+	}
+	if (ActivePlayer)
+	{
+		ActivePlayer->ConfigureFantasyProfession(Profession);
+	}
+	BeginSelectedProfessionRun();
+}
+
+void AWorldWalkerGameModeBase::BeginSelectedProfessionRun()
+{
+	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	if (!Progression || !Progression->HasSelectedProfession() || !ActiveCardCombat)
+	{
+		return;
+	}
+
+	Progression->EnsureRunStarted();
+	ActivePlayer->ConfigureFantasyProfession(Progression->GetSelectedProfession());
+	if (!ActiveCardCombat->LoadStartingDeck())
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("W01 profession starter deck unavailable. Profession=%s"),
+			*Progression->GetProfessionDisplayName());
+		Progression->ResetRun();
+		PresentProfessionChoices();
+		return;
+	}
+	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+	{
+		Controller->SetProfessionLabel(Progression->GetProfessionDisplayName());
+		Controller->SetDeckAccessEnabled(true);
 	}
 	RestoreRunHealthToPlayer();
 	GetWorldTimerManager().SetTimerForNextTick(
 		this,
 		&AWorldWalkerGameModeBase::ResumeOrPresentFantasyRun);
+}
+
+void AWorldWalkerGameModeBase::HandleDeckViewToggle()
+{
+	AWorldWalkerPlayerController* Controller = GetWorldWalkerController();
+	if (!Controller || !ActiveCardCombat || ActiveCardCombat->GetStartingDeckCount() <= 0)
+	{
+		return;
+	}
+
+	if (bDeckViewerOpen)
+	{
+		bDeckViewerOpen = false;
+		if (ActivePlayer && bRestoreMovementAfterDeckViewer)
+		{
+			ActivePlayer->SetCombatLocked(false);
+		}
+		bRestoreMovementAfterDeckViewer = false;
+		const bool bUiOnly = FantasyRunFlowState == EFantasyRunFlowState::ProfessionChoice
+			|| FantasyRunFlowState == EFantasyRunFlowState::Resolution
+			|| FantasyRunFlowState == EFantasyRunFlowState::ChapterComplete;
+		const bool bCombatInput = bCombatActive
+			|| FantasyRunFlowState == EFantasyRunFlowState::RewardChoice
+			|| FantasyRunFlowState == EFantasyRunFlowState::RewardConfirmed
+			|| FantasyRunFlowState == EFantasyRunFlowState::Defeat;
+		Controller->HideDeckViewer(bCombatInput, bUiOnly);
+		UE_LOG(LogTemp, Display, TEXT("W01_DECK_VIEW_CLOSED"));
+		return;
+	}
+
+	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	bDeckViewerOpen = true;
+	bRestoreMovementAfterDeckViewer = ActivePlayer
+		&& !bCombatActive
+		&& FantasyRunFlowState != EFantasyRunFlowState::Resolution
+		&& FantasyRunFlowState != EFantasyRunFlowState::ChapterComplete;
+	if (ActivePlayer && bRestoreMovementAfterDeckViewer)
+	{
+		ActivePlayer->SetCombatLocked(true);
+	}
+	Controller->ShowDeckViewer(
+		FString::Printf(
+			TEXT("当前牌组 · %s · 共 %d 张"),
+			Progression ? *Progression->GetProfessionDisplayName() : TEXT("旅人"),
+			ActiveCardCombat->GetStartingDeckCount()),
+		ActiveCardCombat->BuildCurrentDeckSummary());
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_DECK_VIEW_OPENED Cards=%d"),
+		ActiveCardCombat->GetStartingDeckCount());
 }
 
 void AWorldWalkerGameModeBase::ResumeOrPresentFantasyRun()
@@ -582,13 +712,20 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 	FString Title;
 	FString Lore;
 	TArray<FString> Choices;
+	const UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	const bool bMage = Progression
+		&& Progression->GetSelectedProfession() == EFantasyPlayerProfession::Mage;
+	const FString GiftCardName = bMage ? TEXT("风之石") : TEXT("迅捷攻击");
+	const FString SmithCardName = bMage ? TEXT("冰盾") : TEXT("绝对防御");
 	if (EventId == TEXT("MoonlitWell"))
 	{
 		Title = TEXT("月下古井");
 		Lore = TEXT("井水映出了三个不同的你。每一道倒影都会永久改变本次旅途。");
 		Choices = {
 			TEXT("饮下银色井水：恢复 25 点生命"),
-			TEXT("触碰血色倒影：失去至多 8 生命（保留 1），获得【迅捷攻击】"),
+			FString::Printf(TEXT("触碰血色倒影：失去至多 8 生命（保留 1），获得【%s】"), *GiftCardName),
 			TEXT("沉下沉重倒影：从旅途牌组移除 1 张【普通攻击】")};
 	}
 	else if (EventId == TEXT("AshenSmith"))
@@ -596,7 +733,7 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 		Title = TEXT("灰烬铁匠");
 		Lore = TEXT("失明的铁匠只凭声音敲打剑身。他要求你用伤痕、旧剑或一个承诺付账。");
 		Choices = {
-			TEXT("以血淬火：失去至多 10 生命（保留 1），获得【绝对防御】"),
+			FString::Printf(TEXT("以血淬火：失去至多 10 生命（保留 1），获得【%s】"), *SmithCardName),
 			TEXT("熔掉旧剑：移除 1 张【普通攻击】"),
 			TEXT("记下盾阵：下一场战斗开始时获得 12 格挡")};
 	}
@@ -672,6 +809,13 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 		return ActiveCardCombat
 			&& ActiveCardCombat->GrantRunCard(ActiveCardCombat->FindCardDefinition(CardId));
 	};
+	const bool bMage = Progression
+		&& Progression->GetSelectedProfession() == EFantasyPlayerProfession::Mage;
+	const FName BasicAttackId = bMage ? FName(TEXT("Mage_NormalAttack")) : FName(TEXT("Knight_NormalAttack"));
+	const FName GiftCardId = bMage ? FName(TEXT("Mage_WindStone")) : FName(TEXT("Knight_SwiftAttack"));
+	const FName SmithCardId = bMage ? FName(TEXT("Mage_IceShield")) : FName(TEXT("Knight_AbsoluteDefense"));
+	const TCHAR* GiftCardName = bMage ? TEXT("风之石") : TEXT("迅捷攻击");
+	const TCHAR* SmithCardName = bMage ? TEXT("冰盾") : TEXT("绝对防御");
 
 	if (CurrentEventId == TEXT("MoonlitWell"))
 	{
@@ -683,15 +827,15 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 		else if (ChoiceIndex == 1)
 		{
 			const int32 HealthLost = ApplyNonLethalHealthLoss(8);
-			const bool bGranted = GrantCardById(TEXT("Knight_SwiftAttack"));
+			const bool bGranted = GrantCardById(GiftCardId);
 			Result = bGranted
-				? FString::Printf(TEXT("倒影夺走 %d 点生命，却将【迅捷攻击】留在你手中。"), HealthLost)
+				? FString::Printf(TEXT("倒影夺走 %d 点生命，却将【%s】留在你手中。"), HealthLost, GiftCardName)
 				: FString::Printf(TEXT("你失去 %d 点生命，但卡牌资料尚未生成。"), HealthLost);
 		}
 		else
 		{
 			const bool bRemoved = ActiveCardCombat
-				&& ActiveCardCombat->RemoveCardFromRun(TEXT("Knight_NormalAttack"));
+				&& ActiveCardCombat->RemoveCardFromRun(BasicAttackId);
 			Result = bRemoved
 				? TEXT("一张【普通攻击】沉入井底，旅途牌组更精简了。")
 				: TEXT("没有可移除的【普通攻击】，倒影随水波散去。");
@@ -702,15 +846,15 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 		if (ChoiceIndex == 0)
 		{
 			const int32 HealthLost = ApplyNonLethalHealthLoss(10);
-			const bool bGranted = GrantCardById(TEXT("Knight_AbsoluteDefense"));
+			const bool bGranted = GrantCardById(SmithCardId);
 			Result = bGranted
-				? FString::Printf(TEXT("铁锤落下，你失去 %d 点生命并获得【绝对防御】。"), HealthLost)
+				? FString::Printf(TEXT("铁锤落下，你失去 %d 点生命并获得【%s】。"), HealthLost, SmithCardName)
 				: FString::Printf(TEXT("你失去 %d 点生命，但卡牌资料尚未生成。"), HealthLost);
 		}
 		else if (ChoiceIndex == 1)
 		{
 			const bool bRemoved = ActiveCardCombat
-				&& ActiveCardCombat->RemoveCardFromRun(TEXT("Knight_NormalAttack"));
+				&& ActiveCardCombat->RemoveCardFromRun(BasicAttackId);
 			Result = bRemoved
 				? TEXT("旧剑融化，一张【普通攻击】已从牌组移除。")
 				: TEXT("牌组里已没有可熔的【普通攻击】。");
@@ -1832,6 +1976,7 @@ void AWorldWalkerGameModeBase::BeginVictoryReward()
 	}
 	bAwaitingRewardSelection = PendingRewardChoices.Num() == 3;
 	bRewardReadyToLeave = false;
+	bRewardWasSkipped = false;
 	FantasyRunFlowState = EFantasyRunFlowState::RewardChoice;
 
 	AWorldWalkerPlayerController* Controller = GetWorldWalkerController();
@@ -1894,6 +2039,7 @@ void AWorldWalkerGameModeBase::HandleRewardSelection(const int32 RewardIndex)
 
 	bAwaitingRewardSelection = false;
 	bRewardReadyToLeave = true;
+	bRewardWasSkipped = false;
 	FantasyRunFlowState = EFantasyRunFlowState::RewardConfirmed;
 	PendingRewardChoices.Reset();
 	const FString Confirmation = FString::Printf(
@@ -1914,6 +2060,31 @@ void AWorldWalkerGameModeBase::HandleRewardSelection(const int32 RewardIndex)
 		ActiveCardCombat->GetRunRewardCount());
 }
 
+void AWorldWalkerGameModeBase::HandleRewardSkip()
+{
+	if (FantasyRunFlowState != EFantasyRunFlowState::RewardChoice
+		|| !bAwaitingRewardSelection)
+	{
+		return;
+	}
+
+	bAwaitingRewardSelection = false;
+	bRewardReadyToLeave = true;
+	bRewardWasSkipped = true;
+	FantasyRunFlowState = EFantasyRunFlowState::RewardConfirmed;
+	PendingRewardChoices.Reset();
+	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
+	{
+		Controller->ShowRewardConfirmation(
+			TEXT("你没有拿走任何卡牌。牌组保持不变，可以继续路线。"));
+	}
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_VICTORY_REWARD_SKIPPED Deck=%d"),
+		ActiveCardCombat ? ActiveCardCombat->GetStartingDeckCount() : 0);
+}
+
 void AWorldWalkerGameModeBase::HandleReturnToExploration()
 {
 	if (!bRewardReadyToLeave || FantasyRunFlowState != EFantasyRunFlowState::RewardConfirmed
@@ -1932,16 +2103,24 @@ void AWorldWalkerGameModeBase::HandleReturnToExploration()
 		Soundscape->SetBattleMusicActive(false);
 	}
 	ClearActiveEnemy();
-	CompleteActiveNode(FString::Printf(
-		TEXT("你击败了【%s】，战利品已加入牌组。旅途中累计获得 %d 张卡。"),
-		*DefeatedEnemyName,
-		RewardCount));
+	const FString ResolutionMessage = bRewardWasSkipped
+		? FString::Printf(
+			TEXT("你击败了【%s】，并选择不拿卡牌。旅途中累计获得 %d 张卡。"),
+			*DefeatedEnemyName,
+			RewardCount)
+		: FString::Printf(
+			TEXT("你击败了【%s】，战利品已加入牌组。旅途中累计获得 %d 张卡。"),
+			*DefeatedEnemyName,
+			RewardCount);
+	CompleteActiveNode(ResolutionMessage);
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("W01_REWARD_RETURNED_TO_EXPLORATION Enemy=%s Rewards=%d"),
+		TEXT("W01_REWARD_RETURNED_TO_EXPLORATION Enemy=%s Rewards=%d Skipped=%d"),
 		*DefeatedEnemyName,
-		RewardCount);
+		RewardCount,
+		bRewardWasSkipped ? 1 : 0);
+	bRewardWasSkipped = false;
 }
 
 void AWorldWalkerGameModeBase::RefreshCombatUI() const

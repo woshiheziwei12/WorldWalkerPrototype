@@ -103,9 +103,17 @@ bool UCardCombatComponent::LoadStartingDeck(const FName CardSetId)
 	const UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
 		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr;
+	const EFantasyPlayerProfession Profession = Progression && Progression->HasSelectedProfession()
+		? Progression->GetSelectedProfession()
+		: EFantasyPlayerProfession::Knight;
 
 	for (UCardDefinition* Card : Definitions)
 	{
+		if (!Card || (Card->Profession != EFantasyPlayerProfession::None
+			&& Card->Profession != Profession))
+		{
+			continue;
+		}
 		const int32 RewardCopies = Progression ? Progression->GetGrantedCopies(Card->CardId) : 0;
 		const int32 RemovedCopies = Progression ? Progression->GetRemovedCopies(Card->CardId) : 0;
 		const int32 EffectiveCopies = FMath::Max(
@@ -314,7 +322,13 @@ TArray<UCardDefinition*> UCardCombatComponent::BuildRewardChoices(const int32 Ch
 
 	for (UCardDefinition* Card : LoadCardDefinitions(FantasyCardSetId))
 	{
-		if (!Card || !Card->bRewardEligible)
+		const UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
+			? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+			: nullptr;
+		const EFantasyPlayerProfession Profession = Progression && Progression->HasSelectedProfession()
+			? Progression->GetSelectedProfession()
+			: EFantasyPlayerProfession::Knight;
+		if (!Card || !Card->bRewardEligible || Card->Profession != Profession)
 		{
 			continue;
 		}
@@ -354,7 +368,9 @@ bool UCardCombatComponent::GrantRunCard(UCardDefinition* Card)
 
 	UFantasyCardProgressionSubsystem* Progression =
 		GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
-	if (!Progression || !Progression->GrantCard(Card))
+	if (!Progression || (Card->Profession != EFantasyPlayerProfession::None
+		&& Card->Profession != Progression->GetSelectedProfession())
+		|| !Progression->GrantCard(Card))
 	{
 		return false;
 	}
@@ -421,6 +437,54 @@ int32 UCardCombatComponent::GetRunRemovedCount() const
 		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr;
 	return Progression ? Progression->GetTotalRemovedCopies() : 0;
+}
+
+FString UCardCombatComponent::BuildCurrentDeckSummary() const
+{
+	TMap<FName, int32> CopiesById;
+	TMap<FName, const UCardDefinition*> DefinitionById;
+	for (const UCardDefinition* Card : StartingDeck)
+	{
+		if (!Card)
+		{
+			continue;
+		}
+		++CopiesById.FindOrAdd(Card->CardId);
+		DefinitionById.FindOrAdd(Card->CardId) = Card;
+	}
+
+	TArray<FName> CardIds;
+	CopiesById.GetKeys(CardIds);
+	CardIds.Sort([&DefinitionById](const FName Left, const FName Right)
+	{
+		const UCardDefinition* const* LeftCard = DefinitionById.Find(Left);
+		const UCardDefinition* const* RightCard = DefinitionById.Find(Right);
+		const FString LeftName = LeftCard && *LeftCard
+			? (*LeftCard)->DisplayName.ToString()
+			: Left.ToString();
+		const FString RightName = RightCard && *RightCard
+			? (*RightCard)->DisplayName.ToString()
+			: Right.ToString();
+		return LeftName < RightName;
+	});
+
+	TArray<FString> Entries;
+	for (const FName CardId : CardIds)
+	{
+		const UCardDefinition* const* Card = DefinitionById.Find(CardId);
+		if (!Card || !*Card)
+		{
+			continue;
+		}
+		Entries.Add(FString::Printf(
+			TEXT("%d × %s"),
+			CopiesById.FindRef(CardId),
+			*(*Card)->BuildRulesText()));
+	}
+
+	return Entries.IsEmpty()
+		? TEXT("当前牌组为空。")
+		: FString::Join(Entries, TEXT("\n\n"));
 }
 
 int32 UCardCombatComponent::DrawCards(const int32 Count)

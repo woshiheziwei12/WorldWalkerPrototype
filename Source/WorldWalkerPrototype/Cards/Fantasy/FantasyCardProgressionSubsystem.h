@@ -18,6 +18,10 @@ class WORLDWALKERPROTOTYPE_API UFantasyCardProgressionSubsystem : public UGameIn
 	GENERATED_BODY()
 
 public:
+	bool SelectProfession(EFantasyPlayerProfession Profession);
+	bool HasSelectedProfession() const { return SelectedProfession != EFantasyPlayerProfession::None; }
+	EFantasyPlayerProfession GetSelectedProfession() const { return SelectedProfession; }
+	FString GetProfessionDisplayName() const;
 	void EnsureRunStarted();
 	void ResetRun();
 
@@ -35,6 +39,7 @@ public:
 	bool HasActiveNode() const { return bHasActiveNode; }
 	const FFantasyRouteNodeChoice& GetActiveNode() const { return ActiveNode; }
 	int32 GetChapterDepth() const { return ChapterDepth; }
+	int32 GetTotalRouteDepths() const { return 6; }
 	bool IsChapterComplete() const { return bChapterComplete; }
 	void AddPendingBattleBoon(int32 Block, int32 Valor);
 	void ConsumePendingBattleBoon(int32& OutBlock, int32& OutValor);
@@ -62,6 +67,8 @@ private:
 
 	UPROPERTY(Transient)
 	FFantasyRouteNodeChoice ActiveNode;
+
+	EFantasyPlayerProfession SelectedProfession = EFantasyPlayerProfession::None;
 
 	int32 ChapterDepth = 0;
 	bool bRunStarted = false;

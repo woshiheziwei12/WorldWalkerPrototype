@@ -14,6 +14,7 @@ class WORLDWALKERPROTOTYPE_API AWorldWalkerPlayerController : public APlayerCont
 
 public:
 	virtual void BeginPlay() override;
+	virtual void SetupInputComponent() override;
 
 	void EnterCombat(
 		int32 PlayerHealth,
@@ -52,6 +53,7 @@ public:
 		const TArray<UTexture2D*>& CardArtworks,
 		const TArray<FLinearColor>& CardSchoolTints);
 	void ShowRewardConfirmation(const FString& ConfirmationText);
+	void ShowProfessionSelection(const TArray<FString>& ChoiceLabels);
 	void ShowRouteSelection(const FString& RunSummary, const TArray<FString>& ChoiceLabels);
 	void ShowEventSelection(
 		const FString& Title,
@@ -59,8 +61,16 @@ public:
 		const TArray<FString>& ChoiceLabels);
 	void ShowNodeResolution(const FString& Message, bool bChapterComplete);
 	void ExitCombatToExploration(const FString& ConfirmationText);
+	void SetProfessionLabel(const FString& ProfessionLabel);
+	void SetDeckAccessEnabled(bool bEnabled);
+	void ShowDeckViewer(const FString& Title, const FString& DeckSummary);
+	void HideDeckViewer(bool bReturnToCombatInput, bool bReturnToUIOnly);
 
 private:
+	void ToggleDeckViewer();
+
 	UPROPERTY(Transient)
 	TObjectPtr<UWorldWalkerHUDWidget> HUDWidget;
+
+	bool bDeckViewerOpen = false;
 };

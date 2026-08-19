@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Cards/Fantasy/FantasyCombatTypes.h"
+#include "Cards/Fantasy/FantasyRunTypes.h"
 #include "Engine/DataAsset.h"
 #include "CardDefinition.generated.h"
 
@@ -24,6 +25,10 @@ public:
 	/** Stable content-set identifier. W01 starter cards use W01_EasternHorror. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card")
 	FName CardSetId;
+
+	/** Profession-specific player pool. None is reserved for enemies/shared cards. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression")
+	EFantasyPlayerProfession Profession = EFantasyPlayerProfession::None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card")
 	FText DisplayName;

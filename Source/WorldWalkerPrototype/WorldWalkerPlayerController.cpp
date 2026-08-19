@@ -1,6 +1,7 @@
 #include "WorldWalkerPlayerController.h"
 
 #include "Blueprint/UserWidget.h"
+#include "InputCoreTypes.h"
 #include "UI/WorldWalkerHUDWidget.h"
 #include "WorldWalkerGameModeBase.h"
 
@@ -125,6 +126,19 @@ void AWorldWalkerPlayerController::ShowCombatResult(const bool bPlayerWon)
 	}
 }
 
+void AWorldWalkerPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+	if (InputComponent)
+	{
+		InputComponent->BindKey(
+			EKeys::Tab,
+			IE_Pressed,
+			this,
+			&AWorldWalkerPlayerController::ToggleDeckViewer);
+	}
+}
+
 void AWorldWalkerPlayerController::ShowRewardSelection(
 	const TArray<FString>& CardLabels,
 	const TArray<UTexture2D*>& CardArtworks,
@@ -142,6 +156,23 @@ void AWorldWalkerPlayerController::ShowRewardConfirmation(const FString& Confirm
 	{
 		HUDWidget->ShowRewardConfirmation(ConfirmationText);
 	}
+}
+
+void AWorldWalkerPlayerController::ShowProfessionSelection(const TArray<FString>& ChoiceLabels)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->ShowProfessionSelection(ChoiceLabels);
+	}
+
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	if (HUDWidget)
+	{
+		InputMode.SetWidgetToFocus(HUDWidget->TakeWidget());
+	}
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
 }
 
 void AWorldWalkerPlayerController::ShowRouteSelection(
@@ -212,4 +243,83 @@ void AWorldWalkerPlayerController::ExitCombatToExploration(const FString& Confir
 
 	bShowMouseCursor = false;
 	SetInputMode(FInputModeGameOnly());
+}
+
+void AWorldWalkerPlayerController::SetProfessionLabel(const FString& ProfessionLabel)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->SetPlayerDisplayName(ProfessionLabel);
+	}
+}
+
+void AWorldWalkerPlayerController::SetDeckAccessEnabled(const bool bEnabled)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->SetDeckAccessEnabled(bEnabled);
+	}
+}
+
+void AWorldWalkerPlayerController::ShowDeckViewer(
+	const FString& Title,
+	const FString& DeckSummary)
+{
+	if (!HUDWidget)
+	{
+		return;
+	}
+
+	bDeckViewerOpen = true;
+	HUDWidget->ShowDeckViewer(Title, DeckSummary);
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(HUDWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+}
+
+void AWorldWalkerPlayerController::HideDeckViewer(
+	const bool bReturnToCombatInput,
+	const bool bReturnToUIOnly)
+{
+	bDeckViewerOpen = false;
+	if (HUDWidget)
+	{
+		HUDWidget->HideDeckViewer();
+	}
+
+	if (bReturnToUIOnly)
+	{
+		bShowMouseCursor = true;
+		FInputModeUIOnly InputMode;
+		if (HUDWidget)
+		{
+			InputMode.SetWidgetToFocus(HUDWidget->TakeWidget());
+		}
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		return;
+	}
+
+	if (bReturnToCombatInput)
+	{
+		bShowMouseCursor = true;
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		return;
+	}
+
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+}
+
+void AWorldWalkerPlayerController::ToggleDeckViewer()
+{
+	if (AWorldWalkerGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AWorldWalkerGameModeBase>())
+	{
+		GameMode->HandleDeckViewToggle();
+	}
 }
