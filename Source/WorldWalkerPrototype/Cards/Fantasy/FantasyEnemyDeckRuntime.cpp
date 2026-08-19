@@ -5,11 +5,13 @@
 
 namespace
 {
-	void ShuffleCards(TArray<TObjectPtr<UCardDefinition>>& Cards)
+	void ShuffleCards(
+		TArray<TObjectPtr<UCardDefinition>>& Cards,
+		FRandomStream& RandomStream)
 	{
 		for (int32 Index = Cards.Num() - 1; Index > 0; --Index)
 		{
-			Cards.Swap(Index, FMath::RandRange(0, Index));
+			Cards.Swap(Index, RandomStream.RandRange(0, Index));
 		}
 	}
 
@@ -41,7 +43,9 @@ namespace
 	}
 }
 
-bool UFantasyEnemyDeckRuntime::Initialize(UFantasyEnemyDefinition* InDefinition)
+bool UFantasyEnemyDeckRuntime::Initialize(
+	UFantasyEnemyDefinition* InDefinition,
+	const int32 RandomSeed)
 {
 	Definition = InDefinition;
 	DrawPile.Reset();
@@ -57,6 +61,7 @@ bool UFantasyEnemyDeckRuntime::Initialize(UFantasyEnemyDefinition* InDefinition)
 	CurrentMana = 0;
 	CurrentTurnHandLimit = 0;
 	CardsPlayedThisTurn = 0;
+	BattleRandomStream.Initialize(RandomSeed == INDEX_NONE ? FMath::Rand() : RandomSeed);
 
 	if (!Definition)
 	{
@@ -305,7 +310,7 @@ int32 UFantasyEnemyDeckRuntime::DiscardRandom(const int32 Count)
 	int32 Discarded = 0;
 	while (Discarded < Requested && !Hand.IsEmpty())
 	{
-		const int32 HandIndex = FMath::RandRange(0, Hand.Num() - 1);
+		const int32 HandIndex = BattleRandomStream.RandRange(0, Hand.Num() - 1);
 		if (Hand[HandIndex])
 		{
 			DiscardPile.Add(Hand[HandIndex]);
@@ -528,5 +533,5 @@ void UFantasyEnemyDeckRuntime::RefillDrawPile()
 
 void UFantasyEnemyDeckRuntime::ShuffleDrawPile()
 {
-	ShuffleCards(DrawPile);
+	ShuffleCards(DrawPile, BattleRandomStream);
 }

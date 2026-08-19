@@ -129,4 +129,6 @@ private:
 	uint8 LitSchoolMask = 0;
 	bool bResonanceTriggeredThisTurn = false;
 	bool bLastCardTriggeredResonance = false;
+	FRandomStream BattleRandomStream;
+	bool bBattleRandomStreamReady = false;
 };

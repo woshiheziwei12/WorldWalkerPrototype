@@ -3,8 +3,26 @@
 #include "Cards/CardDefinition.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M1-v1"));
+
+namespace
+{
+	uint32 HashStableUtf8(const FString& Value)
+	{
+		const FTCHARToUTF8 Utf8(*Value);
+		uint32 Hash = 2166136261u;
+		for (int32 Index = 0; Index < Utf8.Length(); ++Index)
+		{
+			Hash ^= static_cast<uint8>(Utf8.Get()[Index]);
+			Hash *= 16777619u;
+		}
+		return Hash;
+	}
+}
 
 bool UFantasyCardProgressionSubsystem::ConfigureRun(
 	const int32 InRouteSeed,
@@ -79,12 +97,14 @@ void UFantasyCardProgressionSubsystem::EnsureRunStarted()
 
 	ResolveRunConfiguration();
 	bRunStarted = true;
+	RunId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
 	ChapterDepth = 0;
 	bHasActiveNode = false;
 	bChapterComplete = false;
 	RunMaxHealth = 100;
 	CurrentRunHealth = RunMaxHealth;
 	RouteChoices.Reset();
+	LogStructuredEvent(TEXT("RunStarted"));
 	RebuildRouteChoices();
 	UE_LOG(
 		LogTemp,
@@ -111,7 +131,77 @@ void UFantasyCardProgressionSubsystem::ResetRun()
 	PendingBattleValor = 0;
 	RunMaxHealth = 100;
 	CurrentRunHealth = RunMaxHealth;
+	RandomStreamSequences.Reset();
+	RunId.Reset();
 	UE_LOG(LogTemp, Display, TEXT("W01_RUN_RESET"));
+}
+
+void UFantasyCardProgressionSubsystem::LogStructuredEvent(
+	const FString& EventType,
+	const TMap<FString, FString>& StringFields,
+	const TMap<FString, int64>& NumberFields) const
+{
+	if (RunId.IsEmpty())
+	{
+		return;
+	}
+	TSharedRef<FJsonObject> Event = MakeShared<FJsonObject>();
+	Event->SetNumberField(TEXT("schemaVersion"), 1);
+	Event->SetStringField(TEXT("event"), EventType);
+	Event->SetStringField(TEXT("runId"), RunId);
+	Event->SetStringField(TEXT("contentVersion"), ContentVersion);
+	Event->SetNumberField(TEXT("routeSeed"), RouteSeed);
+	Event->SetStringField(TEXT("profession"), GetProfessionDisplayName());
+	Event->SetNumberField(TEXT("depth"), ChapterDepth);
+	Event->SetStringField(
+		TEXT("source"),
+		FParse::Param(FCommandLine::Get(), TEXT("W01M0RunAutomation"))
+			? TEXT("automation")
+			: TEXT("manual"));
+	for (const TPair<FString, FString>& Field : StringFields)
+	{
+		Event->SetStringField(Field.Key, Field.Value);
+	}
+	for (const TPair<FString, int64>& Field : NumberFields)
+	{
+		Event->SetNumberField(Field.Key, Field.Value);
+	}
+
+	FString JsonLine;
+	const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
+		TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&JsonLine);
+	FJsonSerializer::Serialize(Event, Writer);
+	UE_LOG(LogTemp, Display, TEXT("W01_RUN_EVENT_JSON %s"), *JsonLine);
+}
+
+int32 UFantasyCardProgressionSubsystem::BuildDeterministicSeed(
+	const FName StreamName,
+	const int32 Sequence) const
+{
+	const uint32 SeedHash = HashCombineFast(
+		GetTypeHash(RouteSeed),
+		HashCombineFast(
+			HashStableUtf8(ContentVersion),
+			HashCombineFast(HashStableUtf8(StreamName.ToString()), GetTypeHash(Sequence))));
+	return static_cast<int32>(SeedHash);
+}
+
+int32 UFantasyCardProgressionSubsystem::ConsumeDeterministicSeed(const FName StreamName)
+{
+	ResolveRunConfiguration();
+	int32& Sequence = RandomStreamSequences.FindOrAdd(StreamName);
+	const int32 DerivedSeed = BuildDeterministicSeed(StreamName, Sequence);
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_RANDOM_STREAM Stream=%s Sequence=%d Seed=%d RouteSeed=%d ContentVersion=%s"),
+		*StreamName.ToString(),
+		Sequence,
+		DerivedSeed,
+		RouteSeed,
+		*ContentVersion);
+	++Sequence;
+	return DerivedSeed;
 }
 
 FString UFantasyCardProgressionSubsystem::BuildRouteChoiceSignature() const
@@ -238,6 +328,11 @@ bool UFantasyCardProgressionSubsystem::SelectRouteChoice(
 		*ActiveNode.NodeId.ToString(),
 		static_cast<int32>(ActiveNode.NodeType),
 		*ActiveNode.PayloadId.ToString());
+	LogStructuredEvent(
+		TEXT("RouteSelected"),
+		{{TEXT("nodeId"), ActiveNode.NodeId.ToString()},
+		 {TEXT("payloadId"), ActiveNode.PayloadId.ToString()}},
+		{{TEXT("nodeType"), static_cast<int64>(ActiveNode.NodeType)}});
 	return true;
 }
 
@@ -270,6 +365,16 @@ bool UFantasyCardProgressionSubsystem::CompleteActiveNode()
 		*CompletedNodeId.ToString(),
 		ChapterDepth,
 		bChapterComplete ? 1 : 0);
+	LogStructuredEvent(
+		TEXT("NodeCompleted"),
+		{{TEXT("nodeId"), CompletedNodeId.ToString()}},
+		{{TEXT("chapterComplete"), bChapterComplete ? 1 : 0}});
+	if (bChapterComplete)
+	{
+		LogStructuredEvent(
+			TEXT("RunEnded"),
+			{{TEXT("reason"), TEXT("Completed")}});
+	}
 	return true;
 }
 
@@ -440,6 +545,10 @@ void UFantasyCardProgressionSubsystem::RebuildRouteChoices()
 		RouteSeed,
 		*ContentVersion,
 		*BuildRouteChoiceSignature());
+	LogStructuredEvent(
+		TEXT("RouteOffered"),
+		{{TEXT("signature"), BuildRouteChoiceSignature()}},
+		{{TEXT("choiceCount"), RouteChoices.Num()}});
 }
 
 void UFantasyCardProgressionSubsystem::ApplyDeterministicRouteOrder()
@@ -451,7 +560,7 @@ void UFantasyCardProgressionSubsystem::ApplyDeterministicRouteOrder()
 
 	const uint32 SeedHash = HashCombineFast(
 		GetTypeHash(RouteSeed),
-		HashCombineFast(GetTypeHash(ContentVersion), GetTypeHash(ChapterDepth)));
+		HashCombineFast(HashStableUtf8(ContentVersion), GetTypeHash(ChapterDepth)));
 	FRandomStream Stream(static_cast<int32>(SeedHash));
 	for (int32 Index = RouteChoices.Num() - 1; Index > 0; --Index)
 	{

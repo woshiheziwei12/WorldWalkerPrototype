@@ -58,11 +58,11 @@ namespace
 		return Definitions;
 	}
 
-	void ShuffleCards(TArray<UCardDefinition*>& Cards)
+	void ShuffleCards(TArray<UCardDefinition*>& Cards, FRandomStream& RandomStream)
 	{
 		for (int32 Index = Cards.Num() - 1; Index > 0; --Index)
 		{
-			Cards.Swap(Index, FMath::RandRange(0, Index));
+			Cards.Swap(Index, RandomStream.RandRange(0, Index));
 		}
 	}
 }
@@ -178,6 +178,13 @@ bool UCardCombatComponent::StartBattle(const FName CardSetId)
 	LitSchoolMask = 0;
 	bResonanceTriggeredThisTurn = false;
 	bLastCardTriggeredResonance = false;
+	UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	BattleRandomStream.Initialize(Progression
+		? Progression->ConsumeDeterministicSeed(TEXT("PlayerBattle"))
+		: FMath::Rand());
+	bBattleRandomStreamReady = true;
 	ShuffleDrawPile();
 	StartPlayerTurn();
 	return true;
@@ -336,7 +343,13 @@ TArray<UCardDefinition*> UCardCombatComponent::BuildRewardChoices(const int32 Ch
 		RewardPool.Add(Card);
 	}
 
-	ShuffleCards(RewardPool);
+	UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	FRandomStream RewardRandomStream(Progression
+		? Progression->ConsumeDeterministicSeed(TEXT("RewardOffer"))
+		: FMath::Rand());
+	ShuffleCards(RewardPool, RewardRandomStream);
 	TArray<UCardDefinition*> Choices;
 	while (Choices.Num() < SafeChoiceCount && !RewardPool.IsEmpty())
 	{
@@ -504,7 +517,18 @@ int32 UCardCombatComponent::DrawCards(const int32 Count)
 			break;
 		}
 
-		Hand.Add(DrawPile.Pop(EAllowShrinking::No));
+		UCardDefinition* DrawnCard = DrawPile.Pop(EAllowShrinking::No);
+		Hand.Add(DrawnCard);
+		if (UFantasyCardProgressionSubsystem* Progression =
+			GetWorld() && GetWorld()->GetGameInstance()
+				? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+				: nullptr)
+		{
+			Progression->LogStructuredEvent(
+				TEXT("CardDrawn"),
+				{{TEXT("actor"), TEXT("Player")},
+				 {TEXT("cardId"), DrawnCard ? DrawnCard->CardId.ToString() : TEXT("None")}});
+		}
 	}
 	return Hand.Num() - InitialHandSize;
 }
@@ -536,7 +560,9 @@ int32 UCardCombatComponent::DiscardRandomCards(const int32 Count)
 	int32 Discarded = 0;
 	while (Discarded < Requested && !Hand.IsEmpty())
 	{
-		const int32 HandIndex = FMath::RandRange(0, Hand.Num() - 1);
+		const int32 HandIndex = bBattleRandomStreamReady
+			? BattleRandomStream.RandRange(0, Hand.Num() - 1)
+			: FMath::RandRange(0, Hand.Num() - 1);
 		if (Hand[HandIndex])
 		{
 			DiscardPile.Add(Hand[HandIndex]);
@@ -628,6 +654,10 @@ void UCardCombatComponent::ShuffleDrawPile()
 {
 	for (int32 Index = DrawPile.Num() - 1; Index > 0; --Index)
 	{
-		DrawPile.Swap(Index, FMath::RandRange(0, Index));
+		DrawPile.Swap(
+			Index,
+			bBattleRandomStreamReady
+				? BattleRandomStream.RandRange(0, Index)
+				: FMath::RandRange(0, Index));
 	}
 }

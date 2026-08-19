@@ -20,7 +20,7 @@ class WORLDWALKERPROTOTYPE_API UFantasyEnemyDeckRuntime : public UObject
 	GENERATED_BODY()
 
 public:
-	bool Initialize(UFantasyEnemyDefinition* InDefinition);
+	bool Initialize(UFantasyEnemyDefinition* InDefinition, int32 RandomSeed = INDEX_NONE);
 
 	/** Refreshes action points, keeps mana, discards non-retained cards, then fills the hand. */
 	bool StartTurn();
@@ -103,6 +103,7 @@ private:
 	int32 CurrentMana = 0;
 	int32 CurrentTurnHandLimit = 0;
 	int32 CardsPlayedThisTurn = 0;
+	FRandomStream BattleRandomStream;
 
 	static constexpr int32 MaxEquipmentSlots = 3;
 	static constexpr int32 MaxCounterSlots = 3;

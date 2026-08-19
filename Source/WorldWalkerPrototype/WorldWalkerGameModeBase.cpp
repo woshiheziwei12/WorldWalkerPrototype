@@ -1267,8 +1267,15 @@ void AWorldWalkerGameModeBase::StartCombat(
 	}
 
 	ActiveEnemyDeck = NewObject<UFantasyEnemyDeckRuntime>(this);
+	UFantasyCardProgressionSubsystem* RandomProgression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
 	const bool bUsingRealEnemyDeck = ActiveEnemyDeck
-		&& ActiveEnemyDeck->Initialize(ActiveFantasyEnemyDefinition);
+		&& ActiveEnemyDeck->Initialize(
+			ActiveFantasyEnemyDefinition,
+			RandomProgression
+				? RandomProgression->ConsumeDeterministicSeed(TEXT("EnemyBattle"))
+				: INDEX_NONE);
 	if (bUsingRealEnemyDeck)
 	{
 		// Draw the publicly previewed hand before the player's first turn. After
@@ -1351,6 +1358,15 @@ void AWorldWalkerGameModeBase::StartCombat(
 		ActiveFantasyEnemyDefinition ? *ActiveFantasyEnemyDefinition->EnemyId.ToString() : TEXT("Unknown"),
 		bUsingRealEnemyDeck ? 1 : 0,
 		ActiveCardCombat->GetStartingDeckCount());
+	if (RandomProgression)
+	{
+		RandomProgression->LogStructuredEvent(
+			TEXT("BattleStarted"),
+			{{TEXT("enemyId"), ActiveFantasyEnemyDefinition
+				? ActiveFantasyEnemyDefinition->EnemyId.ToString()
+				: TEXT("Unknown")}},
+			{{TEXT("playerDeckCount"), ActiveCardCombat->GetStartingDeckCount()}});
+	}
 }
 
 void AWorldWalkerGameModeBase::HandlePlayCard(const int32 HandIndex)
@@ -1370,6 +1386,15 @@ void AWorldWalkerGameModeBase::HandlePlayCard(const int32 HandIndex)
 			Controller->SetCombatMessage(TEXT("行动力或法力不足，暂时无法打出这张牌。"), true);
 		}
 		return;
+	}
+	if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr)
+	{
+		Progression->LogStructuredEvent(
+			TEXT("CardPlayed"),
+			{{TEXT("actor"), TEXT("Player")},
+			 {TEXT("cardId"), Card->CardId.ToString()}});
 	}
 	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
 	{
@@ -1542,6 +1567,16 @@ void AWorldWalkerGameModeBase::HandleEnemyTurnStep()
 	}
 
 	CurrentEnemyTurnCardNames.Add(EnemyCard->DisplayName.ToString());
+	if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr)
+	{
+		Progression->LogStructuredEvent(
+			TEXT("CardPlayed"),
+			{{TEXT("actor"), TEXT("Enemy")},
+			 {TEXT("cardId"), EnemyCard->CardId.ToString()}},
+			{{TEXT("turn"), CurrentEnemyTurnNumber}});
+	}
 	if (AFantasyAmbientSoundscape* Soundscape = GetFantasySoundscape())
 	{
 		Soundscape->PlayCardCue(GetCardAudioCue(EnemyCard), true);
@@ -2215,6 +2250,20 @@ void AWorldWalkerGameModeBase::FinishCombat(const bool bPlayerWon)
 	CurrentEnemyTurnCardNames.Reset();
 	SyncRunHealthFromPlayer();
 	RefreshCombatUI();
+	if (!bPlayerWon)
+	{
+		if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+			? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+			: nullptr)
+		{
+			Progression->LogStructuredEvent(
+				TEXT("RunEnded"),
+				{{TEXT("reason"), TEXT("Defeat")},
+				 {TEXT("enemyId"), ActiveFantasyEnemyDefinition
+					? ActiveFantasyEnemyDefinition->EnemyId.ToString()
+					: TEXT("Unknown")}});
+		}
+	}
 
 	if (bPlayerWon && ActiveEnemy)
 	{
@@ -2292,6 +2341,18 @@ void AWorldWalkerGameModeBase::BeginVictoryReward()
 		*PendingRewardChoices[0]->CardId.ToString(),
 		*PendingRewardChoices[1]->CardId.ToString(),
 		*PendingRewardChoices[2]->CardId.ToString());
+	if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr)
+	{
+		Progression->LogStructuredEvent(
+			TEXT("RewardOffered"),
+			{{TEXT("signature"), FString::Printf(
+				TEXT("%s|%s|%s"),
+				*PendingRewardChoices[0]->CardId.ToString(),
+				*PendingRewardChoices[1]->CardId.ToString(),
+				*PendingRewardChoices[2]->CardId.ToString())}});
+	}
 }
 
 void AWorldWalkerGameModeBase::HandleRewardSelection(const int32 RewardIndex)
@@ -2334,6 +2395,15 @@ void AWorldWalkerGameModeBase::HandleRewardSelection(const int32 RewardIndex)
 		*RewardCard->CardId.ToString(),
 		ActiveCardCombat->GetStartingDeckCount(),
 		ActiveCardCombat->GetRunRewardCount());
+	if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr)
+	{
+		Progression->LogStructuredEvent(
+			TEXT("RewardSelected"),
+			{{TEXT("cardId"), RewardCard->CardId.ToString()},
+			 {TEXT("decision"), TEXT("Claimed")}});
+	}
 }
 
 void AWorldWalkerGameModeBase::HandleRewardSkip()
@@ -2359,6 +2429,15 @@ void AWorldWalkerGameModeBase::HandleRewardSkip()
 		Display,
 		TEXT("W01_VICTORY_REWARD_SKIPPED Deck=%d"),
 		ActiveCardCombat ? ActiveCardCombat->GetStartingDeckCount() : 0);
+	if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr)
+	{
+		Progression->LogStructuredEvent(
+			TEXT("RewardSelected"),
+			{{TEXT("cardId"), TEXT("None")},
+			 {TEXT("decision"), TEXT("Skipped")}});
+	}
 }
 
 void AWorldWalkerGameModeBase::HandleReturnToExploration()

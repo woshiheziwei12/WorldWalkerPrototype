@@ -32,6 +32,13 @@ public:
 	int32 GetRouteSeed() const { return RouteSeed; }
 	const FString& GetContentVersion() const { return ContentVersion; }
 	FString BuildRouteChoiceSignature() const;
+	/** Returns the next deterministic seed for an isolated named random stream. */
+	int32 ConsumeDeterministicSeed(FName StreamName);
+	int32 BuildDeterministicSeed(FName StreamName, int32 Sequence) const;
+	void LogStructuredEvent(
+		const FString& EventType,
+		const TMap<FString, FString>& StringFields = {},
+		const TMap<FString, int64>& NumberFields = {}) const;
 
 	bool GrantCard(const UCardDefinition* Card);
 	bool RemoveCardCopy(FName CardId);
@@ -91,4 +98,6 @@ private:
 	int32 RouteSeed = DefaultRouteSeed;
 	FString ContentVersion = DefaultContentVersion;
 	bool bRunConfigurationResolved = false;
+	TMap<FName, int32> RandomStreamSequences;
+	FString RunId;
 };

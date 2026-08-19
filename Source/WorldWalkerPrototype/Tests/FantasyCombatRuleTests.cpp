@@ -45,6 +45,28 @@ bool FFantasyDeterministicRouteTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("A complete chapter exposes six route layers"), FirstRun.Num(), 6);
 	TestTrue(TEXT("Same Seed and content version reproduce all route layers"), Replay == FirstRun);
 	TestTrue(TEXT("A different Seed changes the route ordering"), DifferentSeed != FirstRun);
+
+	UGameInstance* SeedTestGameInstance = NewObject<UGameInstance>();
+	UFantasyCardProgressionSubsystem* FirstStreams =
+		NewObject<UFantasyCardProgressionSubsystem>(SeedTestGameInstance);
+	UFantasyCardProgressionSubsystem* ReplayStreams =
+		NewObject<UFantasyCardProgressionSubsystem>(SeedTestGameInstance);
+	FirstStreams->ConfigureRun(314159, TEXT("W01-M1-test"));
+	ReplayStreams->ConfigureRun(314159, TEXT("W01-M1-test"));
+	const int32 FirstPlayerBattle = FirstStreams->ConsumeDeterministicSeed(TEXT("PlayerBattle"));
+	const int32 SecondPlayerBattle = FirstStreams->ConsumeDeterministicSeed(TEXT("PlayerBattle"));
+	TestEqual(
+		TEXT("Named stream sequence zero replays"),
+		ReplayStreams->ConsumeDeterministicSeed(TEXT("PlayerBattle")),
+		FirstPlayerBattle);
+	TestEqual(
+		TEXT("Named stream sequence one replays"),
+		ReplayStreams->ConsumeDeterministicSeed(TEXT("PlayerBattle")),
+		SecondPlayerBattle);
+	TestNotEqual(
+		TEXT("Isolated stream names derive different random seeds"),
+		FirstStreams->ConsumeDeterministicSeed(TEXT("RewardOffer")),
+		FirstPlayerBattle);
 	return true;
 }
 
