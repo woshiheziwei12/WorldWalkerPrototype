@@ -3,6 +3,27 @@
 #include "CoreMinimal.h"
 #include "FantasyRunTypes.generated.h"
 
+/** Presentation timing for enemy turns. Fast mode is intended for unattended regression runs. */
+struct WORLDWALKERPROTOTYPE_API FFantasyCombatTiming
+{
+	bool bFastCombat = false;
+	float EnemyTurnStartDelay = 0.7f;
+	float EnemyCardPresentationDelay = 1.05f;
+
+	static FFantasyCombatTiming ForAutomationMode(const bool bFastCombat)
+	{
+		FFantasyCombatTiming Timing;
+		if (bFastCombat)
+		{
+			Timing.bFastCombat = true;
+			// Keep a one-frame-safe positive delay so timer callbacks never recurse inline.
+			Timing.EnemyTurnStartDelay = 0.01f;
+			Timing.EnemyCardPresentationDelay = 0.01f;
+		}
+		return Timing;
+	}
+};
+
 /** Player professions share the same classic route, but own separate starter/reward pools. */
 UENUM(BlueprintType)
 enum class EFantasyPlayerProfession : uint8

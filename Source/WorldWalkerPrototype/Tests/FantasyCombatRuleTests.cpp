@@ -5,6 +5,33 @@
 #include "Cards/CardDefinition.h"
 #include "Cards/Fantasy/FantasyEnemyDeckRuntime.h"
 #include "Cards/Fantasy/FantasyEnemyDefinition.h"
+#include "Cards/Fantasy/FantasyRunTypes.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FFantasyFastCombatTimingTest,
+	"WorldWalker.W01.Combat.FastTiming",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FFantasyFastCombatTimingTest::RunTest(const FString& Parameters)
+{
+	const FFantasyCombatTiming NormalTiming = FFantasyCombatTiming::ForAutomationMode(false);
+	TestFalse(TEXT("Normal timing is not marked fast"), NormalTiming.bFastCombat);
+	TestEqual(TEXT("Normal enemy turn start delay is unchanged"), NormalTiming.EnemyTurnStartDelay, 0.7f);
+	TestEqual(
+		TEXT("Normal enemy card presentation delay is unchanged"),
+		NormalTiming.EnemyCardPresentationDelay,
+		1.05f);
+
+	const FFantasyCombatTiming FastTiming = FFantasyCombatTiming::ForAutomationMode(true);
+	TestTrue(TEXT("Fast timing is marked fast"), FastTiming.bFastCombat);
+	TestEqual(TEXT("Fast enemy turn start delay"), FastTiming.EnemyTurnStartDelay, 0.01f);
+	TestEqual(TEXT("Fast enemy card presentation delay"), FastTiming.EnemyCardPresentationDelay, 0.01f);
+	TestTrue(
+		TEXT("Fast timer delays stay positive"),
+		FastTiming.EnemyTurnStartDelay > 0.0f
+			&& FastTiming.EnemyCardPresentationDelay > 0.0f);
+	return true;
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FFantasyStrengthScaledPreviewTest,

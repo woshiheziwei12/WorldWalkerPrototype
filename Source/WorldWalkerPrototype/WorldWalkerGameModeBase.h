@@ -143,6 +143,7 @@ private:
 	FString ExplorationMessage = TEXT("WASD Move | Mouse Look | Space Jump | E Interact");
 	FFantasyCombatRuntimeState PlayerFantasyState;
 	FFantasyCombatRuntimeState EnemyFantasyState;
+	FFantasyCombatTiming CombatTiming;
 	int32 CurrentEnemyIntentIndex = 0;
 	int32 CurrentEnemyTurnNumber = 0;
 	FName CurrentEventId;

@@ -13,6 +13,8 @@
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "TimerManager.h"
 #include "World/WorldDefinition.h"
 #include "World/Fantasy/FantasyBattleArena.h"
@@ -60,6 +62,8 @@ AWorldWalkerGameModeBase::AWorldWalkerGameModeBase()
 {
 	DefaultPawnClass = AWorldWalkerCharacter::StaticClass();
 	PlayerControllerClass = AWorldWalkerPlayerController::StaticClass();
+	CombatTiming = FFantasyCombatTiming::ForAutomationMode(
+		FParse::Param(FCommandLine::Get(), TEXT("W01FastCombat")));
 }
 
 void AWorldWalkerGameModeBase::BeginPlay()
@@ -68,6 +72,13 @@ void AWorldWalkerGameModeBase::BeginPlay()
 
 	ActivePlayer = Cast<AWorldWalkerCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
 	InitializeWorldContent();
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("W01_COMBAT_TIMING_MODE Fast=%d TurnStartDelay=%.2f CardDelay=%.2f"),
+		CombatTiming.bFastCombat ? 1 : 0,
+		CombatTiming.EnemyTurnStartDelay,
+		CombatTiming.EnemyCardPresentationDelay);
 
 	UE_LOG(
 		LogTemp,
@@ -1236,7 +1247,7 @@ void AWorldWalkerGameModeBase::HandleEndPlayerTurn()
 		EnemyTurnTimer,
 		this,
 		&AWorldWalkerGameModeBase::HandleEnemyTurn,
-		0.7f,
+		CombatTiming.EnemyTurnStartDelay,
 		false);
 }
 
@@ -1272,7 +1283,7 @@ void AWorldWalkerGameModeBase::HandleEnemyTurn()
 			EnemyTurnTimer,
 			this,
 			&AWorldWalkerGameModeBase::FinishEnemyTurnSequence,
-			1.05f,
+			CombatTiming.EnemyCardPresentationDelay,
 			false);
 		return;
 	}
@@ -1327,9 +1338,10 @@ void AWorldWalkerGameModeBase::HandleEnemyTurnStep()
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("W01_ENEMY_CARD_PRESENTED Card=%s Turn=%d Delay=1.05"),
+		TEXT("W01_ENEMY_CARD_PRESENTED Card=%s Turn=%d Delay=%.2f"),
 		*EnemyCard->CardId.ToString(),
-		CurrentEnemyTurnNumber);
+		CurrentEnemyTurnNumber,
+		CombatTiming.EnemyCardPresentationDelay);
 
 	if (!ActivePlayer->GetCombatantComponent()->IsAlive())
 	{
@@ -1349,7 +1361,7 @@ void AWorldWalkerGameModeBase::HandleEnemyTurnStep()
 		EnemyTurnTimer,
 		this,
 		&AWorldWalkerGameModeBase::HandleEnemyTurnStep,
-		1.05f,
+		CombatTiming.EnemyCardPresentationDelay,
 		false);
 }
 
