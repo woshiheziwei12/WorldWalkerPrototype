@@ -19,6 +19,15 @@ enum class EFantasyEnemyVisualProfile : uint8
 	Wizard
 };
 
+/** Route classification is authored on the encounter and never inferred by the route picker. */
+UENUM(BlueprintType)
+enum class EFantasyEncounterTier : uint8
+{
+	Normal,
+	Elite,
+	Boss
+};
+
 /** One concrete card definition and the number of copies in an enemy deck. */
 USTRUCT(BlueprintType)
 struct WORLDWALKERPROTOTYPE_API FFantasyEnemyDeckEntry
@@ -62,6 +71,32 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy")
 	FText DisplayName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression")
+	EFantasyEncounterTier EncounterTier = EFantasyEncounterTier::Normal;
+
+	/** Stable taxonomy used by route constraints and future family-specific events. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression")
+	FName Family;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression", meta=(ClampMin="1"))
+	int32 Chapter = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression", meta=(ClampMin="1"))
+	int32 DangerRating = 1;
+
+	/** Empty means available by default; otherwise this is a stable progression condition ID. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression")
+	FName UnlockCondition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression", meta=(ClampMin="0"))
+	int32 MinDepth = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression", meta=(ClampMin="0"))
+	int32 MaxDepth = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Progression", meta=(ClampMin="0.0"))
+	float RewardWeight = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy", meta=(ClampMin="1"))
 	int32 MaxHealth = 100;

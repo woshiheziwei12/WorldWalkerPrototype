@@ -1196,6 +1196,82 @@ CARD_SPECS = (
 )
 
 
+def _card_contract(spec):
+    """Derive stable M1 metadata without duplicating it across 52 card specs."""
+    is_enemy = spec.get("card_set_id") == "W01_Enemy"
+    is_starter = spec.get("copies", 0) > 0
+    if is_enemy:
+        rarity = unreal.FantasyCardRarity.ENEMY
+        owner_tag = "Owner.Enemy"
+    elif is_starter:
+        rarity = unreal.FantasyCardRarity.STARTER
+        owner_tag = (
+            "Profession.Mage"
+            if spec["profession"] == unreal.FantasyPlayerProfession.MAGE
+            else "Profession.Knight"
+        )
+    else:
+        rarity = (
+            unreal.FantasyCardRarity.COMMON
+            if spec.get("reward_eligible", False)
+            else unreal.FantasyCardRarity.UNCOMMON
+        )
+        owner_tag = (
+            "Profession.Mage"
+            if spec["profession"] == unreal.FantasyPlayerProfession.MAGE
+            else "Profession.Knight"
+        )
+
+    card_type_tags = {
+        unreal.CardType.ATTACK: "Type.Attack",
+        unreal.CardType.SKILL: "Type.Skill",
+        unreal.CardType.ACTION: "Type.Action",
+        unreal.CardType.SPELL: "Type.Spell",
+        unreal.CardType.OATH: "Type.Oath",
+        unreal.CardType.MANA: "Type.Mana",
+        unreal.CardType.EQUIPMENT: "Type.Equipment",
+        unreal.CardType.COUNTER: "Type.Counter",
+        unreal.CardType.PRAYER: "Type.Prayer",
+        unreal.CardType.SPECIAL: "Type.Special",
+    }
+    effect_tags = {
+        unreal.FantasyCombatEffectType.DAMAGE: "Effect.Damage",
+        unreal.FantasyCombatEffectType.BLOCK: "Effect.Block",
+        unreal.FantasyCombatEffectType.DRAW: "Effect.Draw",
+        unreal.FantasyCombatEffectType.HEAL: "Effect.Heal",
+        unreal.FantasyCombatEffectType.GAIN_MANA: "Effect.Mana",
+        unreal.FantasyCombatEffectType.APPLY_STATUS: "Effect.Status",
+        unreal.FantasyCombatEffectType.DISCARD_RANDOM: "Effect.Discard",
+    }
+    school_tags = {
+        unreal.CardSchool.NONE: "School.Neutral",
+        unreal.CardSchool.STEEL: "School.Steel",
+        unreal.CardSchool.FAITH: "School.Faith",
+        unreal.CardSchool.ARCANE: "School.Arcane",
+    }
+    tags = [
+        owner_tag,
+        card_type_tags[spec["card_type"]],
+        school_tags[spec["school"]],
+    ]
+    tags.extend(
+        effect_tags[effect["effect_type"]]
+        for effect in spec["effects"]
+        if effect["effect_type"] in effect_tags
+    )
+    tags.append(
+        "Pool.Starter"
+        if is_starter
+        else "Pool.Reward" if spec.get("reward_eligible", False) else "Pool.Reserved"
+    )
+    return {
+        "rarity": rarity,
+        "build_tags": tuple(dict.fromkeys(tags)),
+        "upgrade_level": spec.get("upgrade_level", 0),
+        "upgrade_card_id": spec.get("upgrade_card_id"),
+    }
+
+
 def _fallback_intent(intent_id, display_name, effects):
     return {
         "intent_id": intent_id,
@@ -1431,6 +1507,21 @@ ENEMY_SPECS = (
 )
 
 
+ENEMY_CONTENT_CONTRACTS = {
+    "DrowsyBat": (unreal.FantasyEncounterTier.NORMAL, "Beast", 1, 0, 0, 1.0),
+    "MagicApprentice": (unreal.FantasyEncounterTier.NORMAL, "Mage", 1, 0, 0, 1.0),
+    "VillageGuard": (unreal.FantasyEncounterTier.NORMAL, "Guard", 2, 1, 1, 1.0),
+    "Hypnotist": (unreal.FantasyEncounterTier.NORMAL, "Occultist", 2, 1, 1, 1.0),
+    "Scarecrow": (unreal.FantasyEncounterTier.NORMAL, "Construct", 3, 2, 2, 1.0),
+    "FortuneTeller": (unreal.FantasyEncounterTier.NORMAL, "Seer", 3, 2, 2, 1.0),
+    "DragonWhelp": (unreal.FantasyEncounterTier.NORMAL, "Dragon", 4, 3, 3, 1.0),
+    "HeadlessKnight": (unreal.FantasyEncounterTier.NORMAL, "Undead", 4, 3, 3, 1.0),
+    "ScarecrowElite": (unreal.FantasyEncounterTier.ELITE, "Construct", 6, 4, 4, 1.35),
+    "FortuneTellerElite": (unreal.FantasyEncounterTier.ELITE, "Seer", 6, 4, 4, 1.35),
+    "HeadlessKnightBoss": (unreal.FantasyEncounterTier.BOSS, "Undead", 8, 5, 5, 2.0),
+}
+
+
 def ensure_directory(path):
     if not unreal.EditorAssetLibrary.does_directory_exist(path):
         if not unreal.EditorAssetLibrary.make_directory(path):
@@ -1582,6 +1673,15 @@ def ensure_card_definition(spec):
     card.set_editor_property("card_type", spec["card_type"])
     card.set_editor_property("school", spec["school"])
     card.set_editor_property("profession", spec["profession"])
+    contract = _card_contract(spec)
+    card.set_editor_property("rarity", contract["rarity"])
+    card.set_editor_property(
+        "build_tags",
+        [unreal.Name(tag) for tag in contract["build_tags"]],
+    )
+    card.set_editor_property("upgrade_level", contract["upgrade_level"])
+    # Clear stale links before the second pass resolves CardId references.
+    card.set_editor_property("upgrade_card", None)
     card.set_editor_property(
         "effects",
         [make_combat_effect(effect) for effect in spec["effects"]],
@@ -1622,6 +1722,23 @@ def ensure_card_definition(spec):
     card.set_editor_property("starting_deck_copies", spec["copies"])
     unreal.EditorAssetLibrary.save_loaded_asset(card, only_if_is_dirty=False)
     return asset_path
+
+
+def link_card_upgrades(card_assets_by_id):
+    for spec in CARD_SPECS:
+        upgrade_card_id = _card_contract(spec)["upgrade_card_id"]
+        if not upgrade_card_id:
+            continue
+        card_path = card_assets_by_id[spec["card_id"]]
+        upgrade_path = card_assets_by_id.get(upgrade_card_id)
+        if not upgrade_path:
+            raise RuntimeError(
+                f"Card {spec['card_id']} references missing upgrade {upgrade_card_id}"
+            )
+        card = unreal.EditorAssetLibrary.load_asset(card_path)
+        upgrade_card = unreal.EditorAssetLibrary.load_asset(upgrade_path)
+        card.set_editor_property("upgrade_card", upgrade_card)
+        unreal.EditorAssetLibrary.save_loaded_asset(card, only_if_is_dirty=False)
 
 
 def make_enemy_intent(spec):
@@ -1677,6 +1794,20 @@ def ensure_enemy_definition(spec, card_assets_by_id):
 
     enemy.set_editor_property("enemy_id", unreal.Name(spec["enemy_id"]))
     enemy.set_editor_property("display_name", spec["display_name"])
+    contract = ENEMY_CONTENT_CONTRACTS.get(spec["enemy_id"])
+    if contract is None:
+        raise RuntimeError(
+            f"Enemy is missing its M1 content contract: {spec['enemy_id']}"
+        )
+    tier, family, danger, min_depth, max_depth, reward_weight = contract
+    enemy.set_editor_property("encounter_tier", tier)
+    enemy.set_editor_property("family", unreal.Name(family))
+    enemy.set_editor_property("chapter", 1)
+    enemy.set_editor_property("danger_rating", danger)
+    enemy.set_editor_property("unlock_condition", unreal.Name("W01.Chapter1"))
+    enemy.set_editor_property("min_depth", min_depth)
+    enemy.set_editor_property("max_depth", max_depth)
+    enemy.set_editor_property("reward_weight", reward_weight)
     enemy.set_editor_property("max_health", spec["max_health"])
     enemy.set_editor_property(
         "deck",
@@ -1738,6 +1869,7 @@ def main():
         card_path = ensure_card_definition(spec)
         card_assets_by_id[spec["card_id"]] = card_path
         unreal.log(f"Card content ready: {spec['card_id']} -> {card_path}")
+    link_card_upgrades(card_assets_by_id)
 
     reward_count = sum(
         1 for spec in CARD_SPECS if spec.get("reward_eligible", False)
@@ -1792,10 +1924,17 @@ def main():
         f"deck_copies={enemy_deck_copy_count} "
         "evidence=verified-minimum-names copies=project-tuned"
     )
+    unreal.log(
+        "W01_CONTENT_CONTRACT_SETUP_COMPLETE "
+        f"cards={len(CARD_SPECS)} enemies={len(ENEMY_SPECS)} "
+        "normal=8 elite=2 boss=1 upgrade_rule=single-level"
+    )
 
+    # Definitions above are saved at their point of mutation. Avoid recursively
+    # resaving maps, materials, and third-party art that this generator did not edit.
     unreal.EditorAssetLibrary.save_directory(
-        W01_ROOT,
-        only_if_is_dirty=False,
+        f"{W01_ROOT}/Data",
+        only_if_is_dirty=True,
         recursive=True,
     )
     unreal.log("WORLD_WALKER_SETUP_COMPLETE")

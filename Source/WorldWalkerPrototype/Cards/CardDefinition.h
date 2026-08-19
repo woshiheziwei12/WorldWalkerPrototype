@@ -8,6 +8,17 @@
 
 class UTexture2D;
 
+/** Progression rarity is content data; combat rules must not infer it from costs. */
+UENUM(BlueprintType)
+enum class EFantasyCardRarity : uint8
+{
+	Starter,
+	Common,
+	Uncommon,
+	Rare,
+	Enemy
+};
+
 /** Data-only description of a playable combat card. */
 UCLASS(BlueprintType)
 class WORLDWALKERPROTOTYPE_API UCardDefinition : public UPrimaryDataAsset
@@ -29,6 +40,21 @@ public:
 	/** Profession-specific player pool. None is reserved for enemies/shared cards. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression")
 	EFantasyPlayerProfession Profession = EFantasyPlayerProfession::None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression")
+	EFantasyCardRarity Rarity = EFantasyCardRarity::Common;
+
+	/** Stable semantic tags such as Profession.Mage, Archetype.Fire, and Effect.Draw. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression")
+	TArray<FName> BuildTags;
+
+	/** Optional single upgrade target. A configured target must be exactly one level higher. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression")
+	TSoftObjectPtr<UCardDefinition> UpgradeCard;
+
+	/** Zero is the base card. M1 permits only levels zero and one. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card|Progression", meta=(ClampMin="0", ClampMax="1"))
+	int32 UpgradeLevel = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Card")
 	FText DisplayName;
