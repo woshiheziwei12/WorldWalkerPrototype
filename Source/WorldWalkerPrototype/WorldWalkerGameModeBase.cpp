@@ -97,8 +97,19 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 
 	if (!TravelSubsystem || !CurrentWorldDefinition)
 	{
-		ExplorationMessage = TEXT("UNREGISTERED TEST MAP\nApproach the red enemy and press E");
+		ActiveCardCombat = ActivePlayer->GetCardCombatComponent();
+		const bool bDeckReady = ActiveCardCombat && ActiveCardCombat->LoadStartingDeck();
+		const bool bEnemyReady = LoadFantasyEnemyDefinition(TEXT("DrowsyBat"));
+		ExplorationMessage = bDeckReady && bEnemyReady
+			? TEXT("UNREGISTERED TEST MAP\nApproach the red enemy and press E")
+			: TEXT("UNREGISTERED TEST MAP\nTest combat data is unavailable; run W01 content setup");
 		SpawnTestEnemy();
+		UE_LOG(
+			LogTemp,
+			Display,
+			TEXT("W01_TEST_COMBAT_READY Deck=%d EnemyDefinition=%d"),
+			bDeckReady ? 1 : 0,
+			bEnemyReady ? 1 : 0);
 		return;
 	}
 
@@ -1681,8 +1692,12 @@ void AWorldWalkerGameModeBase::ResolveEnemyCardEffects(UCardDefinition* Card)
 		case EFantasyCombatEffectType::Damage:
 			if (Effect.Target == EFantasyCombatTarget::Opponent)
 			{
+				const int32 StrengthScaledMagnitude = Effect.Magnitude
+					+ (!bIsAttackCard && Effect.bScalesWithStrength
+						? FMath::Max(0, EnemyFantasyState.Strength)
+						: 0);
 				const int32 HealthDamage = ResolveDamageAgainstPlayer(
-					Effect.Magnitude,
+					StrengthScaledMagnitude,
 					bIsAttackCard,
 					bIsAttackCard && !bWeakConsumed,
 					Effect.bPiercing);
@@ -1722,7 +1737,22 @@ void AWorldWalkerGameModeBase::ResolveEnemyCardEffects(UCardDefinition* Card)
 		case EFantasyCombatEffectType::Draw:
 			if (Effect.Target == EFantasyCombatTarget::Self)
 			{
-				ActiveEnemyDeck->DrawCards(Effect.Magnitude);
+				if (Card->CardType == ECardType::Counter)
+				{
+					const int32 Drawn = ActiveEnemyDeck->DrawCardsIgnoringHandLimit(Effect.Magnitude);
+					UE_LOG(
+						LogTemp,
+						Display,
+						TEXT("W01_ENEMY_COUNTER_DRAW Card=%s Requested=%d Drawn=%d Hand=%d"),
+						*Card->CardId.ToString(),
+						Effect.Magnitude,
+						Drawn,
+						ActiveEnemyDeck->GetHandCount());
+				}
+				else
+				{
+					ActiveEnemyDeck->DrawCards(Effect.Magnitude);
+				}
 			}
 			else
 			{

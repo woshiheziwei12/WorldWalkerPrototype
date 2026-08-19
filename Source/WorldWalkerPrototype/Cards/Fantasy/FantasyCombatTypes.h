@@ -80,6 +80,10 @@ struct WORLDWALKERPROTOTYPE_API FFantasyCombatEffectSpec
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect")
 	bool bPiercing = false;
 
+	/** Allows non-Attack damage (for example a weapon-like Spell) to receive Strength. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect")
+	bool bScalesWithStrength = false;
+
 	FString BuildRulesFragment() const;
 };
 

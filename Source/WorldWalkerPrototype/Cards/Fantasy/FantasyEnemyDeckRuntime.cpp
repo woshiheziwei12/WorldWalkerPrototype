@@ -390,9 +390,9 @@ FString UFantasyEnemyDeckRuntime::BuildPreview(const int32 CurrentStrength) cons
 		if (Effect.EffectType == EFantasyCombatEffectType::Damage
 			&& Effect.Target == EFantasyCombatTarget::Opponent)
 		{
-			const int32 AttackModifier = bAttackCard
-				? FMath::Max(0, CurrentStrength) + GetAttackBonus()
-				: 0;
+			const int32 AttackModifier =
+				(bAttackCard || Effect.bScalesWithStrength ? FMath::Max(0, CurrentStrength) : 0)
+				+ (bAttackCard ? GetAttackBonus() : 0);
 			const int32 Damage = FMath::Max(0, Effect.Magnitude) + AttackModifier;
 			if (Effect.bPiercing)
 			{
@@ -473,6 +473,26 @@ int32 UFantasyEnemyDeckRuntime::DrawCards(const int32 Count)
 	for (int32 DrawIndex = 0;
 		DrawIndex < Requested && Hand.Num() < CurrentTurnHandLimit;
 		++DrawIndex)
+	{
+		if (DrawPile.IsEmpty())
+		{
+			RefillDrawPile();
+		}
+		if (DrawPile.IsEmpty())
+		{
+			break;
+		}
+
+		Hand.Add(DrawPile.Pop(EAllowShrinking::No));
+	}
+	return Hand.Num() - InitialHandSize;
+}
+
+int32 UFantasyEnemyDeckRuntime::DrawCardsIgnoringHandLimit(const int32 Count)
+{
+	const int32 Requested = FMath::Max(0, Count);
+	const int32 InitialHandSize = Hand.Num();
+	for (int32 DrawIndex = 0; DrawIndex < Requested; ++DrawIndex)
 	{
 		if (DrawPile.IsEmpty())
 		{

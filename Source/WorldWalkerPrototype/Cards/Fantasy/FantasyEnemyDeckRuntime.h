@@ -38,6 +38,8 @@ public:
 	int32 AddMana(int32 Amount);
 	/** Draws up to the current enemy hand limit. Used by resolved Draw card effects. */
 	int32 DrawCards(int32 Count);
+	/** Draws without the current-turn hand cap. Reserved for delayed Counter resolution. */
+	int32 DrawCardsIgnoringHandLimit(int32 Count);
 	int32 DiscardRandom(int32 Count);
 	/** Removes and returns the oldest armed Counter for authoritative GameMode resolution. */
 	UCardDefinition* ConsumeNextCounter();

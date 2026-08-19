@@ -21,11 +21,22 @@ FString FFantasyCombatEffectSpec::BuildRulesFragment() const
 	switch (EffectType)
 	{
 	case EFantasyCombatEffectType::Damage:
+	{
+		FString Fragment;
 		if (bPiercing)
 		{
-			return FString::Printf(TEXT("造成 %d 点穿刺伤害"), Magnitude);
+			Fragment = FString::Printf(TEXT("造成 %d 点穿刺伤害"), Magnitude);
 		}
-		return FString::Printf(TEXT("造成 %d 点伤害"), Magnitude);
+		else
+		{
+			Fragment = FString::Printf(TEXT("造成 %d 点伤害"), Magnitude);
+		}
+		if (bScalesWithStrength)
+		{
+			Fragment += TEXT("（受力量加成）");
+		}
+		return Fragment;
+	}
 	case EFantasyCombatEffectType::Block:
 		return FString::Printf(TEXT("获得 %d 点格挡"), Magnitude);
 	case EFantasyCombatEffectType::Heal:

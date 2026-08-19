@@ -441,6 +441,7 @@ def _effect(
     target=unreal.FantasyCombatTarget.OPPONENT,
     status=unreal.FantasyCombatStatus.NONE,
     piercing=False,
+    scales_with_strength=False,
 ):
     return {
         "effect_type": effect_type,
@@ -448,6 +449,7 @@ def _effect(
         "magnitude": magnitude,
         "status": status,
         "piercing": piercing,
+        "scales_with_strength": scales_with_strength,
     }
 
 
@@ -1130,8 +1132,13 @@ ENEMY_CARD_SPECS = (
     _card(
         "DA_EnemyCard_Repentance", "Enemy_Repentance", "忏悔",
         unreal.CardType.SPELL,
-        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4, piercing=True),),
-        "T_Card_LionheartJudgment", _enemy_description("造成穿刺伤害。"),
+        (_effect(
+            unreal.FantasyCombatEffectType.DAMAGE,
+            4,
+            piercing=True,
+            scales_with_strength=True,
+        ),),
+        "T_Card_LionheartJudgment", _enemy_description("造成受力量加成的穿刺伤害。"),
         card_set_id="W01_Enemy", mana_cost=2,
     ),
     _card(
@@ -1529,6 +1536,10 @@ def make_combat_effect(spec):
         spec.get("status", unreal.FantasyCombatStatus.NONE),
     )
     effect.set_editor_property("piercing", spec.get("piercing", False))
+    effect.set_editor_property(
+        "scales_with_strength",
+        spec.get("scales_with_strength", False),
+    )
     return effect
 
 
