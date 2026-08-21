@@ -8,14 +8,14 @@
 
 namespace
 {
-	const TCHAR* EnvironmentRoot =
+	const TCHAR* ArenaEnvironmentRoot =
 		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/Environment");
 
-	FString EnvironmentAssetPath(const TCHAR* AssetName)
+	FString ArenaEnvironmentAssetPath(const TCHAR* AssetName)
 	{
 		return FString::Printf(
 			TEXT("%s/%s/%s.%s"),
-			EnvironmentRoot,
+			ArenaEnvironmentRoot,
 			AssetName,
 			AssetName,
 			AssetName);
@@ -213,7 +213,7 @@ UStaticMesh* AFantasyBattleArena::LoadEnvironmentMesh(const TCHAR* AssetName) co
 		return nullptr;
 	}
 
-	const FString ObjectPath = EnvironmentAssetPath(AssetName);
+	const FString ObjectPath = ArenaEnvironmentAssetPath(AssetName);
 	return LoadObject<UStaticMesh>(nullptr, *ObjectPath);
 }
 

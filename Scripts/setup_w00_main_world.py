@@ -14,6 +14,14 @@ DESTINATION_MAP = (
 WORLD_DEFINITION = (
     "/Game/WorldWalker/Worlds/W00_MainWorld/Data/DA_W00_MainWorld"
 )
+NIGHT_HDRI = (
+    "/Game/WorldWalker/Worlds/W00_MainWorld/ThirdParty/PolyHaven/Sky/"
+    "T_W00_QwantaniMoonNoon"
+)
+NIGHT_MATERIAL = (
+    "/Game/WorldWalker/Worlds/W00_MainWorld/ThirdParty/PolyHaven/Sky/"
+    "M_W00_QwantaniMoonNoonSky"
+)
 NIGHT_SKY_TAG = unreal.Name("W00NightSky")
 
 
@@ -65,6 +73,7 @@ def configure_authored_level():
 
     actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     actors = list(actor_subsystem.get_all_level_actors())
+    night_hdri = load_asset(NIGHT_HDRI)
 
     # The vendor demo contains a bright stationary sun and baked daytime data.
     # Runtime treatment is authoritative; these changes make the editor preview
@@ -89,7 +98,7 @@ def configure_authored_level():
                     "mobility",
                     unreal.ComponentMobility.MOVABLE,
                 )
-                set_property_if_available(component, "intensity", 0.60)
+                set_property_if_available(component, "intensity", 0.55)
                 set_property_if_available(
                     component,
                     "light_color",
@@ -117,13 +126,13 @@ def configure_authored_level():
                 if hasattr(unreal, "SkyLightSourceType"):
                     source_type = getattr(
                         unreal.SkyLightSourceType,
-                        "SLS_CAPTURED_SCENE",
+                        "SLS_SPECIFIED_CUBEMAP",
                         None,
                     )
                     if source_type is None:
                         source_type = getattr(
                             unreal.SkyLightSourceType,
-                            "CAPTURED_SCENE",
+                            "SPECIFIED_CUBEMAP",
                             None,
                         )
                 if source_type is not None:
@@ -132,13 +141,18 @@ def configure_authored_level():
                         "source_type",
                         source_type,
                     )
-                set_property_if_available(component, "cubemap", None)
+                set_property_if_available(component, "cubemap", night_hdri)
+                set_property_if_available(
+                    component,
+                    "lower_hemisphere_is_black",
+                    False,
+                )
         elif class_name == "ExponentialHeightFog":
             component = actor.get_component_by_class(
                 unreal.ExponentialHeightFogComponent
             )
             if component:
-                set_property_if_available(component, "fog_density", 0.0065)
+                set_property_if_available(component, "fog_density", 0.0035)
                 set_property_if_available(component, "fog_height_falloff", 0.08)
                 set_property_if_available(component, "start_distance", 1600.0)
                 set_property_if_available(component, "enable_volumetric_fog", True)
@@ -175,27 +189,29 @@ def ensure_editor_night_sky(actor_subsystem, actors):
         ),
         None,
     )
-    if existing:
-        unreal.log("Keeping existing W00 editor-preview night sky")
-        return
-
     sky_mesh = load_asset("/Engine/MapTemplates/Sky/SM_SkySphere")
-    sky_material = load_asset(
-        "/Engine/MapTemplates/Sky/M_BlackBackground"
-    )
-    night_sky = actor_subsystem.spawn_actor_from_class(
-        unreal.StaticMeshActor,
-        unreal.Vector(0.0, 0.0, -1000.0),
-        unreal.Rotator(),
-        False,
-    )
+    sky_material = load_asset(NIGHT_MATERIAL)
+    night_sky = existing
     if night_sky is None:
-        raise RuntimeError("Unable to spawn W00 editor-preview night sky")
+        night_sky = actor_subsystem.spawn_actor_from_class(
+            unreal.StaticMeshActor,
+            unreal.Vector(0.0, 0.0, -1000.0),
+            unreal.Rotator(),
+            False,
+        )
+        if night_sky is None:
+            raise RuntimeError("Unable to spawn W00 editor-preview night sky")
+        night_sky.set_actor_label("W00_NightSky_Preview")
+        night_sky.set_editor_property(
+            "tags",
+            list(night_sky.get_editor_property("tags")) + [NIGHT_SKY_TAG],
+        )
 
-    night_sky.set_actor_label("W00_NightSky_Preview")
-    night_sky.set_editor_property(
-        "tags",
-        list(night_sky.get_editor_property("tags")) + [NIGHT_SKY_TAG],
+    night_sky.set_actor_hidden_in_game(False)
+    night_sky.set_actor_location(unreal.Vector(0.0, 0.0, -1000.0), False, False)
+    night_sky.set_actor_rotation(
+        unreal.Rotator(pitch=0.0, yaw=18.0, roll=0.0),
+        False,
     )
     night_sky.set_actor_scale3d(unreal.Vector(100.0, 100.0, 100.0))
     component = night_sky.get_component_by_class(unreal.StaticMeshComponent)
@@ -204,8 +220,10 @@ def ensure_editor_night_sky(actor_subsystem, actors):
     component.set_static_mesh(sky_mesh)
     component.set_material(0, sky_material)
     component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    set_property_if_available(component, "visible", True)
+    set_property_if_available(component, "hidden_in_game", False)
     set_property_if_available(component, "cast_shadow", False)
-    unreal.log("Created W00 editor-preview procedural night sky")
+    unreal.log("Updated W00 editor-preview starry night sky")
 
 
 def update_world_definition():

@@ -10,6 +10,7 @@ class UAnimSequence;
 class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class UWidgetComponent;
+enum class EFantasyEnemyVisualProfile : uint8;
 
 UENUM(BlueprintType)
 enum class EWorldWalkerEnemyAnimationCue : uint8
@@ -33,7 +34,9 @@ public:
 
 	UCombatantComponent* GetCombatantComponent() const { return CombatantComponent; }
 	void SetInCombat(bool bInCombat);
-	void ConfigureFantasyPresentation(const FText& EnemyName);
+	void ConfigureFantasyPresentation(
+		const FText& EnemyName,
+		EFantasyEnemyVisualProfile VisualProfile);
 
 	/** Plays a W01 intent/reaction cue. Non-death cues automatically return to idle. */
 	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
@@ -47,7 +50,7 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
-	void LoadFantasyAnimationAssets();
+	bool LoadFantasyPresentationAssets(EFantasyEnemyVisualProfile RequestedProfile);
 	void PlayFantasyAnimation(UAnimSequence* Animation, bool bLooping, float PlayRate = 1.0f);
 	void ReturnToFantasyIdle();
 
@@ -65,6 +68,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimSequence> FantasyEmpowerAnimation;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimSequence> FantasyHitReactionAnimation;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimSequence> FantasyDeathAnimation;

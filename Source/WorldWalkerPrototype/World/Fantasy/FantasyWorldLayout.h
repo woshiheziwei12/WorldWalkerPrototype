@@ -5,9 +5,15 @@
 #include "FantasyWorldLayout.generated.h"
 
 class AExponentialHeightFog;
+class AFantasyAmbientSoundscape;
+class AFantasyAmbientWispField;
+class AFantasyFateAltar;
 class APostProcessVolume;
 class AFantasyNPC;
+class AWorldWalkerCharacter;
+class UBoxComponent;
 class UMaterialInterface;
+class UInstancedStaticMeshComponent;
 class UPointLightComponent;
 class USceneComponent;
 class UStaticMesh;
@@ -31,17 +37,22 @@ public:
 	FVector GetBattleAnchorLocation() const;
 	FVector GetReturnPortalLocation() const;
 	FRotator GetForwardFacingRotation() const;
+	FVector ConstrainChoiceCenterToPlayableArea(const FVector& DesiredWorldCenter) const;
+	AFantasyAmbientSoundscape* GetAmbientSoundscape() const { return AmbientSoundscape; }
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 private:
 	void BuildGroundAndRoad();
+	void BuildWorldBoundaries();
 	void BuildVillageDistrict();
 	void BuildCampAndLandmarks();
 	void BuildBattleApproach();
 	void BuildReturnPortalLandmark();
 	void SpawnResidents();
+	void SpawnWorldAmbienceAndEvent();
 	void ConfigureWorldAtmosphere();
 	void RefreshCapturedSky();
 	void HideTemplateFloor();
@@ -64,18 +75,57 @@ private:
 		UStaticMesh* FallbackMesh,
 		const FLinearColor& FallbackTint);
 	void ApplyTint(UStaticMeshComponent* Component, const FLinearColor& Color) const;
+	void AddBoundaryWall(
+		const FString& ComponentName,
+		const FVector& LocalLocation,
+		const FVector& BoxExtent);
+	void CapturePlayerRecoveryPoint();
+	void RecoverFallenPlayer();
 
 	UPROPERTY(VisibleAnywhere, Category="World")
 	TObjectPtr<USceneComponent> SceneRoot;
 
+	/** W01-only star field; deliberately independent from the W00 sky setup. */
+	UPROPERTY(VisibleAnywhere, Category="World|Atmosphere")
+	TObjectPtr<UStaticMeshComponent> NightSkySphere;
+
+	/** Stylised moon anchor so the route keeps a readable night focal point. */
+	UPROPERTY(VisibleAnywhere, Category="World|Atmosphere")
+	TObjectPtr<UStaticMeshComponent> NightMoon;
+
+	/** Sparse deterministic stars layered in front of the HDRI. */
+	UPROPERTY(VisibleAnywhere, Category="World|Atmosphere")
+	TObjectPtr<UInstancedStaticMeshComponent> NightStars;
+
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> EnvironmentMeshes;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UBoxComponent>> BoundaryWalls;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPointLightComponent>> TorchLights;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AFantasyNPC>> Residents;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AFantasyAmbientWispField> AmbientWispField;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AFantasyAmbientSoundscape> AmbientSoundscape;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AFantasyFateAltar> FateAltar;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AWorldWalkerCharacter> ProtectedPlayer;
+
+	UPROPERTY(Transient)
+	FTransform PlayerRecoveryTransform;
+
+	UPROPERTY(Transient)
+	FRotator PlayerRecoveryControlRotation = FRotator::ZeroRotator;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AExponentialHeightFog> SpawnedFog;
@@ -97,6 +147,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMesh> ConeFallback;
+
+	bool bHasPlayerRecoveryPoint = false;
 
 	static const FVector BattleAnchorLocalLocation;
 	static const FVector ReturnPortalLocalLocation;

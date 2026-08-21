@@ -4260,7 +4260,7 @@ void ASpiralTowerWorldLayout::BeginReturnTravel()
 		? GetGameInstance()->GetSubsystem<UWorldTravelSubsystem>()
 		: nullptr;
 	PendingDestinationWorld = TravelSubsystem
-		? TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::MainWorldId)
+		? TravelSubsystem->GetMainWorldDefinition()
 		: nullptr;
 	if (!TravelSubsystem || !PendingDestinationWorld || PendingDestinationWorld->EntryMap.IsNull())
 	{

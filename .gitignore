@@ -6,9 +6,14 @@
 LocalBuilds/
 [Bb]uild/[Rr]eceipts/
 
-# Unreal Content is distributed to collaborators as a separate resource package.
-# Keep the local directory intact, but never include it in source-code pushes.
-/Content/
+# Immutable third-party Unreal assets are distributed as a separate package.
+# Project-authored assets under Content/WorldWalker remain versioned via Git LFS.
+/Content/AnimeCharacters/
+/Content/Asian_Village/
+/Content/Portals/
+/Content/Realistic_Starter_VFX_Pack_Vol2/
+/Content/ThirdParty/
+/Content/WorldWalker/Worlds/*/ThirdParty/
 
 # Unreal per-user content
 /Plugins/Developer/RiderLink/

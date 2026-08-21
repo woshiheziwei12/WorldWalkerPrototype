@@ -30,6 +30,9 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 | 原始文件 | SHA-256 | 用途或 UE 目标资产 |
 | --- | --- | --- |
+| `FBX/Rogue.fbx` | `5B9BC7A1EC778D0C83F44609971E6C538480B6EF2A3F9CDDE5853DEE5E24586E` | 红兜帽双匕首主角；`/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Rogue/SK_W01_Rogue.SK_W01_Rogue`；同时导入 Idle、Walk、Run、Dagger_Attack、RecieveHit、Death、Roll 等内嵌动画 |
+| `Textures/Rogue_Texture.png` | `540694206878779AA43F8F17524062E88BEA35D2BB666B3F2081D23079A081D3` | Rogue 主体纹理 |
+| `Textures/Rogue_Dagger_Texture.png` | `B4C25A611639BB03C7AA454C2C6D053BDC34FCF0A622E88212E6A6F085816EC6` | Rogue 双匕首纹理 |
 | `FBX/Warrior.fbx` | `5840E821ABA0F4CFBC7316DB456DD28042D35FCD1173F8809E22D25D040B265F` | `/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_Warrior.SK_W01_Warrior` |
 | `Textures/Warrior_Texture.png` | `5D016C19DB78E8B6077EEAD3E1086A3BB3453CFAA8ADB5E583B08DC39869FF17` | Warrior 主体纹理 |
 | `Textures/Warrior_Sword_Texture.png` | `AE902ECABA0EB6D15D47EF428E81D63F9CA2D8A266AAD7DAE393A8363EA9344A` | Warrior 武器纹理 |
@@ -43,7 +46,7 @@ https://creativecommons.org/publicdomain/zero/1.0/
 | `Textures/Ranger_Texture.png` | `21679F0FAF9C5243A58FDC952A5427E2BBB0EA29A00B117308E6FB5FD6D94588` | Ranger 主体纹理 |
 | `Textures/Ranger_Bow_Texture.png` | `36F9FF48610B97C0F599C133D95DE62C6678B29C4EC1A54E03C1AEE838B9BA3D` | Ranger 弓纹理 |
 
-`Scripts/import_w01_fantasy_assets.py` 导入 Warrior，`Scripts/import_w01_world_assets.py` 导入 Cleric、Wizard 和 Ranger。脚本保留原始纹理内容，以固定名称创建或替换 Unreal 资产；不重新发布原始下载归档。
+`Scripts/import_w01_fantasy_assets.py` 导入 Warrior，`Scripts/import_w01_world_assets.py` 导入 Rogue、Cleric、Wizard 和 Ranger。脚本保留原始纹理内容，以固定名称创建或替换 Unreal 资产；不重新发布原始下载归档。
 
 ## UE 5.8 材质绑定说明
 
@@ -51,16 +54,17 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 `Scripts/import_w01_world_assets.py` 在完成 FBX 导入后执行确定性的材质修复：
 
-1. 再次核验并覆盖式导入 8 张角色/武器 PNG。
+1. 再次核验并覆盖式导入 10 张角色/武器 PNG。
 2. 在每个角色自己的 `Materials/` 目录创建或重置两个原生 `Material`，用 `MaterialExpressionTextureSample` 把对应 PNG 的 RGB 明确连接到 Base Color。
 3. 按 FBX 原始材质槽名绑定；仅在槽名不可用时使用已核实的 0/1 槽位回退。
-4. 重新编译材质、保存 SkeletalMesh，并回读验证 8 个材质槽均指向预期材质。
+4. 重新编译材质、保存 SkeletalMesh，并回读验证 10 个材质槽均指向预期材质。
 
 稳定材质路径为：
 
+- `.../Rogue/Materials/M_W01_Rogue_Body` 与 `M_W01_Rogue_Weapon`
 - `.../Warrior/Materials/M_W01_Warrior_Body` 与 `M_W01_Warrior_Weapon`
 - `.../Cleric/Materials/M_W01_Cleric_Body` 与 `M_W01_Cleric_Weapon`
 - `.../Wizard/Materials/M_W01_Wizard_Body` 与 `M_W01_Wizard_Weapon`
 - `.../Ranger/Materials/M_W01_Ranger_Body` 与 `M_W01_Ranger_Weapon`
 
-修复后的成功标记必须包含 `materials=8/8`。旧的 FBX 自动生成白色材质实例可以保留作为导入元数据，但不再绑定到角色网格。
+修复后的成功标记必须包含 `materials=10/10`。旧的 FBX 自动生成白色材质实例可以保留作为导入元数据，但不再绑定到角色网格。

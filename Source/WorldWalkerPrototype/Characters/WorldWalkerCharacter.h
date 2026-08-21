@@ -12,6 +12,7 @@ class UAnimInstance;
 class USkeletalMeshComponent;
 class USpringArmComponent;
 class UStaticMeshComponent;
+enum class EFantasyPlayerProfession : uint8;
 
 enum class EWorldWalkerFantasyAnimationState : uint8
 {
@@ -20,6 +21,8 @@ enum class EWorldWalkerFantasyAnimationState : uint8
 	Walk,
 	Run,
 	Attack,
+	Utility,
+	Spell,
 	HitReact
 };
 
@@ -50,13 +53,22 @@ public:
 	FSimpleMulticastDelegate& OnExternalJumpPressed() { return ExternalJumpPressed; }
 	FSimpleMulticastDelegate& OnExternalJumpReleased() { return ExternalJumpReleased; }
 	void ConfigureFantasyWorldForm(bool bEnabled, bool bStartInFantasyForm = true);
+	void ConfigureFantasyProfession(EFantasyPlayerProfession Profession);
 	bool IsFantasyFormActive() const { return bFantasyFormActive; }
 
-	/** Plays the rune knight's sword action, then safely returns to locomotion/idle. */
+	/** Plays the W01 form's card action, then safely returns to locomotion/idle. */
 	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
 	void PlayFantasyCardAttackAnimation();
 
-	/** Plays the rune knight's hit reaction, then safely returns to locomotion/idle. */
+	/** Plays a guarded/utility card gesture distinct from an attack. */
+	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
+	void PlayFantasyCardUtilityAnimation();
+
+	/** Plays the W01 form's spell gesture. */
+	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
+	void PlayFantasyCardSpellAnimation();
+
+	/** Plays the W01 form's hit reaction, then safely returns to locomotion/idle. */
 	UFUNCTION(BlueprintCallable, Category="World Walker|Fantasy Animation")
 	void PlayFantasyHitReactionAnimation();
 
@@ -70,6 +82,9 @@ private:
 	void HandleJumpReleased();
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+
+	/** Bound to E; reflected so unattended smoke tests can exercise the real interaction path. */
+	UFUNCTION()
 	void TryInteract();
 	void ToggleWorldForm();
 	void ApplyWorldFormVisibility();
@@ -80,7 +95,7 @@ private:
 		USkeletalMeshComponent* PoseLeader);
 	USkeletalMeshComponent* CreateAnimeHairPart(USkeletalMeshComponent* HeadComponent);
 	void ApplyW02AnimeMaterialTuning();
-	void LoadFantasyAnimationAssets(const TCHAR* AssetRoot);
+	bool LoadFantasyPresentationAssets();
 	void RefreshFantasyLocomotionAnimation(bool bForce = false);
 	void PlayFantasyActionAnimation(
 		UAnimSequence* Animation,
@@ -124,6 +139,12 @@ private:
 	TObjectPtr<UAnimSequence> FantasyAttackAnimation;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UAnimSequence> FantasyUtilityAnimation;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimSequence> FantasySpellAnimation;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UAnimSequence> FantasyHitReactionAnimation;
 
 	UPROPERTY(VisibleAnywhere, Category="Combat")
@@ -141,6 +162,7 @@ private:
 	bool bWorldFormToggleEnabled = true;
 	bool bFantasyActionPlaying = false;
 	FVector FantasyFormVisualScale = FVector(0.52f);
+	EFantasyPlayerProfession RequestedFantasyProfession;
 	float FantasyActionEndTime = 0.0f;
 	EWorldWalkerFantasyAnimationState CurrentFantasyAnimationState =
 		EWorldWalkerFantasyAnimationState::None;
