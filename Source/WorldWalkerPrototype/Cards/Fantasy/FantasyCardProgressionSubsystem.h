@@ -6,6 +6,7 @@
 #include "FantasyCardProgressionSubsystem.generated.h"
 
 class UCardDefinition;
+class UFantasyChapterDefinition;
 
 /**
  * Keeps the W01 classic-mode run alive while the player travels between maps.
@@ -89,7 +90,7 @@ public:
 	bool HasActiveNode() const { return bHasActiveNode; }
 	const FFantasyRouteNodeChoice& GetActiveNode() const { return ActiveNode; }
 	int32 GetChapterDepth() const { return ChapterDepth; }
-	int32 GetTotalRouteDepths() const { return 6; }
+	int32 GetTotalRouteDepths() const;
 	bool IsChapterComplete() const { return bChapterComplete; }
 	void AddPendingBattleBoon(int32 Block, int32 Valor);
 	void ConsumePendingBattleBoon(int32& OutBlock, int32& OutValor);
@@ -102,20 +103,18 @@ private:
 	static FString GetEndReasonName(EFantasyRunEndReason Reason);
 	void ResolveRunConfiguration();
 	void ResolveRunIdentityFields();
-	void ApplyDeterministicRouteOrder();
+	bool LoadChapterDefinition();
 	void RebuildRouteChoices();
+	void BuildEmergencyRouteFallback();
 	void AddDecisionRecord(
 		FName EventType,
 		const FString& CandidateSignature,
 		FName SelectionId,
 		int32 SelectionIndex = INDEX_NONE);
 	void AddDeckCount(FName CardId, int32 UpgradeLevel, int32 Delta);
-	void AddRouteChoice(
-		FName NodeId,
-		const TCHAR* DisplayName,
-		const TCHAR* Description,
-		EFantasyRouteNodeType NodeType,
-		FName PayloadId);
+
+	UPROPERTY(Transient)
+	TObjectPtr<UFantasyChapterDefinition> ChapterDefinition;
 
 	UPROPERTY(Transient)
 	TMap<FName, int32> GrantedCardCopies;

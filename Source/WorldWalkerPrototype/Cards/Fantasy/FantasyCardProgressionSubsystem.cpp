@@ -1,6 +1,7 @@
 #include "Cards/Fantasy/FantasyCardProgressionSubsystem.h"
 
 #include "Cards/CardDefinition.h"
+#include "Cards/Fantasy/FantasyChapterDefinition.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -8,7 +9,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M1-v2"));
+const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M1-v3"));
 
 namespace
 {
@@ -177,6 +178,7 @@ void UFantasyCardProgressionSubsystem::EnsureRunStarted()
 	RunMaxHealth = 100;
 	CurrentRunHealth = RunMaxHealth;
 	RouteChoices.Reset();
+	LoadChapterDefinition();
 	LogStructuredEvent(TEXT("RunStarted"));
 	RebuildRouteChoices();
 	UE_LOG(
@@ -846,6 +848,39 @@ void UFantasyCardProgressionSubsystem::RecordRunHealth(
 	CurrentRunHealth = FMath::Clamp(CurrentHealth, 0, RunMaxHealth);
 }
 
+int32 UFantasyCardProgressionSubsystem::GetTotalRouteDepths() const
+{
+	return ChapterDefinition ? FMath::Max(1, ChapterDefinition->TotalDepths) : 6;
+}
+
+bool UFantasyCardProgressionSubsystem::LoadChapterDefinition()
+{
+	if (ChapterDefinition)
+	{
+		return true;
+	}
+	ChapterDefinition = LoadObject<UFantasyChapterDefinition>(
+		nullptr,
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/Encounters/DA_Chapter_W01_AshenKingdom.DA_Chapter_W01_AshenKingdom"));
+	if (!ChapterDefinition)
+	{
+		UE_LOG(LogTemp, Error, TEXT("W01 chapter definition failed to load."));
+		return false;
+	}
+	const TArray<FString> ValidationErrors = ChapterDefinition->ValidateDefinition();
+	if (!ValidationErrors.IsEmpty())
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("W01 chapter definition is invalid. Errors=%s"),
+			*FString::Join(ValidationErrors, TEXT(" | ")));
+		ChapterDefinition = nullptr;
+		return false;
+	}
+	return true;
+}
+
 void UFantasyCardProgressionSubsystem::RebuildRouteChoices()
 {
 	RouteChoices.Reset();
@@ -854,123 +889,27 @@ void UFantasyCardProgressionSubsystem::RebuildRouteChoices()
 		return;
 	}
 
-	switch (ChapterDepth)
+	bool bEmergencyFallback = false;
+	FString FailureReason;
+	if (!LoadChapterDefinition()
+		|| !ChapterDefinition->GenerateRouteChoices(
+			ChapterDepth,
+			RouteSeed,
+			ContentVersion,
+			Difficulty,
+			LastEnemyId,
+			RouteChoices,
+			FailureReason))
 	{
-	case 0:
-		AddRouteChoice(
-			TEXT("D0_DrowsyBat"),
-			TEXT("贪睡蝙蝠"),
-			TEXT("最低确认牌名：爪击、猛击、吸血。战后可选一张牌。"),
-			EFantasyRouteNodeType::Combat,
-			TEXT("DrowsyBat"));
-		AddRouteChoice(
-			TEXT("D0_MagicApprentice"),
-			TEXT("魔法学徒"),
-			TEXT("最低确认牌名：法力、智慧、元素波动、火焰冲击。"),
-			EFantasyRouteNodeType::Combat,
-			TEXT("MagicApprentice"));
-		AddRouteChoice(
-			TEXT("D0_MoonlitWell"),
-			TEXT("月下古井"),
-			TEXT("恢复、牺牲换牌或洗掉一张基础攻击。"),
-			EFantasyRouteNodeType::Event,
-			TEXT("MoonlitWell"));
-		break;
-
-	case 1:
-		AddRouteChoice(
-			TEXT("D1_VillageGuard"),
-			TEXT("村庄守卫"),
-			TEXT("最低确认牌名：急行、禁止通行！、短剑、迅捷攻击。"),
-			EFantasyRouteNodeType::Combat,
-			TEXT("VillageGuard"));
-		AddRouteChoice(
-			TEXT("D1_Hypnotist"),
-			TEXT("催眠师"),
-			TEXT("最低确认牌名：退缩、催眠、酸性喷雾。"),
-			EFantasyRouteNodeType::Combat,
-			TEXT("Hypnotist"));
-		AddRouteChoice(
-			TEXT("D1_AshenSmith"),
-			TEXT("灰烬铁匠"),
-			TEXT("负伤换取一张骑士牌，或移除一张普通攻击。"),
-			EFantasyRouteNodeType::Event,
-			TEXT("AshenSmith"));
-		break;
-
-	case 2:
-		AddRouteChoice(
-			TEXT("D2_Scarecrow"),
-			TEXT("稻草人"),
-			TEXT("最低确认牌名：法力、火焰冲击、元素波动、火苗、法力图腾。"),
-			EFantasyRouteNodeType::Combat,
-			TEXT("Scarecrow"));
-		AddRouteChoice(
-			TEXT("D2_FortuneTeller"),
-			TEXT("女占卜师"),
-			TEXT("最低确认牌名：智慧、元素波动、治愈、风之石、水晶球。"),
-			EFantasyRouteNodeType::Combat,
-			TEXT("FortuneTeller"));
-		AddRouteChoice(
-			TEXT("D2_ExileCamp"),
-			TEXT("流亡者营火"),
-			TEXT("休整恢复生命，或带着临时护甲进入下一战。"),
-			EFantasyRouteNodeType::Rest,
-			TEXT("ExileCamp"));
-		break;
-
-	case 3:
-		AddRouteChoice(
-			TEXT("D3_DragonWhelp"),
-			TEXT("飞龙幼崽 · 精英"),
-			TEXT("最低确认牌名：法力、火焰冲击、元素波动。"),
-			EFantasyRouteNodeType::EliteCombat,
-			TEXT("DragonWhelp"));
-		AddRouteChoice(
-			TEXT("D3_HeadlessKnight"),
-			TEXT("无头骑士 · 精英"),
-			TEXT("最低确认牌名：法力、火焰冲击、忏悔。"),
-			EFantasyRouteNodeType::EliteCombat,
-			TEXT("HeadlessKnight"));
-		AddRouteChoice(
-			TEXT("D3_MoonlitWell"),
-			TEXT("月下古井"),
-			TEXT("恢复、牺牲换取职业牌或移除一张基础攻击。"),
-			EFantasyRouteNodeType::Event,
-			TEXT("MoonlitWell"));
-		break;
-
-	case 4:
-		AddRouteChoice(
-			TEXT("D4_ScarecrowElite"),
-			TEXT("稻草人 · 精英"),
-			TEXT("同一最低确认牌名集合，使用更高生命的章节后段版本。"),
-			EFantasyRouteNodeType::EliteCombat,
-			TEXT("ScarecrowElite"));
-		AddRouteChoice(
-			TEXT("D4_FortuneTellerElite"),
-			TEXT("女占卜师 · 精英"),
-			TEXT("同一最低确认牌名集合，使用更高生命的章节后段版本。"),
-			EFantasyRouteNodeType::EliteCombat,
-			TEXT("FortuneTellerElite"));
-		AddRouteChoice(
-			TEXT("D4_ExileCamp"),
-			TEXT("流亡者营火"),
-			TEXT("守关战前最后一次休整。"),
-			EFantasyRouteNodeType::Rest,
-			TEXT("ExileCamp"));
-		break;
-
-	default:
-		AddRouteChoice(
-			TEXT("D3_ChapterBoss"),
-			TEXT("无头骑士 · 章节守关者"),
-			TEXT("增强版法力/火焰冲击/忏悔牌组，击败后完成灰烬章节。"),
-			EFantasyRouteNodeType::Boss,
-			TEXT("HeadlessKnightBoss"));
-		break;
+		bEmergencyFallback = true;
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("W01 route generation failed. Depth=%d Reason=%s"),
+			ChapterDepth,
+			FailureReason.IsEmpty() ? TEXT("Chapter definition unavailable") : *FailureReason);
+		BuildEmergencyRouteFallback();
 	}
-	ApplyDeterministicRouteOrder();
 
 	UE_LOG(
 		LogTemp,
@@ -988,42 +927,23 @@ void UFantasyCardProgressionSubsystem::RebuildRouteChoices()
 		NAME_None);
 	LogStructuredEvent(
 		TEXT("RouteOffered"),
-		{{TEXT("signature"), BuildRouteChoiceSignature()}},
+		{{TEXT("signature"), BuildRouteChoiceSignature()},
+		 {TEXT("generator"), bEmergencyFallback ? TEXT("EmergencyFallback") : TEXT("ChapterDefinition")}},
 		{{TEXT("choiceCount"), RouteChoices.Num()}});
 }
 
-void UFantasyCardProgressionSubsystem::ApplyDeterministicRouteOrder()
+void UFantasyCardProgressionSubsystem::BuildEmergencyRouteFallback()
 {
-	if (RouteChoices.Num() < 2)
-	{
-		return;
-	}
-
-	const uint32 SeedHash = HashCombineFast(
-		GetTypeHash(RouteSeed),
-		HashCombineFast(
-			HashStableUtf8(ContentVersion),
-			HashCombineFast(
-				GetTypeHash(static_cast<uint8>(Difficulty)),
-				GetTypeHash(ChapterDepth))));
-	FRandomStream Stream(static_cast<int32>(SeedHash));
-	for (int32 Index = RouteChoices.Num() - 1; Index > 0; --Index)
-	{
-		RouteChoices.Swap(Index, Stream.RandRange(0, Index));
-	}
-}
-
-void UFantasyCardProgressionSubsystem::AddRouteChoice(
-	const FName NodeId,
-	const TCHAR* DisplayName,
-	const TCHAR* Description,
-	const EFantasyRouteNodeType NodeType,
-	const FName PayloadId)
-{
+	RouteChoices.Reset();
 	FFantasyRouteNodeChoice& Choice = RouteChoices.AddDefaulted_GetRef();
-	Choice.NodeId = NodeId;
-	Choice.DisplayName = FText::FromString(DisplayName);
-	Choice.Description = FText::FromString(Description);
-	Choice.NodeType = NodeType;
-	Choice.PayloadId = PayloadId;
+	const bool bFinalDepth = ChapterDepth >= GetTotalRouteDepths() - 1;
+	Choice.NodeId = FName(*FString::Printf(TEXT("D%d_EmergencyFallback"), ChapterDepth));
+	Choice.DisplayName = FText::FromString(
+		bFinalDepth ? TEXT("守关路线资料恢复") : TEXT("安全休整路线"));
+	Choice.Description = FText::FromString(
+		TEXT("章节定义不可用；使用可继续流程的紧急候选，并记录错误供内容修复。"));
+	Choice.NodeType = bFinalDepth
+		? EFantasyRouteNodeType::Boss
+		: EFantasyRouteNodeType::Rest;
+	Choice.PayloadId = bFinalDepth ? FName(TEXT("HeadlessKnightBoss")) : FName(TEXT("ExileCamp"));
 }

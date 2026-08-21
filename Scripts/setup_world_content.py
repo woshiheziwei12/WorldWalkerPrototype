@@ -40,6 +40,7 @@ WORLD_SPECS = (
 W01_ROOT = "/Game/WorldWalker/Worlds/W01_EasternHorror"
 W01_CARD_ROOT = f"{W01_ROOT}/Data/Cards"
 W01_ENEMY_ROOT = f"{W01_ROOT}/Data/Enemies"
+W01_CHAPTER_ROOT = f"{W01_ROOT}/Data/Encounters"
 W01_CARD_ART_ROOT = (
     f"{W01_ROOT}/ThirdParty/Zonked/FantasyActionIcons/Cards"
 )
@@ -1533,6 +1534,57 @@ ENEMY_CONTENT_CONTRACTS = {
 }
 
 
+CHAPTER_DEPTH_SPECS = (
+    {
+        "depth": 0,
+        "tier": unreal.FantasyEncounterTier.NORMAL,
+        "non_combat": (
+            ("D0_MoonlitWell", "月下古井", "恢复、牺牲换牌或洗掉一张基础攻击。",
+             unreal.FantasyRouteNodeType.EVENT, "MoonlitWell", 1.0),
+        ),
+    },
+    {
+        "depth": 1,
+        "tier": unreal.FantasyEncounterTier.NORMAL,
+        "non_combat": (
+            ("D1_AshenSmith", "灰烬铁匠", "负伤换取一张职业牌，或移除一张普通攻击。",
+             unreal.FantasyRouteNodeType.EVENT, "AshenSmith", 1.0),
+        ),
+    },
+    {
+        "depth": 2,
+        "tier": unreal.FantasyEncounterTier.NORMAL,
+        "non_combat": (
+            ("D2_ExileCamp", "流亡者营火", "休整恢复生命，或带着临时护甲进入下一战。",
+             unreal.FantasyRouteNodeType.REST, "ExileCamp", 1.0),
+        ),
+    },
+    {
+        "depth": 3,
+        "tier": unreal.FantasyEncounterTier.NORMAL,
+        "non_combat": (
+            ("D3_MoonlitWell", "月下古井", "恢复、牺牲换取职业牌或移除一张基础攻击。",
+             unreal.FantasyRouteNodeType.EVENT, "MoonlitWell", 1.0),
+        ),
+    },
+    {
+        "depth": 4,
+        "tier": unreal.FantasyEncounterTier.ELITE,
+        "non_combat": (
+            ("D4_ExileCamp", "流亡者营火", "守关战前最后一次休整。",
+             unreal.FantasyRouteNodeType.REST, "ExileCamp", 1.0),
+        ),
+    },
+    {
+        "depth": 5,
+        "tier": unreal.FantasyEncounterTier.BOSS,
+        "choice_count": 1,
+        "combat_choice_count": 1,
+        "non_combat": (),
+    },
+)
+
+
 def ensure_directory(path):
     if not unreal.EditorAssetLibrary.does_directory_exist(path):
         if not unreal.EditorAssetLibrary.make_directory(path):
@@ -1852,6 +1904,84 @@ def ensure_enemy_definition(spec, card_assets_by_id):
     return asset_path
 
 
+def make_non_combat_route_definition(spec):
+    node_id, display_name, description, node_type, payload_id, weight = spec
+    candidate = unreal.FantasyNonCombatRouteDefinition()
+    candidate.set_editor_property("node_id", unreal.Name(node_id))
+    candidate.set_editor_property("display_name", display_name)
+    candidate.set_editor_property("description", description)
+    candidate.set_editor_property("node_type", node_type)
+    candidate.set_editor_property("payload_id", unreal.Name(payload_id))
+    candidate.set_editor_property("weight", weight)
+    return candidate
+
+
+def make_route_depth_definition(spec):
+    depth = unreal.FantasyRouteDepthDefinition()
+    depth.set_editor_property("depth", spec["depth"])
+    depth.set_editor_property("choice_count", spec.get("choice_count", 3))
+    depth.set_editor_property(
+        "combat_choice_count",
+        spec.get("combat_choice_count", 2),
+    )
+    depth.set_editor_property("encounter_tier", spec["tier"])
+    depth.set_editor_property("require_distinct_enemy_families", True)
+    depth.set_editor_property(
+        "non_combat_candidates",
+        [make_non_combat_route_definition(item) for item in spec["non_combat"]],
+    )
+    return depth
+
+
+def ensure_chapter_definition():
+    asset_name = "DA_Chapter_W01_AshenKingdom"
+    asset_path = f"{W01_CHAPTER_ROOT}/{asset_name}"
+    chapter = (
+        unreal.EditorAssetLibrary.load_asset(asset_path)
+        if unreal.EditorAssetLibrary.does_asset_exist(asset_path)
+        else None
+    )
+    if chapter is None:
+        factory = unreal.DataAssetFactory()
+        factory.set_editor_property(
+            "data_asset_class",
+            unreal.FantasyChapterDefinition,
+        )
+        chapter = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+            asset_name,
+            W01_CHAPTER_ROOT,
+            unreal.FantasyChapterDefinition,
+            factory,
+        )
+        if chapter is None:
+            raise RuntimeError(
+                f"Failed to create FantasyChapterDefinition: {asset_path}"
+            )
+        unreal.log(f"Created FantasyChapterDefinition: {asset_path}")
+
+    enemy_assets = []
+    for spec in ENEMY_SPECS:
+        enemy_path = f"{W01_ENEMY_ROOT}/{spec['asset_name']}"
+        enemy = unreal.EditorAssetLibrary.load_asset(enemy_path)
+        if enemy is None:
+            raise RuntimeError(
+                f"Chapter encounter pool references missing enemy: {enemy_path}"
+            )
+        enemy_assets.append(enemy)
+
+    chapter.set_editor_property("chapter_id", unreal.Name("W01.AshenKingdom.Chapter1"))
+    chapter.set_editor_property("chapter_number", 1)
+    chapter.set_editor_property("total_depths", 6)
+    chapter.set_editor_property("unlock_condition", unreal.Name("W01.Chapter1"))
+    chapter.set_editor_property("encounter_pool", enemy_assets)
+    chapter.set_editor_property(
+        "depth_definitions",
+        [make_route_depth_definition(spec) for spec in CHAPTER_DEPTH_SPECS],
+    )
+    unreal.EditorAssetLibrary.save_loaded_asset(chapter, only_if_is_dirty=False)
+    return asset_path
+
+
 def main():
     validate_main_world_dependencies()
     for root in (
@@ -1932,6 +2062,12 @@ def main():
         unreal.log(
             f"Enemy content ready: {enemy_spec['enemy_id']} -> {enemy_path}"
         )
+    chapter_path = ensure_chapter_definition()
+    unreal.log(
+        "W01_CHAPTER_DEFINITION_SETUP_COMPLETE "
+        f"asset={chapter_path} depths={len(CHAPTER_DEPTH_SPECS)} "
+        f"encounters={len(ENEMY_SPECS)} generator=weighted-constrained"
+    )
     unreal.log(
         "W01_ENEMY_DECK_SETUP_COMPLETE "
         f"cards={len(ENEMY_CARD_SPECS)} enemies={len(ENEMY_SPECS)} "

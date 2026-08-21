@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Cards/CardDefinition.h"
+#include "Cards/Fantasy/FantasyChapterDefinition.h"
 #include "Cards/Fantasy/FantasyEnemyDefinition.h"
 #include "Engine/AssetManager.h"
 
@@ -231,6 +232,180 @@ bool FFantasyEnemyContentContractsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Chapter one has eight normal encounters"), NormalCount, 8);
 	TestEqual(TEXT("Chapter one has two elite encounters"), EliteCount, 2);
 	TestEqual(TEXT("Chapter one has one boss encounter"), BossCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FFantasyChapterContentContractsTest,
+	"WorldWalker.W01.Content.ChapterContracts",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FFantasyChapterContentContractsTest::RunTest(const FString& Parameters)
+{
+	const UFantasyChapterDefinition* Chapter = LoadObject<UFantasyChapterDefinition>(
+		nullptr,
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/Encounters/DA_Chapter_W01_AshenKingdom.DA_Chapter_W01_AshenKingdom"));
+	TestNotNull(TEXT("W01 chapter definition loads"), Chapter);
+	if (!Chapter)
+	{
+		return false;
+	}
+
+	TestEqual(TEXT("Chapter ID is stable"), Chapter->ChapterId, FName(TEXT("W01.AshenKingdom.Chapter1")));
+	TestEqual(TEXT("Chapter number is one"), Chapter->ChapterNumber, 1);
+	TestEqual(TEXT("Chapter has six route depths"), Chapter->TotalDepths, 6);
+	TestEqual(TEXT("All six depth rules are authored"), Chapter->DepthDefinitions.Num(), 6);
+	TestEqual(TEXT("All eleven encounters are in the chapter pool"), Chapter->EncounterPool.Num(), 11);
+	const TArray<FString> ValidationErrors = Chapter->ValidateDefinition();
+	for (const FString& Error : ValidationErrors)
+	{
+		AddError(FString::Printf(TEXT("Chapter contract: %s"), *Error));
+	}
+	TestTrue(TEXT("Chapter definition passes structural validation"), ValidationErrors.IsEmpty());
+
+	TMap<FName, const UFantasyEnemyDefinition*> EnemyById;
+	for (const TSoftObjectPtr<UFantasyEnemyDefinition>& EnemyReference : Chapter->EncounterPool)
+	{
+		if (const UFantasyEnemyDefinition* Enemy = EnemyReference.LoadSynchronous())
+		{
+			EnemyById.Add(Enemy->EnemyId, Enemy);
+		}
+	}
+	TSet<FName> SeenNodeIds;
+	for (int32 Depth = 0; Depth < Chapter->TotalDepths; ++Depth)
+	{
+		TArray<FFantasyRouteNodeChoice> FirstOffer;
+		TArray<FFantasyRouteNodeChoice> ReplayOffer;
+		FString FailureReason;
+		TestTrue(
+			*FString::Printf(TEXT("Depth %d generates"), Depth),
+			Chapter->GenerateRouteChoices(
+				Depth,
+				424242,
+				TEXT("W01-M1-chapter-test"),
+				EFantasyRunDifficulty::Normal,
+				NAME_None,
+				FirstOffer,
+				FailureReason));
+		FString ReplayFailureReason;
+		TestTrue(
+			*FString::Printf(TEXT("Depth %d replays"), Depth),
+			Chapter->GenerateRouteChoices(
+				Depth,
+				424242,
+				TEXT("W01-M1-chapter-test"),
+				EFantasyRunDifficulty::Normal,
+				NAME_None,
+				ReplayOffer,
+				ReplayFailureReason));
+		const int32 ExpectedChoiceCount = Depth == Chapter->TotalDepths - 1 ? 1 : 3;
+		TestEqual(
+			*FString::Printf(TEXT("Depth %d has the authored choice count"), Depth),
+			FirstOffer.Num(),
+			ExpectedChoiceCount);
+		TArray<FName> FirstIds;
+		TArray<FName> ReplayIds;
+		for (const FFantasyRouteNodeChoice& Choice : FirstOffer)
+		{
+			FirstIds.Add(Choice.NodeId);
+			TestFalse(
+				*FString::Printf(TEXT("Node ID is unique: %s"), *Choice.NodeId.ToString()),
+				SeenNodeIds.Contains(Choice.NodeId));
+			SeenNodeIds.Add(Choice.NodeId);
+			if (Choice.IsCombat())
+			{
+				const UFantasyEnemyDefinition* const* Enemy = EnemyById.Find(Choice.PayloadId);
+				TestNotNull(
+					*FString::Printf(TEXT("Combat payload resolves: %s"), *Choice.PayloadId.ToString()),
+					Enemy ? *Enemy : nullptr);
+				if (Enemy && *Enemy)
+				{
+					TestTrue(
+						*FString::Printf(TEXT("Enemy depth metadata admits depth %d"), Depth),
+						(*Enemy)->MinDepth <= Depth && (*Enemy)->MaxDepth >= Depth);
+					const EFantasyEncounterTier ExpectedTier = Depth == 5
+						? EFantasyEncounterTier::Boss
+						: Depth == 4 ? EFantasyEncounterTier::Elite : EFantasyEncounterTier::Normal;
+					TestEqual(
+						*FString::Printf(TEXT("Enemy tier matches depth %d"), Depth),
+						(*Enemy)->EncounterTier,
+						ExpectedTier);
+				}
+			}
+		}
+		for (const FFantasyRouteNodeChoice& Choice : ReplayOffer)
+		{
+			ReplayIds.Add(Choice.NodeId);
+		}
+		TestTrue(
+			*FString::Printf(TEXT("Depth %d choice order is deterministic"), Depth),
+			FirstIds == ReplayIds);
+	}
+
+	UFantasyChapterDefinition* ConstraintChapter = NewObject<UFantasyChapterDefinition>();
+	ConstraintChapter->ChapterId = TEXT("W01.Test.ConstraintChapter");
+	ConstraintChapter->ChapterNumber = 1;
+	ConstraintChapter->TotalDepths = 1;
+	FFantasyRouteDepthDefinition& ConstraintDepth =
+		ConstraintChapter->DepthDefinitions.AddDefaulted_GetRef();
+	ConstraintDepth.Depth = 0;
+	ConstraintDepth.ChoiceCount = 2;
+	ConstraintDepth.CombatChoiceCount = 2;
+	ConstraintDepth.EncounterTier = EFantasyEncounterTier::Normal;
+	ConstraintDepth.bRequireDistinctEnemyFamilies = true;
+
+	auto AddConstraintEnemy = [ConstraintChapter](
+		const TCHAR* EnemyId,
+		const TCHAR* Family)
+	{
+		UFantasyEnemyDefinition* Enemy = NewObject<UFantasyEnemyDefinition>(ConstraintChapter);
+		Enemy->EnemyId = EnemyId;
+		Enemy->DisplayName = FText::FromName(Enemy->EnemyId);
+		Enemy->Family = Family;
+		Enemy->Chapter = 1;
+		Enemy->MinDepth = 0;
+		Enemy->MaxDepth = 0;
+		Enemy->RewardWeight = 1.0f;
+		ConstraintChapter->EncounterPool.Add(Enemy);
+	};
+	AddConstraintEnemy(TEXT("PreviousEnemy"), TEXT("FamilyA"));
+	AddConstraintEnemy(TEXT("AlternateFamilyA"), TEXT("FamilyA"));
+	AddConstraintEnemy(TEXT("FamilyBEnemy"), TEXT("FamilyB"));
+	AddConstraintEnemy(TEXT("FamilyCEnemy"), TEXT("FamilyC"));
+
+	TArray<FFantasyRouteNodeChoice> ConstrainedOffer;
+	FString ConstraintFailureReason;
+	TestTrue(
+		TEXT("Surplus pool generates a constrained offer"),
+		ConstraintChapter->GenerateRouteChoices(
+			0,
+			818181,
+			TEXT("W01-M1-constraint-test"),
+			EFantasyRunDifficulty::Normal,
+			TEXT("PreviousEnemy"),
+			ConstrainedOffer,
+			ConstraintFailureReason));
+	TestEqual(TEXT("Constrained offer has two encounters"), ConstrainedOffer.Num(), 2);
+	TSet<FName> ConstrainedFamilies;
+	for (const FFantasyRouteNodeChoice& Choice : ConstrainedOffer)
+	{
+		TestNotEqual(
+			TEXT("Previous encounter is excluded when the pool has surplus"),
+			Choice.PayloadId,
+			FName(TEXT("PreviousEnemy")));
+		const TSoftObjectPtr<UFantasyEnemyDefinition>* EnemyReference =
+			ConstraintChapter->EncounterPool.FindByPredicate(
+				[&Choice](const TSoftObjectPtr<UFantasyEnemyDefinition>& Candidate)
+				{
+					const UFantasyEnemyDefinition* Enemy = Candidate.Get();
+					return Enemy && Enemy->EnemyId == Choice.PayloadId;
+				});
+		if (EnemyReference && EnemyReference->Get())
+		{
+			ConstrainedFamilies.Add(EnemyReference->Get()->Family);
+		}
+	}
+	TestEqual(TEXT("Constrained encounters use distinct families"), ConstrainedFamilies.Num(), 2);
 	return true;
 }
 
