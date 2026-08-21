@@ -106,3 +106,41 @@ void AWorldWalkerPlayerController::ShowCombatResult(const bool bPlayerWon)
 		HUDWidget->ShowCombatResult(bPlayerWon);
 	}
 }
+
+void AWorldWalkerPlayerController::SetPlatformingStatus(
+	const float CurrentStamina,
+	const float MaxStamina,
+	const FString& StateText)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->SetPlatformingStatus(CurrentStamina, MaxStamina, StateText);
+	}
+}
+
+void AWorldWalkerPlayerController::HidePlatformingStatus()
+{
+	if (HUDWidget)
+	{
+		HUDWidget->HidePlatformingStatus();
+	}
+}
+
+void AWorldWalkerPlayerController::ShowJourneyMessage(
+	const FString& Title,
+	const FString& Body,
+	const FString& Prompt)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->ShowJourneyMessage(Title, Body, Prompt);
+	}
+}
+
+void AWorldWalkerPlayerController::HideJourneyMessage()
+{
+	if (HUDWidget)
+	{
+		HUDWidget->HideJourneyMessage();
+	}
+}

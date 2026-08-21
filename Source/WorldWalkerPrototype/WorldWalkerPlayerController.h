@@ -36,6 +36,10 @@ public:
 		const TArray<FLinearColor>& CardSchoolTints);
 	void SetCombatMessage(const FString& Message, bool bCanAttack);
 	void ShowCombatResult(bool bPlayerWon);
+	void SetPlatformingStatus(float CurrentStamina, float MaxStamina, const FString& StateText);
+	void HidePlatformingStatus();
+	void ShowJourneyMessage(const FString& Title, const FString& Body, const FString& Prompt = FString());
+	void HideJourneyMessage();
 
 private:
 	UPROPERTY(Transient)

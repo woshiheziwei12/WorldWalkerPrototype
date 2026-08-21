@@ -1,4 +1,4 @@
-# W01 Quaternius 西幻环境资源授权证明
+# W01 / W02 Quaternius 西幻环境资源授权证明
 
 ## 采用的资源包
 
@@ -29,7 +29,9 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 ## 本项目筛选并导入的文件
 
-所有 StaticMesh 均导入到 `/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/Environment/`。每个 FBX 使用独立的同名子目录，避免不同资源包中的通用材质或纹理名互相覆盖；表中的稳定目标名同时是子目录、package 名和 object 名，例如 `SM_W01_HouseA/SM_W01_HouseA.SM_W01_HouseA`。
+所有 StaticMesh 首先导入到 `/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/Environment/`。每个 FBX 使用独立的同名子目录，避免不同资源包中的通用材质或纹理名互相覆盖；表中的稳定目标名同时是子目录、package 名和 object 名，例如 `SM_W01_HouseA/SM_W01_HouseA.SM_W01_HouseA`。
+
+W02 对本页三套 Quaternius 资源不新增下载或重新导入。`Scripts/setup_w02_spiral_tower.py` 通过 Unreal 的资产复制接口，把 `SM_W01_Tower`、`SM_W01_Wall`、`SM_W01_Arch`、`SM_W01_Campfire` 和 `SM_W01_Path` 连同各自私有材质目录复制到 `/Game/WorldWalker/Worlds/W02_SpiralTower/ThirdParty/Quaternius/Environment/`。运行时只引用 W02 副本；副本缺失时使用 Engine 基础几何体，不跨世界读取 W01 package。W02 新增的 Kenney Castle Kit 来源和校验记录另见 `Docs/Licenses/W02/Kenney_CastleKit_CC0.md`。
 
 | 原始 FBX | SHA-256 | 稳定目标名 |
 | --- | --- | --- |

@@ -12,6 +12,7 @@ class AWorldHubLayout;
 class AWorldPortal;
 class AFantasyBattleArena;
 class AFantasyWorldLayout;
+class ASpiralTowerWorldLayout;
 class UCardCombatComponent;
 class UCardDefinition;
 class UFantasyEnemyDefinition;
@@ -40,6 +41,7 @@ private:
 	void SpawnTestEnemy();
 	void SpawnFantasyWorldLayout();
 	void SpawnFantasyBattleArena();
+	void SpawnSpiralTowerWorldLayout();
 	void SpawnPortal(UWorldDefinition* DestinationWorld, const FVector& OffsetFromPlayer);
 	void LoadFantasyEnemyDefinition();
 	void HandleEnemyTurn();
@@ -72,6 +74,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AFantasyWorldLayout> ActiveFantasyWorld;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ASpiralTowerWorldLayout> ActiveSpiralTowerWorld;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UFantasyEnemyDefinition> ActiveFantasyEnemyDefinition;

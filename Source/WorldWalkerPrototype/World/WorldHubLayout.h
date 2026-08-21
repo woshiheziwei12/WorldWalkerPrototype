@@ -4,7 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "WorldHubLayout.generated.h"
 
-class ACharacter;
+class AWorldWalkerCharacter;
 class UBoxComponent;
 class UDirectionalLightComponent;
 class UExponentialHeightFogComponent;
@@ -13,7 +13,6 @@ class UPointLightComponent;
 class UPostProcessComponent;
 class UPrimitiveComponent;
 class USceneComponent;
-class USkeletalMeshComponent;
 class USkyLightComponent;
 class UStaticMeshComponent;
 class UTextRenderComponent;
@@ -23,8 +22,8 @@ class UWorldDefinition;
  * W00-only presentation controller.
  *
  * The authored Asian Village level supplies the playable landscape and distant
- * scenery. This actor adds the night treatment, the modular anime avatar, and
- * the automatic portal shrine without changing shared character/game-mode code.
+ * scenery. This actor adds the night treatment and portal shrines, then asks the
+ * shared player character to apply the same modular anime form used by W02.
  */
 UCLASS()
 class WORLDWALKERPROTOTYPE_API AWorldHubLayout : public AActor
@@ -37,6 +36,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 	FVector GetActivePortalLocation() const;
+	FVector GetSpiralTowerPortalLocation() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -44,14 +44,6 @@ protected:
 private:
 	void ConfigureMainWorldEnvironment();
 	void ConfigureMainWorldAvatar();
-	USkeletalMeshComponent* CreateLinkedAvatarPart(
-		ACharacter* PlayerCharacter,
-		FName ComponentName,
-		const TCHAR* MeshPath,
-		USkeletalMeshComponent* PoseLeader);
-	USkeletalMeshComponent* CreateHairPart(
-		ACharacter* PlayerCharacter,
-		USkeletalMeshComponent* HeadComponent);
 	void RefreshNightSky();
 	void HideLegacyPortal();
 	void UpdateMainWorldMovement();
@@ -117,11 +109,39 @@ private:
 	UPROPERTY(VisibleAnywhere, Category="Main World|Portal")
 	TArray<TObjectPtr<UPointLightComponent>> ShrineLights;
 
-	UPROPERTY(Transient)
-	TObjectPtr<ACharacter> MainWorldCharacter;
+	/** Explicit simple collision keeps both authored arch openings traversable. */
+	UPROPERTY(VisibleAnywhere, Category="Main World|Portal Collision")
+	TArray<TObjectPtr<UBoxComponent>> PortalCollisionShapes;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TObjectPtr<UStaticMeshComponent> SpiralTowerPortalFoundation;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TObjectPtr<UStaticMeshComponent> SpiralTowerPortalArch;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TObjectPtr<UStaticMeshComponent> SpiralTowerPortalCanopy;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TObjectPtr<UStaticMeshComponent> SpiralTowerPortalDisk;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TObjectPtr<UNiagaraComponent> SpiralTowerPortalVortex;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TObjectPtr<UPointLightComponent> SpiralTowerPortalLight;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TObjectPtr<UTextRenderComponent> SpiralTowerPortalInstruction;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TArray<TObjectPtr<UStaticMeshComponent>> SpiralTowerPortalScenery;
+
+	UPROPERTY(VisibleAnywhere, Category="Main World|Spiral Tower Portal")
+	TArray<TObjectPtr<UPointLightComponent>> SpiralTowerShrineLights;
 
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<USkeletalMeshComponent>> MainWorldAvatarParts;
+	TObjectPtr<AWorldWalkerCharacter> MainWorldCharacter;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UWorldDefinition> PendingDestinationWorld;
@@ -134,4 +154,7 @@ private:
 
 	/** Hub itself spawns 850 cm ahead; -330 places the portal 520 cm ahead of the player. */
 	static const FVector ActivePortalLocalLocation;
+
+	/** Keeps the W02 interaction authority 780 cm away from the automatic W01 trigger. */
+	static const FVector SpiralTowerPortalLocalLocation;
 };

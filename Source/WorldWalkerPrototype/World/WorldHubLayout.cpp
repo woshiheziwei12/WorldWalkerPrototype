@@ -1,14 +1,13 @@
 #include "World/WorldHubLayout.h"
 
-#include "Animation/AnimInstance.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Characters/WorldWalkerCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/SceneComponent.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -16,7 +15,6 @@
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/GameInstance.h"
 #include "Engine/PostProcessVolume.h"
-#include "Engine/SkeletalMesh.h"
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
@@ -30,12 +28,12 @@
 #include "NiagaraSystem.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
-#include "UObject/UObjectGlobals.h"
 #include "World/WorldDefinition.h"
 #include "World/WorldPortal.h"
 #include "World/WorldTravelSubsystem.h"
 
 const FVector AWorldHubLayout::ActivePortalLocalLocation(-330.0f, 0.0f, 0.0f);
+const FVector AWorldHubLayout::SpiralTowerPortalLocalLocation(-630.0f, 720.0f, 0.0f);
 
 AWorldHubLayout::AWorldHubLayout()
 {
@@ -66,6 +64,8 @@ AWorldHubLayout::AWorldHubLayout()
 		TEXT("/Game/Asian_Village/meshes/props/SM_flag_banner_01.SM_flag_banner_01"));
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> WaterPortalSystem(
 		TEXT("/Game/Portals/Rounded/WaterPortal/NS_WaterPortal.NS_WaterPortal"));
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> WindPortalSystem(
+		TEXT("/Game/Portals/Rounded/WindPortal/NS_WindPortal.NS_WindPortal"));
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> LightningPortalSystem(
 		TEXT("/Game/Portals/Rounded/LightningPortal/NS_Lightning.NS_Lightning"));
 
@@ -310,6 +310,314 @@ AWorldHubLayout::AWorldHubLayout()
 		ShrineLight->SetCastShadows(false);
 		ShrineLights.Add(ShrineLight);
 	}
+
+	// W02 keeps the W01 shrine silhouette and circular portal proportions, but
+	// uses the package's rounded wind system plus purple/gold lighting so the
+	// interaction-only destination reads differently from the automatic rift.
+	const FVector PlayerLocalLocation(-850.0f, 0.0f, 0.0f);
+	const FVector SpiralFacing =
+		(PlayerLocalLocation - SpiralTowerPortalLocalLocation).GetSafeNormal2D();
+	const FVector SpiralSide(-SpiralFacing.Y, SpiralFacing.X, 0.0f);
+	const float SpiralFacingYaw = SpiralFacing.Rotation().Yaw;
+	const float SpiralFrameYaw = SpiralFacingYaw - 90.0f;
+
+	SpiralTowerPortalFoundation = CreateDefaultSubobject<UStaticMeshComponent>(
+		TEXT("SpiralTowerPortalFoundation"));
+	SpiralTowerPortalFoundation->SetupAttachment(SceneRoot);
+	SpiralTowerPortalFoundation->SetRelativeLocation(
+		SpiralTowerPortalLocalLocation + FVector(0.0f, 0.0f, 4.0f));
+	SpiralTowerPortalFoundation->SetRelativeRotation(FRotator(0.0f, SpiralFrameYaw, 0.0f));
+	SpiralTowerPortalFoundation->SetRelativeScale3D(FVector(1.20f, 1.20f, 0.65f));
+	SpiralTowerPortalFoundation->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (PortalFoundationMesh.Succeeded())
+	{
+		SpiralTowerPortalFoundation->SetStaticMesh(PortalFoundationMesh.Object);
+	}
+
+	SpiralTowerPortalArch = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpiralTowerPortalArch"));
+	SpiralTowerPortalArch->SetupAttachment(SceneRoot);
+	SpiralTowerPortalArch->SetRelativeLocation(
+		SpiralTowerPortalLocalLocation + FVector(0.0f, 0.0f, 63.0f));
+	SpiralTowerPortalArch->SetRelativeRotation(FRotator(0.0f, SpiralFrameYaw, 0.0f));
+	SpiralTowerPortalArch->SetRelativeScale3D(FVector(0.80f));
+	SpiralTowerPortalArch->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (EasternArchMesh.Succeeded())
+	{
+		SpiralTowerPortalArch->SetStaticMesh(EasternArchMesh.Object);
+	}
+
+	SpiralTowerPortalCanopy = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpiralTowerPortalCanopy"));
+	SpiralTowerPortalCanopy->SetupAttachment(SceneRoot);
+	SpiralTowerPortalCanopy->SetRelativeLocation(
+		SpiralTowerPortalLocalLocation + SpiralFacing * 8.0f + FVector(0.0f, 0.0f, 335.0f));
+	SpiralTowerPortalCanopy->SetRelativeRotation(FRotator(0.0f, SpiralFrameYaw, 0.0f));
+	SpiralTowerPortalCanopy->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.62f));
+	SpiralTowerPortalCanopy->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (CanopyMesh.Succeeded())
+	{
+		SpiralTowerPortalCanopy->SetStaticMesh(CanopyMesh.Object);
+	}
+
+	SpiralTowerPortalDisk = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpiralTowerPortalDisk"));
+	SpiralTowerPortalDisk->SetupAttachment(SceneRoot);
+	SpiralTowerPortalDisk->SetRelativeLocation(
+		SpiralTowerPortalLocalLocation - SpiralFacing * 8.0f + FVector(0.0f, 0.0f, 150.0f));
+	SpiralTowerPortalDisk->SetRelativeRotation(FRotator(90.0f, SpiralFacingYaw - 180.0f, 0.0f));
+	SpiralTowerPortalDisk->SetRelativeScale3D(FVector(1.48f));
+	SpiralTowerPortalDisk->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SpiralTowerPortalDisk->SetCastShadow(false);
+	SpiralTowerPortalDisk->SetTranslucentSortPriority(5);
+	if (PortalDiskMesh.Succeeded())
+	{
+		SpiralTowerPortalDisk->SetStaticMesh(PortalDiskMesh.Object);
+	}
+	if (PortalWaterMaterial.Succeeded())
+	{
+		SpiralTowerPortalDisk->SetMaterial(0, PortalWaterMaterial.Object);
+	}
+
+	SpiralTowerPortalVortex = CreateDefaultSubobject<UNiagaraComponent>(TEXT("SpiralTowerPortalVortex"));
+	SpiralTowerPortalVortex->SetupAttachment(SceneRoot);
+	SpiralTowerPortalVortex->SetRelativeLocation(
+		SpiralTowerPortalLocalLocation + FVector(0.0f, 0.0f, 150.0f));
+	SpiralTowerPortalVortex->SetRelativeRotation(FRotator(0.0f, SpiralFacingYaw, 0.0f));
+	SpiralTowerPortalVortex->SetRelativeScale3D(FVector(0.19f));
+	SpiralTowerPortalVortex->SetAutoActivate(true);
+	if (WindPortalSystem.Succeeded())
+	{
+		SpiralTowerPortalVortex->SetAsset(WindPortalSystem.Object);
+	}
+	SpiralTowerPortalVortex->SetSystemFixedBounds(FBox(FVector(-700.0f), FVector(700.0f)));
+
+	SpiralTowerPortalLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("SpiralTowerPortalLight"));
+	SpiralTowerPortalLight->SetupAttachment(SceneRoot);
+	SpiralTowerPortalLight->SetRelativeLocation(
+		SpiralTowerPortalLocalLocation + SpiralFacing * 70.0f + FVector(0.0f, 0.0f, 155.0f));
+	SpiralTowerPortalLight->SetIntensity(1750.0f);
+	SpiralTowerPortalLight->SetAttenuationRadius(480.0f);
+	SpiralTowerPortalLight->SetLightColor(FLinearColor(0.72f, 0.08f, 1.0f));
+	SpiralTowerPortalLight->SetCastShadows(true);
+
+	SpiralTowerPortalInstruction = CreateDefaultSubobject<UTextRenderComponent>(
+		TEXT("SpiralTowerPortalInstruction"));
+	SpiralTowerPortalInstruction->SetupAttachment(SceneRoot);
+	SpiralTowerPortalInstruction->SetRelativeLocation(
+		SpiralTowerPortalLocalLocation + SpiralFacing * 55.0f + FVector(0.0f, 0.0f, 385.0f));
+	SpiralTowerPortalInstruction->SetRelativeRotation(FRotator(0.0f, SpiralFacingYaw, 0.0f));
+	SpiralTowerPortalInstruction->SetHorizontalAlignment(EHTA_Center);
+	SpiralTowerPortalInstruction->SetVerticalAlignment(EVRTA_TextCenter);
+	SpiralTowerPortalInstruction->SetWorldSize(17.0f);
+	SpiralTowerPortalInstruction->SetTextRenderColor(FColor(255, 176, 70));
+	SpiralTowerPortalInstruction->SetText(FText::FromString(TEXT("SPIRAL TOWER\nPRESS E")));
+
+	auto CreateSpiralShrineMesh = [this](
+		const FName ComponentName,
+		UStaticMesh* Mesh,
+		const FVector& RelativeLocation,
+		const FRotator& RelativeRotation,
+		const FVector& RelativeScale)
+	{
+		UStaticMeshComponent* Component = CreateDefaultSubobject<UStaticMeshComponent>(ComponentName);
+		Component->SetupAttachment(SceneRoot);
+		Component->SetStaticMesh(Mesh);
+		Component->SetRelativeLocation(RelativeLocation);
+		Component->SetRelativeRotation(RelativeRotation);
+		Component->SetRelativeScale3D(RelativeScale);
+		Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SpiralTowerPortalScenery.Add(Component);
+	};
+
+	CreateSpiralShrineMesh(
+		TEXT("SpiralTowerPortalLanternLeft"),
+		LanternMesh.Succeeded() ? LanternMesh.Object : nullptr,
+		SpiralTowerPortalLocalLocation + SpiralFacing * 42.0f + SpiralSide * 245.0f
+			+ FVector(0.0f, 0.0f, 315.0f),
+		FRotator(0.0f, SpiralFacingYaw - 180.0f, 0.0f),
+		FVector(1.15f));
+	CreateSpiralShrineMesh(
+		TEXT("SpiralTowerPortalLanternRight"),
+		LanternMesh.Succeeded() ? LanternMesh.Object : nullptr,
+		SpiralTowerPortalLocalLocation + SpiralFacing * 42.0f - SpiralSide * 245.0f
+			+ FVector(0.0f, 0.0f, 315.0f),
+		FRotator(0.0f, SpiralFacingYaw - 180.0f, 0.0f),
+		FVector(1.15f));
+	CreateSpiralShrineMesh(
+		TEXT("SpiralTowerPortalGuardianLeft"),
+		StatueMesh.Succeeded() ? StatueMesh.Object : nullptr,
+		SpiralTowerPortalLocalLocation - SpiralFacing * 35.0f + SpiralSide * 340.0f
+			+ FVector(0.0f, 0.0f, 58.0f),
+		FRotator(0.0f, SpiralFacingYaw - 105.0f, 0.0f),
+		FVector(0.72f));
+	CreateSpiralShrineMesh(
+		TEXT("SpiralTowerPortalGuardianRight"),
+		StatueMesh.Succeeded() ? StatueMesh.Object : nullptr,
+		SpiralTowerPortalLocalLocation - SpiralFacing * 35.0f - SpiralSide * 340.0f
+			+ FVector(0.0f, 0.0f, 58.0f),
+		FRotator(0.0f, SpiralFacingYaw + 105.0f, 0.0f),
+		FVector(0.72f));
+	CreateSpiralShrineMesh(
+		TEXT("SpiralTowerPortalBannerLeft"),
+		BannerMesh.Succeeded() ? BannerMesh.Object : nullptr,
+		SpiralTowerPortalLocalLocation - SpiralFacing * 50.0f + SpiralSide * 425.0f
+			+ FVector(0.0f, 0.0f, 35.0f),
+		FRotator(0.0f, SpiralFacingYaw - 90.0f, 0.0f),
+		FVector(0.90f));
+	CreateSpiralShrineMesh(
+		TEXT("SpiralTowerPortalBannerRight"),
+		BannerMesh.Succeeded() ? BannerMesh.Object : nullptr,
+		SpiralTowerPortalLocalLocation - SpiralFacing * 50.0f - SpiralSide * 425.0f
+			+ FVector(0.0f, 0.0f, 35.0f),
+		FRotator(0.0f, SpiralFacingYaw + 90.0f, 0.0f),
+		FVector(0.90f));
+
+	const FVector SpiralShrineLightLocations[] =
+	{
+		SpiralTowerPortalLocalLocation + SpiralFacing * 70.0f + SpiralSide * 245.0f
+			+ FVector(0.0f, 0.0f, 265.0f),
+		SpiralTowerPortalLocalLocation + SpiralFacing * 70.0f - SpiralSide * 245.0f
+			+ FVector(0.0f, 0.0f, 265.0f)
+	};
+	for (int32 LightIndex = 0; LightIndex < UE_ARRAY_COUNT(SpiralShrineLightLocations); ++LightIndex)
+	{
+		UPointLightComponent* ShrineLight = CreateDefaultSubobject<UPointLightComponent>(
+			*FString::Printf(TEXT("SpiralTowerShrineLight_%d"), LightIndex));
+		ShrineLight->SetupAttachment(SceneRoot);
+		ShrineLight->SetRelativeLocation(SpiralShrineLightLocations[LightIndex]);
+		ShrineLight->SetIntensity(850.0f);
+		ShrineLight->SetAttenuationRadius(340.0f);
+		ShrineLight->SetLightColor(FLinearColor(1.0f, 0.30f, 0.025f));
+		ShrineLight->SetCastShadows(false);
+		SpiralTowerShrineLights.Add(ShrineLight);
+	}
+
+	// Imported shrine meshes can have coarse convex collision that closes the
+	// visual archway. Use explicit query-only shapes so the stone and wood read
+	// as solid to the player/camera while the portal opening stays traversable.
+	auto CreatePortalCollisionBox = [this](
+		const FName ComponentName,
+		const FVector& RelativeLocation,
+		const float FacingYaw,
+		const FVector& BoxExtent,
+		const bool bBlockPawn,
+		const bool bBlockCamera)
+	{
+		UBoxComponent* CollisionBox = CreateDefaultSubobject<UBoxComponent>(ComponentName);
+		CollisionBox->SetupAttachment(SceneRoot);
+		CollisionBox->SetRelativeLocation(RelativeLocation);
+		CollisionBox->SetRelativeRotation(FRotator(0.0f, FacingYaw, 0.0f));
+		CollisionBox->SetBoxExtent(BoxExtent);
+		CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		CollisionBox->SetCollisionObjectType(ECC_WorldStatic);
+		CollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+		CollisionBox->SetCollisionResponseToChannel(
+			ECC_Pawn,
+			bBlockPawn ? ECR_Block : ECR_Ignore);
+		CollisionBox->SetCollisionResponseToChannel(
+			ECC_Camera,
+			bBlockCamera ? ECR_Block : ECR_Ignore);
+		CollisionBox->SetGenerateOverlapEvents(false);
+		CollisionBox->SetCanEverAffectNavigation(false);
+		PortalCollisionShapes.Add(CollisionBox);
+	};
+
+	auto CreateShrineCollision = [&CreatePortalCollisionBox](
+		const TCHAR* NamePrefix,
+		const FVector& PortalLocation,
+		const FVector& Facing,
+		const FVector& Side,
+		const float FacingYaw)
+	{
+		auto MakeName = [NamePrefix](const TCHAR* Suffix)
+		{
+			return FName(*FString::Printf(TEXT("%s%s"), NamePrefix, Suffix));
+		};
+
+		// A shallow, stepable base supports the arch without becoming a curb.
+		CreatePortalCollisionBox(
+			MakeName(TEXT("FoundationCollision")),
+			PortalLocation + FVector(0.0f, 0.0f, 15.0f),
+			FacingYaw,
+			FVector(90.0f, 235.0f, 15.0f),
+			true,
+			true);
+
+		// The inner pillar faces sit at +/-165uu, leaving a 330uu-wide opening.
+		CreatePortalCollisionBox(
+			MakeName(TEXT("LeftPillarCollision")),
+			PortalLocation + Side * 205.0f + FVector(0.0f, 0.0f, 155.0f),
+			FacingYaw,
+			FVector(55.0f, 40.0f, 155.0f),
+			true,
+			true);
+		CreatePortalCollisionBox(
+			MakeName(TEXT("RightPillarCollision")),
+			PortalLocation - Side * 205.0f + FVector(0.0f, 0.0f, 155.0f),
+			FacingYaw,
+			FVector(55.0f, 40.0f, 155.0f),
+			true,
+			true);
+		CreatePortalCollisionBox(
+			MakeName(TEXT("UpperArchCollision")),
+			PortalLocation + FVector(0.0f, 0.0f, 300.0f),
+			FacingYaw,
+			FVector(55.0f, 245.0f, 28.0f),
+			true,
+			true);
+
+		// High or hanging pieces should pull the camera forward, but must never
+		// snag a jumping character passing through the center of the shrine.
+		CreatePortalCollisionBox(
+			MakeName(TEXT("CanopyCollision")),
+			PortalLocation + Facing * 8.0f + FVector(0.0f, 0.0f, 350.0f),
+			FacingYaw,
+			FVector(115.0f, 300.0f, 30.0f),
+			false,
+			true);
+		CreatePortalCollisionBox(
+			MakeName(TEXT("LeftLanternCollision")),
+			PortalLocation + Facing * 42.0f + Side * 245.0f + FVector(0.0f, 0.0f, 315.0f),
+			FacingYaw,
+			FVector(35.0f, 35.0f, 60.0f),
+			false,
+			true);
+		CreatePortalCollisionBox(
+			MakeName(TEXT("RightLanternCollision")),
+			PortalLocation + Facing * 42.0f - Side * 245.0f + FVector(0.0f, 0.0f, 315.0f),
+			FacingYaw,
+			FVector(35.0f, 35.0f, 60.0f),
+			false,
+			true);
+
+		CreatePortalCollisionBox(
+			MakeName(TEXT("LeftGuardianCollision")),
+			PortalLocation - Facing * 35.0f + Side * 340.0f + FVector(0.0f, 0.0f, 85.0f),
+			FacingYaw,
+			FVector(70.0f, 55.0f, 85.0f),
+			true,
+			true);
+		CreatePortalCollisionBox(
+			MakeName(TEXT("RightGuardianCollision")),
+			PortalLocation - Facing * 35.0f - Side * 340.0f + FVector(0.0f, 0.0f, 85.0f),
+			FacingYaw,
+			FVector(70.0f, 55.0f, 85.0f),
+			true,
+			true);
+	};
+
+	const FVector ActivePortalFacing(-1.0f, 0.0f, 0.0f);
+	const FVector ActivePortalSide(0.0f, -1.0f, 0.0f);
+	CreateShrineCollision(
+		TEXT("ActivePortal"),
+		ActivePortalLocalLocation,
+		ActivePortalFacing,
+		ActivePortalSide,
+		180.0f);
+	CreateShrineCollision(
+		TEXT("SpiralTowerPortal"),
+		SpiralTowerPortalLocalLocation,
+		SpiralFacing,
+		SpiralSide,
+		SpiralFacingYaw);
 }
 
 void AWorldHubLayout::BeginPlay()
@@ -324,9 +632,10 @@ void AWorldHubLayout::BeginPlay()
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("W00 night presentation ready. Avatar=%s Portal=%s"),
+		TEXT("W00 night presentation ready. Avatar=%s W01Portal=%s W02Portal=%s"),
 		MainWorldCharacter ? TEXT("anime-animated") : TEXT("missing"),
-		*GetActivePortalLocation().ToCompactString());
+		*GetActivePortalLocation().ToCompactString(),
+		*GetSpiralTowerPortalLocation().ToCompactString());
 }
 
 void AWorldHubLayout::Tick(const float DeltaSeconds)
@@ -340,9 +649,18 @@ void AWorldHubLayout::Tick(const float DeltaSeconds)
 	{
 		PortalDisk->AddLocalRotation(FRotator(0.0f, -28.0f * DeltaSeconds, 0.0f));
 	}
+	if (SpiralTowerPortalDisk)
+	{
+		SpiralTowerPortalDisk->AddLocalRotation(FRotator(0.0f, 32.0f * DeltaSeconds, 0.0f));
+	}
 	if (PortalLight && !bTravelRequested)
 	{
 		PortalLight->SetIntensity(1500.0f + FMath::Sin(PortalPulseTime * 2.4f) * 250.0f);
+	}
+	if (SpiralTowerPortalLight)
+	{
+		SpiralTowerPortalLight->SetIntensity(
+			1750.0f + FMath::Sin(PortalPulseTime * 2.1f + 1.2f) * 300.0f);
 	}
 	for (int32 LightIndex = 0; LightIndex < ShrineLights.Num(); ++LightIndex)
 	{
@@ -350,6 +668,15 @@ void AWorldHubLayout::Tick(const float DeltaSeconds)
 		{
 			const float Flicker = FMath::Sin(PortalPulseTime * (3.7f + LightIndex * 0.35f)) * 65.0f;
 			ShrineLight->SetIntensity(700.0f + Flicker);
+		}
+	}
+	for (int32 LightIndex = 0; LightIndex < SpiralTowerShrineLights.Num(); ++LightIndex)
+	{
+		if (UPointLightComponent* ShrineLight = SpiralTowerShrineLights[LightIndex])
+		{
+			const float Flicker =
+				FMath::Sin(PortalPulseTime * (4.1f + LightIndex * 0.4f) + 0.8f) * 80.0f;
+			ShrineLight->SetIntensity(850.0f + Flicker);
 		}
 	}
 }
@@ -435,65 +762,17 @@ void AWorldHubLayout::ConfigureMainWorldEnvironment()
 
 void AWorldHubLayout::ConfigureMainWorldAvatar()
 {
-	MainWorldCharacter = UGameplayStatics::GetPlayerCharacter(this, 0);
+	MainWorldCharacter = Cast<AWorldWalkerCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
 	if (!MainWorldCharacter)
 	{
 		UE_LOG(LogTemp, Error, TEXT("W00 anime avatar was not configured: player character is missing."));
 		return;
 	}
 
-	TArray<UStaticMeshComponent*> PlayerStaticMeshes;
-	MainWorldCharacter->GetComponents(PlayerStaticMeshes);
-	for (UStaticMeshComponent* StaticMeshComponent : PlayerStaticMeshes)
+	if (!MainWorldCharacter->ConfigureMainWorldAnimeForm())
 	{
-		if (StaticMeshComponent && StaticMeshComponent->GetFName() == TEXT("PrototypeBody"))
-		{
-			StaticMeshComponent->SetVisibility(false, true);
-			StaticMeshComponent->SetHiddenInGame(true, true);
-		}
+		UE_LOG(LogTemp, Error, TEXT("W00 anime avatar configuration is incomplete."));
 	}
-
-	static const TCHAR* HeadMeshPath =
-		TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/Head/Starter/skl_AnimeF_Head_1.skl_AnimeF_Head_1");
-	static const TCHAR* HumanAnimBlueprintPath =
-		TEXT("/Game/AnimeCharacters/Animations/abp_Human.abp_Human_C");
-
-	USkeletalMeshComponent* HeadComponent = MainWorldCharacter->GetMesh();
-	USkeletalMesh* HeadMesh = LoadObject<USkeletalMesh>(nullptr, HeadMeshPath);
-	UClass* HumanAnimClass = LoadClass<UAnimInstance>(nullptr, HumanAnimBlueprintPath);
-	if (!HeadComponent || !HeadMesh || !HumanAnimClass)
-	{
-		UE_LOG(
-			LogTemp,
-			Error,
-			TEXT("W00 anime avatar failed to load head or locomotion AnimBP. Head=%s AnimBP=%s"),
-			HeadMesh ? TEXT("ok") : TEXT("missing"),
-			HumanAnimClass ? TEXT("ok") : TEXT("missing"));
-		return;
-	}
-
-	HeadComponent->SetSkeletalMeshAsset(HeadMesh);
-	HeadComponent->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f));
-	HeadComponent->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
-	HeadComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	HeadComponent->SetVisibility(true, true);
-	HeadComponent->SetHiddenInGame(false, true);
-	HeadComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
-	HeadComponent->SetAnimInstanceClass(HumanAnimClass);
-	HeadComponent->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-	MainWorldAvatarParts.Add(HeadComponent);
-
-	CreateLinkedAvatarPart(
-		MainWorldCharacter,
-		TEXT("MainWorldAvatarTop"),
-		TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/tops/Starter_TurtleNeck/skl_AnimeF_top_TurtleNeck.skl_AnimeF_top_TurtleNeck"),
-		HeadComponent);
-	CreateLinkedAvatarPart(
-		MainWorldCharacter,
-		TEXT("MainWorldAvatarBottom"),
-		TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/bottoms/Starter_Skirt/skl_AnimeF_bottom_skirt.skl_AnimeF_bottom_skirt"),
-		HeadComponent);
-	CreateHairPart(MainWorldCharacter, HeadComponent);
 
 	if (UCharacterMovementComponent* Movement = MainWorldCharacter->GetCharacterMovement())
 	{
@@ -506,60 +785,6 @@ void AWorldHubLayout::ConfigureMainWorldAvatar()
 	}
 }
 
-USkeletalMeshComponent* AWorldHubLayout::CreateLinkedAvatarPart(
-	ACharacter* PlayerCharacter,
-	const FName ComponentName,
-	const TCHAR* MeshPath,
-	USkeletalMeshComponent* PoseLeader)
-{
-	USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, MeshPath);
-	if (!PlayerCharacter || !PoseLeader || !Mesh)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("W00 avatar part failed to load: %s"), MeshPath);
-		return nullptr;
-	}
-
-	USkeletalMeshComponent* Part = NewObject<USkeletalMeshComponent>(PlayerCharacter, ComponentName);
-	PlayerCharacter->AddInstanceComponent(Part);
-	Part->SetupAttachment(PlayerCharacter->GetRootComponent());
-	Part->SetSkeletalMeshAsset(Mesh);
-	Part->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f));
-	Part->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
-	Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Part->SetCastShadow(true);
-	Part->RegisterComponent();
-	Part->SetLeaderPoseComponent(PoseLeader, true, false);
-
-	MainWorldAvatarParts.Add(Part);
-	return Part;
-}
-
-USkeletalMeshComponent* AWorldHubLayout::CreateHairPart(
-	ACharacter* PlayerCharacter,
-	USkeletalMeshComponent* HeadComponent)
-{
-	static const TCHAR* HairMeshPath =
-		TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/Hair/Starter2/skl_AnimeHair_F2.skl_AnimeHair_F2");
-	USkeletalMesh* HairMesh = LoadObject<USkeletalMesh>(nullptr, HairMeshPath);
-	if (!PlayerCharacter || !HeadComponent || !HairMesh)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("W00 avatar hair failed to load: %s"), HairMeshPath);
-		return nullptr;
-	}
-
-	USkeletalMeshComponent* Hair = NewObject<USkeletalMeshComponent>(PlayerCharacter, TEXT("MainWorldAvatarHair"));
-	PlayerCharacter->AddInstanceComponent(Hair);
-	Hair->SetupAttachment(HeadComponent, TEXT("HeadAttachment"));
-	Hair->SetSkeletalMeshAsset(HairMesh);
-	Hair->SetRelativeTransform(FTransform::Identity);
-	Hair->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Hair->SetCastShadow(true);
-	Hair->RegisterComponent();
-
-	MainWorldAvatarParts.Add(Hair);
-	return Hair;
-}
-
 void AWorldHubLayout::RefreshNightSky()
 {
 	if (NightSkyLight)
@@ -570,15 +795,27 @@ void AWorldHubLayout::RefreshNightSky()
 
 void AWorldHubLayout::HideLegacyPortal()
 {
-	const FVector PortalLocation = GetActivePortalLocation();
+	const FVector PortalLocations[] =
+	{
+		GetActivePortalLocation(),
+		GetSpiralTowerPortalLocation()
+	};
 	for (TActorIterator<AWorldPortal> It(GetWorld()); It; ++It)
 	{
 		AWorldPortal* Portal = *It;
-		if (Portal && FVector::DistSquared(Portal->GetActorLocation(), PortalLocation) < FMath::Square(350.0f))
+		if (!Portal)
 		{
-			Portal->SetActorHiddenInGame(true);
-			Portal->SetActorEnableCollision(false);
-			return;
+			continue;
+		}
+
+		for (const FVector& PortalLocation : PortalLocations)
+		{
+			if (FVector::DistSquared(Portal->GetActorLocation(), PortalLocation) < FMath::Square(350.0f))
+			{
+				Portal->SetActorHiddenInGame(true);
+				Portal->SetActorEnableCollision(false);
+				break;
+			}
 		}
 	}
 }
@@ -704,4 +941,9 @@ void AWorldHubLayout::CompletePortalTravel()
 FVector AWorldHubLayout::GetActivePortalLocation() const
 {
 	return GetActorTransform().TransformPosition(ActivePortalLocalLocation);
+}
+
+FVector AWorldHubLayout::GetSpiralTowerPortalLocation() const
+{
+	return GetActorTransform().TransformPosition(SpiralTowerPortalLocalLocation);
 }

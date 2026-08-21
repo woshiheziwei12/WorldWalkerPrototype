@@ -8,6 +8,7 @@ class UCameraComponent;
 class UCardCombatComponent;
 class UCombatantComponent;
 class UAnimSequence;
+class UAnimInstance;
 class USkeletalMeshComponent;
 class USpringArmComponent;
 class UStaticMeshComponent;
@@ -33,6 +34,21 @@ public:
 	UCombatantComponent* GetCombatantComponent() const { return CombatantComponent; }
 	UCardCombatComponent* GetCardCombatComponent() const { return CardCombatComponent; }
 	void SetCombatLocked(bool bLocked);
+	/** Applies the modular anime woman used by W00 without spawning the W00 hub. */
+	bool ConfigureMainWorldAnimeForm();
+	/** Reuses W00's anime woman in W02 with subdued night-scene rim lighting. */
+	bool ConfigureSpiralTowerAnimeForm();
+
+	/** Applies the W02 procedural hang/pull-up pose to the active visual form. */
+	void SetMainWorldLedgeClimbPose(float NormalizedTime);
+
+	/** Restores the shared locomotion AnimBP after a W02 one-shot action. */
+	void RestoreMainWorldLocomotionAnimation();
+
+	/** Lets a world-specific traversal controller own pressed/released jump semantics. */
+	void SetExternalJumpHandlingEnabled(bool bEnabled) { bExternalJumpHandlingEnabled = bEnabled; }
+	FSimpleMulticastDelegate& OnExternalJumpPressed() { return ExternalJumpPressed; }
+	FSimpleMulticastDelegate& OnExternalJumpReleased() { return ExternalJumpReleased; }
 	void ConfigureFantasyWorldForm(bool bEnabled, bool bStartInFantasyForm = true);
 	bool IsFantasyFormActive() const { return bFantasyFormActive; }
 
@@ -50,12 +66,21 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
+	void HandleJumpPressed();
+	void HandleJumpReleased();
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void TryInteract();
 	void ToggleWorldForm();
 	void ApplyWorldFormVisibility();
-	void LoadFantasyAnimationAssets();
+	void SetMainWorldAnimeFormVisibility(bool bVisible);
+	USkeletalMeshComponent* CreateLinkedAnimePart(
+		FName ComponentName,
+		const TCHAR* MeshPath,
+		USkeletalMeshComponent* PoseLeader);
+	USkeletalMeshComponent* CreateAnimeHairPart(USkeletalMeshComponent* HeadComponent);
+	void ApplyW02AnimeMaterialTuning();
+	void LoadFantasyAnimationAssets(const TCHAR* AssetRoot);
 	void RefreshFantasyLocomotionAnimation(bool bForce = false);
 	void PlayFantasyActionAnimation(
 		UAnimSequence* Animation,
@@ -73,6 +98,18 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category="Visual")
 	TObjectPtr<USkeletalMeshComponent> FantasyFormMesh;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USkeletalMeshComponent> MainWorldAnimeTop;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USkeletalMeshComponent> MainWorldAnimeBottom;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USkeletalMeshComponent> MainWorldAnimeHair;
+
+	UPROPERTY(Transient)
+	TSubclassOf<UAnimInstance> MainWorldLocomotionAnimClass;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimSequence> FantasyIdleAnimation;
@@ -96,11 +133,18 @@ private:
 	TObjectPtr<UCardCombatComponent> CardCombatComponent;
 
 	bool bCombatLocked = false;
+	bool bExternalJumpHandlingEnabled = false;
+	bool bMainWorldAnimeFormConfigured = false;
+	bool bMainWorldAnimeFormActive = false;
 	bool bFantasyFormAvailable = false;
 	bool bFantasyFormActive = false;
+	bool bWorldFormToggleEnabled = true;
 	bool bFantasyActionPlaying = false;
+	FVector FantasyFormVisualScale = FVector(0.52f);
 	float FantasyActionEndTime = 0.0f;
 	EWorldWalkerFantasyAnimationState CurrentFantasyAnimationState =
 		EWorldWalkerFantasyAnimationState::None;
 	float InteractionDistance = 350.0f;
+	FSimpleMulticastDelegate ExternalJumpPressed;
+	FSimpleMulticastDelegate ExternalJumpReleased;
 };

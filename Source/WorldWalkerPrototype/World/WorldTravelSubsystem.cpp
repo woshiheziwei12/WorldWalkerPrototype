@@ -6,6 +6,7 @@
 
 const FName UWorldTravelSubsystem::MainWorldId(TEXT("W00_MainWorld"));
 const FName UWorldTravelSubsystem::EasternHorrorWorldId(TEXT("W01_EasternHorror"));
+const FName UWorldTravelSubsystem::SpiralTowerWorldId(TEXT("W02_SpiralTower"));
 
 void UWorldTravelSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -19,6 +20,10 @@ void UWorldTravelSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		EasternHorrorWorldId,
 		TSoftObjectPtr<UWorldDefinition>(FSoftObjectPath(
 			TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/DA_W01_EasternHorror.DA_W01_EasternHorror"))));
+	WorldRegistry.Add(
+		SpiralTowerWorldId,
+		TSoftObjectPtr<UWorldDefinition>(FSoftObjectPath(
+			TEXT("/Game/WorldWalker/Worlds/W02_SpiralTower/Data/DA_W02_SpiralTower.DA_W02_SpiralTower"))));
 }
 
 UWorldDefinition* UWorldTravelSubsystem::GetWorldDefinition(const FName WorldId) const

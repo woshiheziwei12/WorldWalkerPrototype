@@ -14,6 +14,7 @@
 #include "World/WorldDefinition.h"
 #include "World/Fantasy/FantasyBattleArena.h"
 #include "World/Fantasy/FantasyWorldLayout.h"
+#include "World/Platforming/SpiralTowerWorldLayout.h"
 #include "World/WorldHubLayout.h"
 #include "World/WorldPortal.h"
 #include "World/WorldTravelSubsystem.h"
@@ -35,13 +36,14 @@ void AWorldWalkerGameModeBase::BeginPlay()
 	UE_LOG(
 		LogTemp,
 		Display,
-		TEXT("WorldWalker world ready. World=%s Player=%s Enemy=%s Portal=%s Hub=%s FantasyWorld=%s"),
+		TEXT("WorldWalker world ready. World=%s Player=%s Enemy=%s Portal=%s Hub=%s FantasyWorld=%s SpiralTower=%s"),
 		CurrentWorldDefinition ? *CurrentWorldDefinition->WorldId.ToString() : TEXT("Unregistered"),
 		ActivePlayer ? TEXT("spawned") : TEXT("missing"),
 		ActiveEnemy ? TEXT("spawned") : TEXT("none"),
 		ActivePortal ? TEXT("spawned") : TEXT("none"),
 		ActiveHub ? TEXT("spawned") : TEXT("none"),
-		ActiveFantasyWorld ? TEXT("spawned") : TEXT("none"));
+		ActiveFantasyWorld ? TEXT("spawned") : TEXT("none"),
+		ActiveSpiralTowerWorld ? TEXT("spawned") : TEXT("none"));
 }
 
 void AWorldWalkerGameModeBase::InitializeWorldContent()
@@ -67,8 +69,18 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 
 	if (CurrentWorldDefinition->WorldId == UWorldTravelSubsystem::MainWorldId)
 	{
-		ExplorationMessage = TEXT("MAIN WORLD - IMMORTAL HUB\nWalk into the vortex portal to travel");
+		ExplorationMessage = TEXT("MAIN WORLD - IMMORTAL HUB\nWalk into the vortex: Ashen Kingdom | E: Spiral Tower");
 		SpawnMainWorldHub(TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::EasternHorrorWorldId));
+
+		const FVector Forward = ActivePlayer->GetActorForwardVector().GetSafeNormal2D();
+		const FVector Right = ActivePlayer->GetActorRightVector().GetSafeNormal2D();
+		const FVector GroundOrigin = ActivePlayer->GetActorLocation() - FVector(0.0f, 0.0f, 88.0f);
+		const FVector SpiralTowerPortalOffset = ActiveHub
+			? ActiveHub->GetSpiralTowerPortalLocation() - GroundOrigin
+			: Forward * 220.0f + Right * 720.0f;
+		SpawnPortal(
+			TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::SpiralTowerWorldId),
+			SpiralTowerPortalOffset);
 		return;
 	}
 
@@ -91,6 +103,17 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 		SpawnPortal(
 			TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::MainWorldId),
 			PortalOffset);
+		return;
+	}
+
+	if (CurrentWorldDefinition->WorldId == UWorldTravelSubsystem::SpiralTowerWorldId)
+	{
+		ExplorationMessage = TEXT("螺旋王塔 · 断阶试炼\nWASD 移动 | Shift 冲刺 | Space 跳跃 | 拾取攀岩手甲后：空中朝向边缘按住 Space 翻上 | 登顶返回主世界");
+		if (!ActivePlayer->ConfigureSpiralTowerAnimeForm())
+		{
+			ActivePlayer->ConfigureMainWorldAnimeForm();
+		}
+		SpawnSpiralTowerWorldLayout();
 	}
 }
 
@@ -203,6 +226,26 @@ void AWorldWalkerGameModeBase::SpawnFantasyBattleArena()
 		SpawnParameters);
 }
 
+void AWorldWalkerGameModeBase::SpawnSpiralTowerWorldLayout()
+{
+	if (!ActivePlayer || !GetWorld())
+	{
+		return;
+	}
+
+	const FVector Forward = ActivePlayer->GetActorForwardVector().GetSafeNormal2D();
+	const FVector GroundOrigin = ActivePlayer->GetActorLocation() - FVector(0.0f, 0.0f, 88.0f);
+	const FRotator WorldRotation(0.0f, Forward.Rotation().Yaw, 0.0f);
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ActiveSpiralTowerWorld = GetWorld()->SpawnActor<ASpiralTowerWorldLayout>(
+		ASpiralTowerWorldLayout::StaticClass(),
+		GroundOrigin,
+		WorldRotation,
+		SpawnParameters);
+}
+
 void AWorldWalkerGameModeBase::LoadFantasyEnemyDefinition()
 {
 	static const TCHAR* EnemyDefinitionPath =
@@ -238,6 +281,12 @@ void AWorldWalkerGameModeBase::SpawnPortal(
 	if (ActivePortal)
 	{
 		ActivePortal->ConfigurePortal(DestinationWorld);
+		UE_LOG(
+			LogTemp,
+			Display,
+			TEXT("World portal ready. Destination=%s Location=%s"),
+			*DestinationWorld->WorldId.ToString(),
+			*SpawnLocation.ToCompactString());
 	}
 }
 

@@ -8,6 +8,7 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
+#include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
 #include "Components/Spacer.h"
 #include "Components/TextBlock.h"
@@ -76,6 +77,69 @@ void UWorldWalkerHUDWidget::BuildWidgetTree()
 	ExplorationSlot->SetAnchors(FAnchors(0.5f, 0.03f));
 	ExplorationSlot->SetAlignment(FVector2D(0.5f, 0.0f));
 	ExplorationSlot->SetAutoSize(true);
+
+	PlatformingStatusPanel = WidgetTree->ConstructWidget<UBorder>(
+		UBorder::StaticClass(),
+		TEXT("PlatformingStatusPanel"));
+	PlatformingStatusPanel->SetBrushColor(FLinearColor(0.015f, 0.020f, 0.030f, 0.90f));
+	PlatformingStatusPanel->SetPadding(FMargin(16.0f, 10.0f));
+	UVerticalBox* PlatformingStatusBox = WidgetTree->ConstructWidget<UVerticalBox>(
+		UVerticalBox::StaticClass(),
+		TEXT("PlatformingStatusBox"));
+	PlatformingStatusPanel->SetContent(PlatformingStatusBox);
+	PlatformingStatusText = MakeText(TEXT("PlatformingStatusText"), TEXT("体力 100 / 100 · 可攀爬"), 17);
+	PlatformingStatusText->SetColorAndOpacity(FSlateColor(FLinearColor(0.82f, 0.91f, 1.0f, 1.0f)));
+	PlatformingStatusBox->AddChildToVerticalBox(PlatformingStatusText)->SetPadding(
+		FMargin(0.0f, 0.0f, 0.0f, 5.0f));
+	PlatformingStaminaBar = WidgetTree->ConstructWidget<UProgressBar>(
+		UProgressBar::StaticClass(),
+		TEXT("PlatformingStaminaBar"));
+	PlatformingStaminaBar->SetPercent(1.0f);
+	PlatformingStaminaBar->SetFillColorAndOpacity(FLinearColor(0.18f, 0.72f, 0.88f, 1.0f));
+	USizeBox* StaminaBarSize = WidgetTree->ConstructWidget<USizeBox>(
+		USizeBox::StaticClass(),
+		TEXT("PlatformingStaminaBarSize"));
+	StaminaBarSize->SetWidthOverride(285.0f);
+	StaminaBarSize->SetHeightOverride(18.0f);
+	StaminaBarSize->AddChild(PlatformingStaminaBar);
+	PlatformingStatusBox->AddChildToVerticalBox(StaminaBarSize);
+
+	UCanvasPanelSlot* PlatformingStatusSlot = RootCanvas->AddChildToCanvas(PlatformingStatusPanel);
+	PlatformingStatusSlot->SetAnchors(FAnchors(0.035f, 0.80f));
+	PlatformingStatusSlot->SetAlignment(FVector2D(0.0f, 0.5f));
+	PlatformingStatusSlot->SetAutoSize(true);
+	PlatformingStatusPanel->SetVisibility(ESlateVisibility::Collapsed);
+
+	JourneyPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("JourneyPanel"));
+	JourneyPanel->SetBrushColor(FLinearColor(0.012f, 0.020f, 0.040f, 0.91f));
+	JourneyPanel->SetPadding(FMargin(21.0f, 17.0f));
+	UVerticalBox* JourneyBox = WidgetTree->ConstructWidget<UVerticalBox>(
+		UVerticalBox::StaticClass(),
+		TEXT("JourneyBox"));
+	JourneyPanel->SetContent(JourneyBox);
+	JourneyTitleText = MakeText(TEXT("JourneyTitle"), TEXT("守晓者的记录"), 23);
+	JourneyTitleText->SetJustification(ETextJustify::Left);
+	JourneyTitleText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.63f, 0.24f, 1.0f)));
+	JourneyBox->AddChildToVerticalBox(JourneyTitleText)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+	JourneyBodyText = MakeText(TEXT("JourneyBody"), TEXT("风从没有封死的窗里吹进来。"), 17);
+	JourneyBodyText->SetJustification(ETextJustify::Left);
+	JourneyBodyText->SetAutoWrapText(true);
+	JourneyBodyText->SetColorAndOpacity(FSlateColor(FLinearColor(0.82f, 0.87f, 0.96f, 1.0f)));
+	JourneyBox->AddChildToVerticalBox(JourneyBodyText);
+	JourneyPromptText = MakeText(TEXT("JourneyPrompt"), TEXT(""), 16);
+	JourneyPromptText->SetJustification(ETextJustify::Left);
+	JourneyPromptText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.72f, 0.31f, 1.0f)));
+	JourneyBox->AddChildToVerticalBox(JourneyPromptText)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 0.0f));
+	USizeBox* JourneySize = WidgetTree->ConstructWidget<USizeBox>(
+		USizeBox::StaticClass(),
+		TEXT("JourneySize"));
+	JourneySize->SetWidthOverride(450.0f);
+	JourneySize->AddChild(JourneyPanel);
+	UCanvasPanelSlot* JourneySlot = RootCanvas->AddChildToCanvas(JourneySize);
+	JourneySlot->SetAnchors(FAnchors(0.965f, 0.15f));
+	JourneySlot->SetAlignment(FVector2D(1.0f, 0.0f));
+	JourneySlot->SetAutoSize(true);
+	JourneyPanel->SetVisibility(ESlateVisibility::Collapsed);
 
 	CombatPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CombatPanel"));
 	CombatPanel->SetBrushColor(NearBlack);
@@ -245,12 +309,76 @@ void UWorldWalkerHUDWidget::SetExplorationMessage(const FString& Message)
 	}
 }
 
+void UWorldWalkerHUDWidget::SetPlatformingStatus(
+	const float CurrentStamina,
+	const float MaxStamina,
+	const FString& StateText)
+{
+	if (!PlatformingStatusPanel || !PlatformingStaminaBar || !PlatformingStatusText)
+	{
+		return;
+	}
+
+	const float Fraction = MaxStamina > UE_KINDA_SMALL_NUMBER
+		? FMath::Clamp(CurrentStamina / MaxStamina, 0.0f, 1.0f)
+		: 0.0f;
+	PlatformingStatusPanel->SetVisibility(ESlateVisibility::HitTestInvisible);
+	PlatformingStaminaBar->SetPercent(Fraction);
+	PlatformingStaminaBar->SetFillColorAndOpacity(
+		Fraction <= 0.20f
+			? FLinearColor(0.92f, 0.16f, 0.08f, 1.0f)
+			: (Fraction <= 0.45f
+				? FLinearColor(0.94f, 0.60f, 0.08f, 1.0f)
+				: FLinearColor(0.18f, 0.72f, 0.88f, 1.0f)));
+	PlatformingStatusText->SetText(FText::FromString(FString::Printf(
+		TEXT("体力 %d / %d · %s"),
+		FMath::RoundToInt(CurrentStamina),
+		FMath::RoundToInt(MaxStamina),
+		*StateText)));
+}
+
+void UWorldWalkerHUDWidget::HidePlatformingStatus()
+{
+	if (PlatformingStatusPanel)
+	{
+		PlatformingStatusPanel->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UWorldWalkerHUDWidget::ShowJourneyMessage(
+	const FString& Title,
+	const FString& Body,
+	const FString& Prompt)
+{
+	if (!JourneyPanel || !JourneyTitleText || !JourneyBodyText || !JourneyPromptText)
+	{
+		return;
+	}
+	JourneyTitleText->SetText(FText::FromString(Title));
+	JourneyBodyText->SetText(FText::FromString(Body));
+	JourneyPromptText->SetText(FText::FromString(Prompt));
+	JourneyPromptText->SetVisibility(Prompt.IsEmpty()
+		? ESlateVisibility::Collapsed
+		: ESlateVisibility::HitTestInvisible);
+	JourneyPanel->SetVisibility(ESlateVisibility::HitTestInvisible);
+}
+
+void UWorldWalkerHUDWidget::HideJourneyMessage()
+{
+	if (JourneyPanel)
+	{
+		JourneyPanel->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
 void UWorldWalkerHUDWidget::ShowCombat(
 	const int32 PlayerHealth,
 	const int32 PlayerMaxHealth,
 	const int32 EnemyHealth,
 	const int32 EnemyMaxHealth)
 {
+	HidePlatformingStatus();
+	HideJourneyMessage();
 	ExplorationPanel->SetVisibility(ESlateVisibility::Collapsed);
 	CombatPanel->SetVisibility(ESlateVisibility::Visible);
 	RestartButton->SetVisibility(ESlateVisibility::Collapsed);

@@ -29,12 +29,13 @@ const FVector AFantasyWorldLayout::ReturnPortalLocalLocation(-120.0f, 760.0f, 0.
 
 namespace
 {
-	const TCHAR* EnvironmentRoot =
+	const TCHAR* WorldLayoutEnvironmentRoot =
 		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/Environment");
 
-	FString EnvironmentAssetPath(const TCHAR* AssetName)
+	FString WorldLayoutEnvironmentAssetPath(const TCHAR* AssetName)
 	{
-		return FString::Printf(TEXT("%s/%s/%s.%s"), EnvironmentRoot, AssetName, AssetName, AssetName);
+		return FString::Printf(
+			TEXT("%s/%s/%s.%s"), WorldLayoutEnvironmentRoot, AssetName, AssetName, AssetName);
 	}
 }
 
@@ -311,11 +312,11 @@ void AFantasyWorldLayout::BuildGroundAndRoad()
 
 void AFantasyWorldLayout::BuildVillageDistrict()
 {
-	const FString HouseA = EnvironmentAssetPath(TEXT("SM_W01_HouseA"));
-	const FString HouseB = EnvironmentAssetPath(TEXT("SM_W01_HouseB"));
-	const FString Tower = EnvironmentAssetPath(TEXT("SM_W01_Tower"));
-	const FString Arch = EnvironmentAssetPath(TEXT("SM_W01_Arch"));
-	const FString Wall = EnvironmentAssetPath(TEXT("SM_W01_Wall"));
+	const FString HouseA = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_HouseA"));
+	const FString HouseB = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_HouseB"));
+	const FString Tower = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Tower"));
+	const FString Arch = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Arch"));
+	const FString Wall = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Wall"));
 
 	AddEnvironmentMesh(TEXT("VillageGate"), *Arch, FVector(430.0f, 0.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f),
 		FVector(1.25f), false, CubeFallback, FLinearColor(0.11f, 0.10f, 0.13f));
@@ -353,18 +354,18 @@ void AFantasyWorldLayout::BuildVillageDistrict()
 
 void AFantasyWorldLayout::BuildCampAndLandmarks()
 {
-	const FString Tree = EnvironmentAssetPath(TEXT("SM_W01_Tree"));
-	const FString Crate = EnvironmentAssetPath(TEXT("SM_W01_Crate"));
-	const FString Barrel = EnvironmentAssetPath(TEXT("SM_W01_Barrel"));
-	const FString Cart = EnvironmentAssetPath(TEXT("SM_W01_Cart"));
-	const FString Path = EnvironmentAssetPath(TEXT("SM_W01_Path"));
-	const FString Fence = EnvironmentAssetPath(TEXT("SM_W01_Fence"));
-	const FString Gazebo = EnvironmentAssetPath(TEXT("SM_W01_Gazebo"));
-	const FString MarketStand = EnvironmentAssetPath(TEXT("SM_W01_MarketStand"));
-	const FString Well = EnvironmentAssetPath(TEXT("SM_W01_Well"));
-	const FString Bush = EnvironmentAssetPath(TEXT("SM_W01_Bush"));
-	const FString Grass = EnvironmentAssetPath(TEXT("SM_W01_Grass"));
-	const FString Rock = EnvironmentAssetPath(TEXT("SM_W01_Rock"));
+	const FString Tree = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Tree"));
+	const FString Crate = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Crate"));
+	const FString Barrel = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Barrel"));
+	const FString Cart = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Cart"));
+	const FString Path = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Path"));
+	const FString Fence = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Fence"));
+	const FString Gazebo = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Gazebo"));
+	const FString MarketStand = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_MarketStand"));
+	const FString Well = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Well"));
+	const FString Bush = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Bush"));
+	const FString Grass = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Grass"));
+	const FString Rock = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Rock"));
 
 	for (int32 PathIndex = 0; PathIndex < 9; ++PathIndex)
 	{
@@ -473,8 +474,8 @@ void AFantasyWorldLayout::BuildCampAndLandmarks()
 
 void AFantasyWorldLayout::BuildBattleApproach()
 {
-	const FString Arch = EnvironmentAssetPath(TEXT("SM_W01_Arch"));
-	const FString Wall = EnvironmentAssetPath(TEXT("SM_W01_Wall"));
+	const FString Arch = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Arch"));
+	const FString Wall = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Wall"));
 	AddEnvironmentMesh(TEXT("BlackthornGate"), *Arch, FVector(2050.0f, 0.0f, 0.0f),
 		FRotator(0.0f, 90.0f, 0.0f), FVector(1.55f), false, CubeFallback,
 		FLinearColor(0.075f, 0.055f, 0.085f));
@@ -488,9 +489,9 @@ void AFantasyWorldLayout::BuildBattleApproach()
 
 void AFantasyWorldLayout::BuildReturnPortalLandmark()
 {
-	const FString Arch = EnvironmentAssetPath(TEXT("SM_W01_Arch"));
-	const FString Rock = EnvironmentAssetPath(TEXT("SM_W01_Rock"));
-	const FString Campfire = EnvironmentAssetPath(TEXT("SM_W01_Campfire"));
+	const FString Arch = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Arch"));
+	const FString Rock = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Rock"));
+	const FString Campfire = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Campfire"));
 	const FVector Facing = (-ReturnPortalLocalLocation).GetSafeNormal2D();
 	const FVector Side(-Facing.Y, Facing.X, 0.0f);
 	// The imported arch spans its local +X axis. Rotate that span across the
@@ -563,7 +564,7 @@ void AFantasyWorldLayout::SpawnResidents()
 
 void AFantasyWorldLayout::AddTorch(const FVector& LocalLocation, const int32 TorchIndex)
 {
-	const FString Campfire = EnvironmentAssetPath(TEXT("SM_W01_Campfire"));
+	const FString Campfire = WorldLayoutEnvironmentAssetPath(TEXT("SM_W01_Campfire"));
 	const bool bCampfire = TorchIndex == 2 || TorchIndex == 5;
 	FVector DisplayLocation = LocalLocation;
 	if (!bCampfire)

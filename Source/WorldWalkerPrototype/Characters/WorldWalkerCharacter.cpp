@@ -1,5 +1,6 @@
 #include "Characters/WorldWalkerCharacter.h"
 
+#include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Cards/CardCombatComponent.h"
@@ -15,6 +16,7 @@
 #include "Interaction/WorldWalkerInteractable.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
+#include "UObject/UObjectGlobals.h"
 
 AWorldWalkerCharacter::AWorldWalkerCharacter()
 {
@@ -114,8 +116,8 @@ void AWorldWalkerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &AWorldWalkerCharacter::MoveRight);
 	PlayerInputComponent->BindAxis(TEXT("Turn"), this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &APawn::AddControllerPitchInput);
-	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ACharacter::Jump);
-	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &AWorldWalkerCharacter::HandleJumpPressed);
+	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Released, this, &AWorldWalkerCharacter::HandleJumpReleased);
 	PlayerInputComponent->BindAction(TEXT("Interact"), IE_Pressed, this, &AWorldWalkerCharacter::TryInteract);
 	PlayerInputComponent->BindAction(TEXT("ToggleWorldForm"), IE_Pressed, this, &AWorldWalkerCharacter::ToggleWorldForm);
 }
@@ -192,11 +194,244 @@ void AWorldWalkerCharacter::SetCombatLocked(const bool bLocked)
 	RefreshFantasyLocomotionAnimation(true);
 }
 
+void AWorldWalkerCharacter::HandleJumpPressed()
+{
+	if (bCombatLocked)
+	{
+		return;
+	}
+
+	if (bExternalJumpHandlingEnabled && ExternalJumpPressed.IsBound())
+	{
+		ExternalJumpPressed.Broadcast();
+		return;
+	}
+	Jump();
+}
+
+void AWorldWalkerCharacter::HandleJumpReleased()
+{
+	if (bExternalJumpHandlingEnabled && ExternalJumpReleased.IsBound())
+	{
+		ExternalJumpReleased.Broadcast();
+		return;
+	}
+	StopJumping();
+}
+
+bool AWorldWalkerCharacter::ConfigureMainWorldAnimeForm()
+{
+	static const TCHAR* HeadMeshPath =
+		TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/Head/Starter/skl_AnimeF_Head_1.skl_AnimeF_Head_1");
+	static const TCHAR* HumanAnimBlueprintPath =
+		TEXT("/Game/AnimeCharacters/Animations/abp_Human.abp_Human_C");
+
+	USkeletalMeshComponent* HeadComponent = GetMesh();
+	USkeletalMesh* HeadMesh = LoadObject<USkeletalMesh>(nullptr, HeadMeshPath);
+	UClass* HumanAnimClass = LoadClass<UAnimInstance>(nullptr, HumanAnimBlueprintPath);
+	if (!HeadComponent || !HeadMesh || !HumanAnimClass)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("Anime world form failed to load head or locomotion AnimBP. Head=%s AnimBP=%s"),
+			HeadMesh ? TEXT("ok") : TEXT("missing"),
+			HumanAnimClass ? TEXT("ok") : TEXT("missing"));
+		return false;
+	}
+
+	HeadComponent->SetSkeletalMeshAsset(HeadMesh);
+	HeadComponent->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f));
+	HeadComponent->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	HeadComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HeadComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	HeadComponent->SetAnimInstanceClass(HumanAnimClass);
+	MainWorldLocomotionAnimClass = HumanAnimClass;
+	HeadComponent->VisibilityBasedAnimTickOption =
+		EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
+	if (!MainWorldAnimeTop)
+	{
+		MainWorldAnimeTop = CreateLinkedAnimePart(
+			TEXT("MainWorldAvatarTop"),
+			TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/tops/Starter_TurtleNeck/skl_AnimeF_top_TurtleNeck.skl_AnimeF_top_TurtleNeck"),
+			HeadComponent);
+	}
+	if (!MainWorldAnimeBottom)
+	{
+		MainWorldAnimeBottom = CreateLinkedAnimePart(
+			TEXT("MainWorldAvatarBottom"),
+			TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/bottoms/Starter_Skirt/skl_AnimeF_bottom_skirt.skl_AnimeF_bottom_skirt"),
+			HeadComponent);
+	}
+	if (!MainWorldAnimeHair)
+	{
+		MainWorldAnimeHair = CreateAnimeHairPart(HeadComponent);
+	}
+
+	bMainWorldAnimeFormConfigured =
+		MainWorldAnimeTop != nullptr
+		&& MainWorldAnimeBottom != nullptr
+		&& MainWorldAnimeHair != nullptr;
+	if (!bMainWorldAnimeFormConfigured)
+	{
+		bMainWorldAnimeFormActive = false;
+		SetMainWorldAnimeFormVisibility(false);
+		ApplyWorldFormVisibility();
+		UE_LOG(LogTemp, Error, TEXT("Anime world form is incomplete; using the prototype body."));
+		return false;
+	}
+
+	bMainWorldAnimeFormActive = true;
+	bFantasyFormAvailable = false;
+	bFantasyFormActive = false;
+	bFantasyActionPlaying = false;
+	CurrentFantasyAnimationState = EWorldWalkerFantasyAnimationState::None;
+	ApplyWorldFormVisibility();
+	return true;
+}
+
+void AWorldWalkerCharacter::RestoreMainWorldLocomotionAnimation()
+{
+	if (bFantasyFormAvailable && bFantasyFormActive
+		&& FantasyFormMesh && FantasyFormMesh->GetSkeletalMeshAsset())
+	{
+		FantasyFormMesh->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
+		FantasyFormMesh->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+		FantasyFormMesh->SetRelativeScale3D(FantasyFormVisualScale);
+		FantasyFormMesh->GlobalAnimRateScale = 1.0f;
+		bFantasyActionPlaying = false;
+		RefreshFantasyLocomotionAnimation(true);
+		return;
+	}
+
+	USkeletalMeshComponent* HeadComponent = GetMesh();
+	if (!bMainWorldAnimeFormConfigured || !bMainWorldAnimeFormActive || !HeadComponent)
+	{
+		return;
+	}
+
+	HeadComponent->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f));
+	HeadComponent->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	HeadComponent->GlobalAnimRateScale = 1.0f;
+	HeadComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	if (MainWorldLocomotionAnimClass)
+	{
+		HeadComponent->SetAnimInstanceClass(MainWorldLocomotionAnimClass);
+	}
+
+	for (USkeletalMeshComponent* Part : {MainWorldAnimeTop.Get(), MainWorldAnimeBottom.Get()})
+	{
+		if (Part)
+		{
+			Part->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f));
+			Part->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+		}
+	}
+}
+
+void AWorldWalkerCharacter::SetMainWorldLedgeClimbPose(const float NormalizedTime)
+{
+	const bool bUseMedievalClimber = bFantasyFormAvailable && bFantasyFormActive
+		&& FantasyFormMesh && FantasyFormMesh->GetSkeletalMeshAsset();
+	const bool bUseAnimeForm = bMainWorldAnimeFormConfigured && bMainWorldAnimeFormActive;
+	if (!bUseMedievalClimber && !bUseAnimeForm)
+	{
+		return;
+	}
+
+	const float ClampedTime = FMath::Clamp(NormalizedTime, 0.0f, 1.0f);
+	const float PoseWeight = FMath::Sin(ClampedTime * PI);
+	const float PullWeight = FMath::SmoothStep(0.30f, 0.82f, ClampedTime);
+	const float PitchOffset = -22.0f * PoseWeight + 10.0f * PullWeight * PoseWeight;
+	const float RollOffset = FMath::Sin(ClampedTime * 2.0f * PI) * 4.0f;
+	const FVector LocationOffset(
+		-7.0f * PoseWeight,
+		0.0f,
+		8.0f * PoseWeight + 5.0f * PullWeight * PoseWeight);
+
+	auto ApplyPose = [&](USkeletalMeshComponent* Component)
+	{
+		if (!Component)
+		{
+			return;
+		}
+
+		Component->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f) + LocationOffset);
+		Component->SetRelativeRotation(FRotator(PitchOffset, -90.0f, RollOffset));
+	};
+
+	if (bUseMedievalClimber)
+	{
+		FantasyFormMesh->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f) + LocationOffset);
+		FantasyFormMesh->SetRelativeRotation(FRotator(PitchOffset, -90.0f, RollOffset));
+		FantasyFormMesh->GlobalAnimRateScale = PoseWeight > 0.01f ? 0.72f : 1.0f;
+	}
+	else
+	{
+		ApplyPose(GetMesh());
+		ApplyPose(MainWorldAnimeTop);
+		ApplyPose(MainWorldAnimeBottom);
+		GetMesh()->GlobalAnimRateScale = PoseWeight > 0.01f ? 0.72f : 1.0f;
+	}
+}
+
+USkeletalMeshComponent* AWorldWalkerCharacter::CreateLinkedAnimePart(
+	const FName ComponentName,
+	const TCHAR* MeshPath,
+	USkeletalMeshComponent* PoseLeader)
+{
+	USkeletalMesh* LoadedMesh = LoadObject<USkeletalMesh>(nullptr, MeshPath);
+	if (!PoseLeader || !LoadedMesh)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Anime avatar part failed to load: %s"), MeshPath);
+		return nullptr;
+	}
+
+	USkeletalMeshComponent* Part = NewObject<USkeletalMeshComponent>(this, ComponentName);
+	AddInstanceComponent(Part);
+	Part->SetupAttachment(GetRootComponent());
+	Part->SetSkeletalMeshAsset(LoadedMesh);
+	Part->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f));
+	Part->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Part->SetCastShadow(true);
+	Part->RegisterComponent();
+	Part->SetLeaderPoseComponent(PoseLeader, true, false);
+	return Part;
+}
+
+USkeletalMeshComponent* AWorldWalkerCharacter::CreateAnimeHairPart(
+	USkeletalMeshComponent* HeadComponent)
+{
+	static const TCHAR* HairMeshPath =
+		TEXT("/Game/AnimeCharacters/Blueprints/Characters/Female_Average/Hair/Starter2/skl_AnimeHair_F2.skl_AnimeHair_F2");
+	USkeletalMesh* HairMesh = LoadObject<USkeletalMesh>(nullptr, HairMeshPath);
+	if (!HeadComponent || !HairMesh)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Anime avatar hair failed to load: %s"), HairMeshPath);
+		return nullptr;
+	}
+
+	USkeletalMeshComponent* Hair = NewObject<USkeletalMeshComponent>(this, TEXT("MainWorldAvatarHair"));
+	AddInstanceComponent(Hair);
+	Hair->SetupAttachment(HeadComponent, TEXT("HeadAttachment"));
+	Hair->SetSkeletalMeshAsset(HairMesh);
+	Hair->SetRelativeTransform(FTransform::Identity);
+	Hair->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Hair->SetCastShadow(true);
+	Hair->RegisterComponent();
+	return Hair;
+}
+
 void AWorldWalkerCharacter::ConfigureFantasyWorldForm(
 	const bool bEnabled,
 	const bool bStartInFantasyForm)
 {
+	bMainWorldAnimeFormActive = false;
 	bFantasyFormAvailable = bEnabled;
+	FantasyFormVisualScale = FVector(0.52f);
+	FantasyFormMesh->SetRelativeScale3D(FantasyFormVisualScale);
 
 	if (bFantasyFormAvailable && !FantasyFormMesh->GetSkeletalMeshAsset())
 	{
@@ -212,16 +447,104 @@ void AWorldWalkerCharacter::ConfigureFantasyWorldForm(
 		}
 	}
 
-	LoadFantasyAnimationAssets();
+	LoadFantasyAnimationAssets(
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior"));
 
 	bFantasyFormActive = bFantasyFormAvailable && bStartInFantasyForm;
+	bWorldFormToggleEnabled = true;
 	ApplyWorldFormVisibility();
 	RefreshFantasyLocomotionAnimation(true);
 }
 
+bool AWorldWalkerCharacter::ConfigureSpiralTowerAnimeForm()
+{
+	if (!ConfigureMainWorldAnimeForm())
+	{
+		return false;
+	}
+
+	bWorldFormToggleEnabled = false;
+	ApplyW02AnimeMaterialTuning();
+	UE_LOG(LogTemp, Display, TEXT("W02 anime avatar configured. Model=W00Shared RimLightIntensity=0.00 ToonTint=0.035 FormToggle=Disabled"));
+	return true;
+}
+
+void AWorldWalkerCharacter::ApplyW02AnimeMaterialTuning()
+{
+	USkeletalMeshComponent* AnimeComponents[] =
+	{
+		GetMesh(),
+		MainWorldAnimeTop.Get(),
+		MainWorldAnimeBottom.Get(),
+		MainWorldAnimeHair.Get()
+	};
+	int32 TunedMaterialSlots = 0;
+	for (USkeletalMeshComponent* Component : AnimeComponents)
+	{
+		if (!Component)
+		{
+			continue;
+		}
+
+		for (int32 MaterialIndex = 0; MaterialIndex < Component->GetNumMaterials(); ++MaterialIndex)
+		{
+			if (UMaterialInstanceDynamic* Material = Component->CreateAndSetMaterialInstanceDynamic(MaterialIndex))
+			{
+				Material->SetScalarParameterValue(TEXT("RimLight_Intensity"), 0.0f);
+				Material->SetVectorParameterValue(
+					TEXT("RimlightColor"),
+					FLinearColor(0.01f, 0.015f, 0.025f, 1.0f));
+				// The Anime Character Pack's toon masters route most surface color
+				// through unlit-style parameters. A neutral sub-one tint reduces that
+				// apparent emissive output without mutating W00's shared assets.
+				Material->SetVectorParameterValue(
+					TEXT("TintColor"),
+					FLinearColor(0.035f, 0.035f, 0.04f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("HighlightColor"),
+					FLinearColor(0.04f, 0.04f, 0.045f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("Color 1"),
+					FLinearColor(0.055f, 0.032f, 0.025f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("Color 2"),
+					FLinearColor(0.025f, 0.018f, 0.022f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("Color 3"),
+					FLinearColor(0.012f, 0.014f, 0.02f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("ShadowColor"),
+					FLinearColor(0.008f, 0.01f, 0.016f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("MidShadeColor"),
+					FLinearColor(0.018f, 0.02f, 0.028f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("Hair Color"),
+					FLinearColor(0.022f, 0.011f, 0.016f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("GradientColor"),
+					FLinearColor(0.008f, 0.006f, 0.012f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("HairShadowColor"),
+					FLinearColor(0.004f, 0.003f, 0.006f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("Color"),
+					FLinearColor(0.035f, 0.035f, 0.04f, 1.0f));
+				Material->SetVectorParameterValue(
+					TEXT("Tint"),
+					FLinearColor(0.025f, 0.035f, 0.055f, 1.0f));
+				Material->SetScalarParameterValue(TEXT("Gradient Intensity"), 0.0f);
+				++TunedMaterialSlots;
+			}
+		}
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("W02 anime material tuning applied. Slots=%d RimLightIntensity=0.00 ToonTint=0.035"), TunedMaterialSlots);
+}
+
 void AWorldWalkerCharacter::ToggleWorldForm()
 {
-	if (bCombatLocked || !bFantasyFormAvailable)
+	if (bCombatLocked || !bFantasyFormAvailable || !bWorldFormToggleEnabled)
 	{
 		return;
 	}
@@ -241,10 +564,16 @@ void AWorldWalkerCharacter::ApplyWorldFormVisibility()
 {
 	const bool bCanShowFantasyMesh =
 		bFantasyFormAvailable && bFantasyFormActive && FantasyFormMesh->GetSkeletalMeshAsset() != nullptr;
-	FantasyFormMesh->SetVisibility(bCanShowFantasyMesh, true);
-	FantasyFormMesh->SetHiddenInGame(!bCanShowFantasyMesh, true);
-	PrototypeBody->SetVisibility(!bCanShowFantasyMesh, true);
-	PrototypeBody->SetHiddenInGame(bCanShowFantasyMesh, true);
+	const bool bCanShowMainWorldAnimeMesh =
+		bMainWorldAnimeFormActive && bMainWorldAnimeFormConfigured;
+	FantasyFormMesh->SetVisibility(bCanShowFantasyMesh, false);
+	FantasyFormMesh->SetHiddenInGame(!bCanShowFantasyMesh, false);
+	FantasyFormMesh->SetRenderInMainPass(bCanShowFantasyMesh);
+	FantasyFormMesh->SetCastShadow(bCanShowFantasyMesh);
+	SetMainWorldAnimeFormVisibility(bCanShowMainWorldAnimeMesh);
+	const bool bShowPrototypeBody = !bCanShowFantasyMesh && !bCanShowMainWorldAnimeMesh;
+	PrototypeBody->SetVisibility(bShowPrototypeBody, true);
+	PrototypeBody->SetHiddenInGame(!bShowPrototypeBody, true);
 
 	if (!bCanShowFantasyMesh)
 	{
@@ -252,24 +581,51 @@ void AWorldWalkerCharacter::ApplyWorldFormVisibility()
 	}
 }
 
-void AWorldWalkerCharacter::LoadFantasyAnimationAssets()
+void AWorldWalkerCharacter::SetMainWorldAnimeFormVisibility(const bool bVisible)
 {
-	static const TCHAR* IdlePath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Idle.SK_W01_WarriorCharacterArmature_Idle");
-	static const TCHAR* WalkPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Walk.SK_W01_WarriorCharacterArmature_Walk");
-	static const TCHAR* RunPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Run.SK_W01_WarriorCharacterArmature_Run");
-	static const TCHAR* AttackPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_Sword_Attack.SK_W01_WarriorCharacterArmature_Sword_Attack");
-	static const TCHAR* HitPath =
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/ThirdParty/Quaternius/RPGCharacters/Warrior/SK_W01_WarriorCharacterArmature_RecieveHit.SK_W01_WarriorCharacterArmature_RecieveHit");
+	if (USkeletalMeshComponent* HeadComponent = GetMesh())
+	{
+		HeadComponent->SetVisibility(bVisible, true);
+		HeadComponent->SetHiddenInGame(!bVisible, true);
+	}
 
-	FantasyIdleAnimation = LoadObject<UAnimSequence>(nullptr, IdlePath);
-	FantasyWalkAnimation = LoadObject<UAnimSequence>(nullptr, WalkPath);
-	FantasyRunAnimation = LoadObject<UAnimSequence>(nullptr, RunPath);
-	FantasyAttackAnimation = LoadObject<UAnimSequence>(nullptr, AttackPath);
-	FantasyHitReactionAnimation = LoadObject<UAnimSequence>(nullptr, HitPath);
+	USkeletalMeshComponent* AnimeParts[] =
+	{
+		MainWorldAnimeTop.Get(),
+		MainWorldAnimeBottom.Get(),
+		MainWorldAnimeHair.Get()
+	};
+	for (USkeletalMeshComponent* Part : AnimeParts)
+	{
+		if (Part)
+		{
+			Part->SetVisibility(bVisible, true);
+			Part->SetHiddenInGame(!bVisible, true);
+		}
+	}
+}
+
+void AWorldWalkerCharacter::LoadFantasyAnimationAssets(const TCHAR* AssetRoot)
+{
+	const auto AnimationPath = [AssetRoot](const TCHAR* AssetName)
+	{
+		return FString::Printf(TEXT("%s/%s.%s"), AssetRoot, AssetName, AssetName);
+	};
+	FantasyIdleAnimation = LoadObject<UAnimSequence>(
+		nullptr,
+		*AnimationPath(TEXT("SK_W01_WarriorCharacterArmature_Idle")));
+	FantasyWalkAnimation = LoadObject<UAnimSequence>(
+		nullptr,
+		*AnimationPath(TEXT("SK_W01_WarriorCharacterArmature_Walk")));
+	FantasyRunAnimation = LoadObject<UAnimSequence>(
+		nullptr,
+		*AnimationPath(TEXT("SK_W01_WarriorCharacterArmature_Run")));
+	FantasyAttackAnimation = LoadObject<UAnimSequence>(
+		nullptr,
+		*AnimationPath(TEXT("SK_W01_WarriorCharacterArmature_Sword_Attack")));
+	FantasyHitReactionAnimation = LoadObject<UAnimSequence>(
+		nullptr,
+		*AnimationPath(TEXT("SK_W01_WarriorCharacterArmature_RecieveHit")));
 
 	if (!FantasyIdleAnimation || !FantasyWalkAnimation || !FantasyRunAnimation)
 	{

@@ -24,6 +24,15 @@ WORLD_SPECS = (
         "is_main": False,
         "portal_color": unreal.LinearColor(0.65, 0.08, 0.9, 1.0),
     },
+    {
+        "world_id": "W02_SpiralTower",
+        "display_name": "螺旋高塔",
+        "root": "/Game/WorldWalker/Worlds/W02_SpiralTower",
+        "map_name": "L_W02_SpiralTower",
+        "definition_name": "DA_W02_SpiralTower",
+        "is_main": False,
+        "portal_color": unreal.LinearColor(1.0, 0.32, 0.04, 1.0),
+    },
 )
 
 W01_ROOT = "/Game/WorldWalker/Worlds/W01_EasternHorror"
@@ -456,6 +465,7 @@ def main():
         "/Game/ThirdParty/Shared",
         "/Game/ThirdParty/W00_MainWorld",
         "/Game/ThirdParty/W01_EasternHorror",
+        "/Game/ThirdParty/W02_SpiralTower",
     ):
         ensure_directory(root)
 

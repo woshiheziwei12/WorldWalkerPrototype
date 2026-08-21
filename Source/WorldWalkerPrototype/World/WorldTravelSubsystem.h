@@ -14,6 +14,7 @@ class WORLDWALKERPROTOTYPE_API UWorldTravelSubsystem : public UGameInstanceSubsy
 public:
 	static const FName MainWorldId;
 	static const FName EasternHorrorWorldId;
+	static const FName SpiralTowerWorldId;
 
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 

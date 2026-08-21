@@ -8,6 +8,7 @@ class UBorder;
 class UButton;
 class UHorizontalBox;
 class UImage;
+class UProgressBar;
 class UTextBlock;
 class UTexture2D;
 class UVerticalBox;
@@ -20,6 +21,10 @@ class WORLDWALKERPROTOTYPE_API UWorldWalkerHUDWidget : public UUserWidget
 public:
 	void ShowExploration();
 	void SetExplorationMessage(const FString& Message);
+	void SetPlatformingStatus(float CurrentStamina, float MaxStamina, const FString& StateText);
+	void HidePlatformingStatus();
+	void ShowJourneyMessage(const FString& Title, const FString& Body, const FString& Prompt);
+	void HideJourneyMessage();
 	void ShowCombat(int32 PlayerHealth, int32 PlayerMaxHealth, int32 EnemyHealth, int32 EnemyMaxHealth);
 	void RefreshCombatState(
 		int32 PlayerHealth,
@@ -78,6 +83,27 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> ExplorationText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBorder> PlatformingStatusPanel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UProgressBar> PlatformingStaminaBar;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> PlatformingStatusText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBorder> JourneyPanel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> JourneyTitleText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> JourneyBodyText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> JourneyPromptText;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBorder> CombatPanel;
