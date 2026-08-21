@@ -11,6 +11,7 @@ WORLD_SPECS = (
         "map_name": "L_W00_MainWorld_Night",
         "definition_name": "DA_W00_MainWorld",
         "is_main": True,
+        "portal_order": 0,
         "portal_color": unreal.LinearColor(0.05, 0.8, 1.0, 1.0),
     },
     {
@@ -22,6 +23,7 @@ WORLD_SPECS = (
         "map_name": "L_W01_Entry",
         "definition_name": "DA_W01_EasternHorror",
         "is_main": False,
+        "portal_order": 10,
         "portal_color": unreal.LinearColor(0.65, 0.08, 0.9, 1.0),
     },
 )
@@ -1597,6 +1599,8 @@ def ensure_world_definition(spec, map_path):
     definition.set_editor_property("display_name", spec["display_name"])
     definition.set_editor_property("entry_map", map_asset)
     definition.set_editor_property("is_main_world", spec["is_main"])
+    definition.set_editor_property("expose_in_main_world", not spec["is_main"])
+    definition.set_editor_property("portal_order", spec["portal_order"])
     definition.set_editor_property("portal_color", spec["portal_color"])
     unreal.EditorAssetLibrary.save_loaded_asset(definition, only_if_is_dirty=False)
     return definition_path

@@ -51,7 +51,8 @@ public:
 
 private:
 	void InitializeWorldContent();
-	void SpawnMainWorldHub(UWorldDefinition* DestinationWorld);
+	void SpawnRegisteredWorldRoot();
+	void SpawnMainWorldHub(const TArray<UWorldDefinition*>& DestinationWorlds);
 	void SpawnTestEnemy();
 	void SpawnFantasyWorldLayout();
 	void SpawnFantasyBattleArena();
@@ -137,6 +138,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UWorldDefinition> CurrentWorldDefinition;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> ActiveWorldRoot;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UCardDefinition>> PendingRewardChoices;

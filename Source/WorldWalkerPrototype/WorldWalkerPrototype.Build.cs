@@ -19,6 +19,7 @@ public class WorldWalkerPrototype : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			"AssetRegistry",
 			"Json",
 			"Slate",
 			"SlateCore"

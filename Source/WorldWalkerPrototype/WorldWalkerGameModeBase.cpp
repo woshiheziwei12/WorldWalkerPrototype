@@ -146,10 +146,12 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 		return;
 	}
 
-	if (CurrentWorldDefinition->WorldId == UWorldTravelSubsystem::MainWorldId)
+	SpawnRegisteredWorldRoot();
+
+	if (CurrentWorldDefinition->bIsMainWorld)
 	{
 		ExplorationMessage = TEXT("MAIN WORLD - IMMORTAL HUB\nWalk into the vortex portal to travel");
-		SpawnMainWorldHub(TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::EasternHorrorWorldId));
+		SpawnMainWorldHub(TravelSubsystem->GetTravelDestinations());
 		return;
 	}
 
@@ -165,11 +167,52 @@ void AWorldWalkerGameModeBase::InitializeWorldContent()
 			? ActiveFantasyWorld->GetReturnPortalLocation() - GroundOrigin
 			: ActivePlayer->GetActorRightVector().GetSafeNormal2D() * 650.0f;
 		SpawnPortal(
-			TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::MainWorldId),
+			TravelSubsystem->GetMainWorldDefinition(),
 			PortalOffset);
 		GetWorldTimerManager().SetTimerForNextTick(
 			this,
 			&AWorldWalkerGameModeBase::InitializeFantasyRun);
+	}
+}
+
+void AWorldWalkerGameModeBase::SpawnRegisteredWorldRoot()
+{
+	if (!CurrentWorldDefinition || CurrentWorldDefinition->WorldRootActorClass.IsNull() || !GetWorld())
+	{
+		return;
+	}
+
+	UClass* RootClass = CurrentWorldDefinition->WorldRootActorClass.LoadSynchronous();
+	if (!RootClass || !RootClass->IsChildOf(AActor::StaticClass()))
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("Registered world '%s' has an invalid WorldRootActorClass."),
+			*CurrentWorldDefinition->WorldId.ToString());
+		return;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ActiveWorldRoot = GetWorld()->SpawnActor<AActor>(RootClass, FTransform::Identity, SpawnParameters);
+	if (ActiveWorldRoot)
+	{
+		UE_LOG(
+			LogTemp,
+			Display,
+			TEXT("Registered world root spawned. World=%s Class=%s"),
+			*CurrentWorldDefinition->WorldId.ToString(),
+			*GetNameSafe(RootClass));
+	}
+	else
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("Registered world root failed to spawn. World=%s Class=%s"),
+			*CurrentWorldDefinition->WorldId.ToString(),
+			*GetNameSafe(RootClass));
 	}
 }
 
@@ -189,7 +232,7 @@ void AWorldWalkerGameModeBase::InitializeM0RunAutomation()
 		return;
 	}
 
-	if (CurrentWorldDefinition->WorldId == UWorldTravelSubsystem::MainWorldId)
+	if (CurrentWorldDefinition->bIsMainWorld)
 	{
 		if (!GM0AutomationCompletedRun)
 		{
@@ -368,8 +411,7 @@ void AWorldWalkerGameModeBase::HandleM0RunAutomationStep()
 			? GetGameInstance()->GetSubsystem<UWorldTravelSubsystem>()
 			: nullptr)
 		{
-			if (TravelSubsystem->TravelToWorld(
-				TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::MainWorldId)))
+			if (TravelSubsystem->TravelToWorld(TravelSubsystem->GetMainWorldDefinition()))
 			{
 				return;
 			}
@@ -392,11 +434,11 @@ void AWorldWalkerGameModeBase::FailM0RunAutomation(const FString& Reason)
 	FPlatformMisc::RequestExitWithStatus(true, 1);
 }
 
-void AWorldWalkerGameModeBase::SpawnMainWorldHub(UWorldDefinition* DestinationWorld)
+void AWorldWalkerGameModeBase::SpawnMainWorldHub(const TArray<UWorldDefinition*>& DestinationWorlds)
 {
-	if (!ActivePlayer || !DestinationWorld)
+	if (!ActivePlayer)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Cannot spawn main-world hub: player or destination WorldDefinition is missing."));
+		UE_LOG(LogTemp, Error, TEXT("Cannot spawn main-world hub: player is missing."));
 		return;
 	}
 
@@ -415,7 +457,20 @@ void AWorldWalkerGameModeBase::SpawnMainWorldHub(UWorldDefinition* DestinationWo
 
 	if (ActiveHub)
 	{
-		SpawnPortal(DestinationWorld, ActiveHub->GetActivePortalLocation() - GroundOrigin);
+		ActiveHub->ConfigureDestination(DestinationWorlds.IsEmpty() ? nullptr : DestinationWorlds[0]);
+
+		// The authored vortex features the first registered destination. Additional
+		// worlds receive ordinary data-driven portals arranged beside it. Adding a
+		// definition asset is therefore sufficient to expose a new world in W00.
+		const FVector Right = FVector::CrossProduct(FVector::UpVector, Forward).GetSafeNormal2D();
+		for (int32 DestinationIndex = 1; DestinationIndex < DestinationWorlds.Num(); ++DestinationIndex)
+		{
+			const int32 SideIndex = (DestinationIndex + 1) / 2;
+			const float Side = DestinationIndex % 2 == 1 ? 1.0f : -1.0f;
+			const FVector PortalLocation = ActiveHub->GetActivePortalLocation()
+				+ Right * Side * SideIndex * 430.0f;
+			SpawnPortal(DestinationWorlds[DestinationIndex], PortalLocation - GroundOrigin);
+		}
 	}
 }
 

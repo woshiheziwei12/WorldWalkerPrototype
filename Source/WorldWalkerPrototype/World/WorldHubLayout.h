@@ -45,6 +45,9 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	/** Configures the featured vortex from registry data; the hub never names a child world. */
+	void ConfigureDestination(UWorldDefinition* InDestinationWorld);
+
 	FVector GetActivePortalLocation() const;
 
 protected:
@@ -179,6 +182,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> PortalBackdropMaterial;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UWorldDefinition> DestinationWorld;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UWorldDefinition> PendingDestinationWorld;

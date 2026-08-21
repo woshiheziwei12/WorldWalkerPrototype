@@ -537,6 +537,25 @@ void AWorldHubLayout::BeginPlay()
 		NightMoon && NightMoon->GetStaticMesh() ? TEXT("ready") : TEXT("missing"));
 }
 
+void AWorldHubLayout::ConfigureDestination(UWorldDefinition* InDestinationWorld)
+{
+	DestinationWorld = InDestinationWorld;
+	if (PortalTrigger)
+	{
+		PortalTrigger->SetCollisionEnabled(
+			DestinationWorld ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	}
+	if (PortalInstruction && DestinationWorld)
+	{
+		PortalInstruction->SetText(DestinationWorld->DisplayName);
+		PortalInstruction->SetTextRenderColor(DestinationWorld->PortalColor.ToFColor(true));
+	}
+	if (PortalLight && DestinationWorld)
+	{
+		PortalLight->SetLightColor(DestinationWorld->PortalColor);
+	}
+}
+
 void AWorldHubLayout::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearTimer(PortalTravelTimer);
@@ -1485,12 +1504,10 @@ void AWorldHubLayout::HandlePortalOverlap(
 	UWorldTravelSubsystem* TravelSubsystem = GetGameInstance()
 		? GetGameInstance()->GetSubsystem<UWorldTravelSubsystem>()
 		: nullptr;
-	UWorldDefinition* DestinationWorld = TravelSubsystem
-		? TravelSubsystem->GetWorldDefinition(UWorldTravelSubsystem::EasternHorrorWorldId)
-		: nullptr;
 	if (!TravelSubsystem || !DestinationWorld)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Automatic W00 portal travel failed: destination is unavailable."));
+		bPortalProximityLatched = false;
 		return;
 	}
 
