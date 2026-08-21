@@ -100,7 +100,7 @@ bool UCardCombatComponent::LoadStartingDeck(const FName CardSetId)
 		CardSetId,
 		&ScannedAssetCount,
 		&RegisteredDefinitionCount);
-	const UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
+	UFantasyCardProgressionSubsystem* Progression = GetWorld() && GetWorld()->GetGameInstance()
 		? GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr;
 	const EFantasyPlayerProfession Profession = Progression && Progression->HasSelectedProfession()
@@ -114,15 +114,36 @@ bool UCardCombatComponent::LoadStartingDeck(const FName CardSetId)
 		{
 			continue;
 		}
-		const int32 RewardCopies = Progression ? Progression->GetGrantedCopies(Card->CardId) : 0;
-		const int32 RemovedCopies = Progression ? Progression->GetRemovedCopies(Card->CardId) : 0;
+		const int32 RewardCopies = Progression
+			? Progression->GetGrantedCopies(Card->CardId, Card->UpgradeLevel)
+			: 0;
+		const int32 RemovedCopies = Progression
+			? Progression->GetRemovedCopies(Card->CardId, Card->UpgradeLevel)
+			: 0;
+		const int32 UpgradedFromCopies = Progression
+			? Progression->GetUpgradedFromCopies(Card->CardId, Card->UpgradeLevel)
+			: 0;
+		const int32 UpgradedToCopies = Progression
+			? Progression->GetUpgradedToCopies(Card->CardId, Card->UpgradeLevel)
+			: 0;
 		const int32 EffectiveCopies = FMath::Max(
 			0,
-			Card->StartingDeckCopies + RewardCopies - RemovedCopies);
+			Card->StartingDeckCopies + RewardCopies - RemovedCopies
+				- UpgradedFromCopies + UpgradedToCopies);
 		for (int32 CopyIndex = 0; CopyIndex < EffectiveCopies; ++CopyIndex)
 		{
 			StartingDeck.Add(Card);
 		}
+	}
+	if (Progression)
+	{
+		TArray<UCardDefinition*> DeckSnapshot;
+		DeckSnapshot.Reserve(StartingDeck.Num());
+		for (UCardDefinition* Card : StartingDeck)
+		{
+			DeckSnapshot.Add(Card);
+		}
+		Progression->ReplaceDeckSnapshot(DeckSnapshot);
 	}
 
 	if (StartingDeck.IsEmpty())
@@ -427,7 +448,9 @@ bool UCardCombatComponent::RemoveCardFromRun(const FName CardId)
 
 	UFantasyCardProgressionSubsystem* Progression =
 		GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
-	if (!Progression || !Progression->RemoveCardCopy(CardId))
+	const UCardDefinition* CardToRemove = StartingDeck[DeckIndex];
+	if (!Progression || !CardToRemove
+		|| !Progression->RemoveCardCopy(CardId, CardToRemove->UpgradeLevel))
 	{
 		return false;
 	}

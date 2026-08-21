@@ -51,8 +51,14 @@ bool FFantasyDeterministicRouteTest::RunTest(const FString& Parameters)
 		NewObject<UFantasyCardProgressionSubsystem>(SeedTestGameInstance);
 	UFantasyCardProgressionSubsystem* ReplayStreams =
 		NewObject<UFantasyCardProgressionSubsystem>(SeedTestGameInstance);
+	UFantasyCardProgressionSubsystem* HardStreams =
+		NewObject<UFantasyCardProgressionSubsystem>(SeedTestGameInstance);
 	FirstStreams->ConfigureRun(314159, TEXT("W01-M1-test"));
 	ReplayStreams->ConfigureRun(314159, TEXT("W01-M1-test"));
+	HardStreams->ConfigureRun(
+		314159,
+		TEXT("W01-M1-test"),
+		EFantasyRunDifficulty::Hard);
 	const int32 FirstPlayerBattle = FirstStreams->ConsumeDeterministicSeed(TEXT("PlayerBattle"));
 	const int32 SecondPlayerBattle = FirstStreams->ConsumeDeterministicSeed(TEXT("PlayerBattle"));
 	TestEqual(
@@ -67,6 +73,109 @@ bool FFantasyDeterministicRouteTest::RunTest(const FString& Parameters)
 		TEXT("Isolated stream names derive different random seeds"),
 		FirstStreams->ConsumeDeterministicSeed(TEXT("RewardOffer")),
 		FirstPlayerBattle);
+	TestNotEqual(
+		TEXT("Difficulty participates in deterministic random seeds"),
+		HardStreams->ConsumeDeterministicSeed(TEXT("PlayerBattle")),
+		FirstPlayerBattle);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FFantasyRunStateContractTest,
+	"WorldWalker.W01.Run.StateContract",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FFantasyRunStateContractTest::RunTest(const FString& Parameters)
+{
+	UGameInstance* GameInstance = NewObject<UGameInstance>();
+	UFantasyCardProgressionSubsystem* Progression =
+		NewObject<UFantasyCardProgressionSubsystem>(GameInstance);
+	TestFalse(
+		TEXT("Run configuration rejects an invalid difficulty enum"),
+		Progression->ConfigureRun(
+			777,
+			TEXT("W01-M1-state-test"),
+			static_cast<EFantasyRunDifficulty>(255)));
+	TestTrue(
+		TEXT("Run configuration accepts explicit difficulty"),
+		Progression->ConfigureRun(
+			777,
+			TEXT("W01-M1-state-test"),
+			EFantasyRunDifficulty::Hard));
+	TestTrue(
+		TEXT("Profession can be selected before the run starts"),
+		Progression->SelectProfession(EFantasyPlayerProfession::Mage));
+	Progression->EnsureRunStarted();
+	TestEqual(TEXT("Difficulty is retained"), Progression->GetDifficulty(), EFantasyRunDifficulty::Hard);
+	TestFalse(TEXT("Run ID is assigned"), Progression->GetRunId().IsEmpty());
+	TestFalse(TEXT("Build version is assigned"), Progression->GetBuildVersion().IsEmpty());
+	TestEqual(TEXT("Run begins without an end reason"), Progression->GetEndReason(), EFantasyRunEndReason::None);
+
+	UCardDefinition* BaseCard = NewObject<UCardDefinition>();
+	BaseCard->CardId = TEXT("Test_State_Base");
+	BaseCard->CardSetId = TEXT("W01_EasternHorror");
+	BaseCard->Profession = EFantasyPlayerProfession::Mage;
+	BaseCard->UpgradeLevel = 0;
+	UCardDefinition* UpgradeCard = NewObject<UCardDefinition>();
+	UpgradeCard->CardId = TEXT("Test_State_Upgrade");
+	UpgradeCard->CardSetId = BaseCard->CardSetId;
+	UpgradeCard->Profession = BaseCard->Profession;
+	UpgradeCard->UpgradeLevel = 1;
+	BaseCard->UpgradeCard = UpgradeCard;
+	UCardDefinition* ForeignProfessionCard = NewObject<UCardDefinition>();
+	ForeignProfessionCard->CardId = TEXT("Test_State_Foreign");
+	ForeignProfessionCard->CardSetId = BaseCard->CardSetId;
+	ForeignProfessionCard->Profession = EFantasyPlayerProfession::Knight;
+	TestFalse(
+		TEXT("A card from another profession is rejected"),
+		Progression->GrantCard(ForeignProfessionCard));
+
+	TArray<UCardDefinition*> InitialDeck = {BaseCard};
+	Progression->ReplaceDeckSnapshot(InitialDeck);
+	TestTrue(TEXT("A valid reward card is persisted"), Progression->GrantCard(BaseCard));
+	TestEqual(TEXT("Reward updates the base deck tuple"), Progression->GetRunDeckCopies(BaseCard->CardId, 0), 2);
+	TestTrue(TEXT("One exact base copy can be removed"), Progression->RemoveCardCopy(BaseCard->CardId, 0));
+	TestEqual(TEXT("Deletion count is retained"), Progression->GetDeletionCount(), 1);
+	TestTrue(TEXT("One exact base copy can be upgraded"), Progression->UpgradeCardCopy(BaseCard));
+	TestEqual(TEXT("Base tuple is consumed by upgrade"), Progression->GetRunDeckCopies(BaseCard->CardId, 0), 0);
+	TestEqual(TEXT("Level-one tuple is added by upgrade"), Progression->GetRunDeckCopies(UpgradeCard->CardId, 1), 1);
+	TestFalse(TEXT("A missing base copy cannot be upgraded twice"), Progression->UpgradeCardCopy(BaseCard));
+
+	TestEqual(TEXT("Gold grant applies"), Progression->AddGold(120), 120);
+	TestTrue(TEXT("Affordable gold spend succeeds"), Progression->SpendGold(45));
+	TestFalse(TEXT("Unaffordable gold spend is rejected"), Progression->SpendGold(100));
+	TestEqual(TEXT("Gold balance is retained"), Progression->GetGold(), 75);
+	TestTrue(TEXT("A blessing is retained"), Progression->GrantBlessing(TEXT("Test_Blessing")));
+	TestFalse(TEXT("A duplicate blessing is rejected"), Progression->GrantBlessing(TEXT("Test_Blessing")));
+
+	Progression->RecordRewardOffer(TEXT("CardA|CardB|CardC"));
+	Progression->RecordRewardSelection(TEXT("CardB"), false, 1);
+	Progression->RecordEventOffer(TEXT("Test_Event"), TEXT("Left|Right"));
+	Progression->RecordEventSelection(TEXT("Test_Event"), 0);
+	Progression->RecordBattleStarted(TEXT("Test_Enemy"), 1);
+	Progression->RecordEnemyDefeated(TEXT("Test_Enemy"));
+	TestTrue(
+		TEXT("Decision history retains exact reward selection index"),
+		Progression->GetDecisionHistory().ContainsByPredicate(
+			[](const FFantasyRunDecisionRecord& Record)
+			{
+				return Record.EventType == TEXT("RewardSelected")
+					&& Record.SelectionId == TEXT("CardB")
+					&& Record.SelectionIndex == 1;
+			}));
+	TestEqual(TEXT("Defeated enemy history is retained"), Progression->GetDefeatedEnemyIds().Num(), 1);
+	TestEqual(TEXT("Last enemy is retained"), Progression->GetLastEnemyId(), FName(TEXT("Test_Enemy")));
+
+	Progression->EndRun(EFantasyRunEndReason::Defeat, TEXT("Test_Enemy"));
+	Progression->EndRun(EFantasyRunEndReason::Completed);
+	TestEqual(TEXT("The first terminal reason is immutable"), Progression->GetEndReason(), EFantasyRunEndReason::Defeat);
+	Progression->ResetRun();
+	TestEqual(TEXT("Reset clears gold"), Progression->GetGold(), 0);
+	TestTrue(TEXT("Reset clears the deck snapshot"), Progression->GetRunDeck().IsEmpty());
+	TestTrue(TEXT("Reset clears blessings"), Progression->GetBlessings().IsEmpty());
+	TestTrue(TEXT("Reset clears decision history"), Progression->GetDecisionHistory().IsEmpty());
+	TestTrue(TEXT("Reset clears defeated enemies"), Progression->GetDefeatedEnemyIds().IsEmpty());
+	TestEqual(TEXT("Reset clears the terminal reason"), Progression->GetEndReason(), EFantasyRunEndReason::None);
 	return true;
 }
 

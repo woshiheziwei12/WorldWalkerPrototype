@@ -33,6 +33,31 @@ enum class EFantasyPlayerProfession : uint8
 	Mage
 };
 
+/** Explicit run difficulty participates in all deterministic seed derivation. */
+UENUM(BlueprintType)
+enum class EFantasyRunDifficulty : uint8
+{
+	Story,
+	Normal,
+	Hard
+};
+
+UENUM(BlueprintType)
+enum class EFantasyRunSource : uint8
+{
+	Manual,
+	Automation
+};
+
+UENUM(BlueprintType)
+enum class EFantasyRunEndReason : uint8
+{
+	None,
+	Completed,
+	Defeat,
+	Aborted
+};
+
 /** High-level pages used by the W01 classic deck-building chapter. */
 UENUM(BlueprintType)
 enum class EFantasyRouteNodeType : uint8
@@ -71,4 +96,47 @@ struct WORLDWALKERPROTOTYPE_API FFantasyRouteNodeChoice
 			|| NodeType == EFantasyRouteNodeType::EliteCombat
 			|| NodeType == EFantasyRouteNodeType::Boss;
 	}
+};
+
+/** Serializable shape for one exact card version in the transient run deck. */
+USTRUCT(BlueprintType)
+struct WORLDWALKERPROTOTYPE_API FFantasyRunCardCount
+{
+	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|Deck")
+	FName CardId;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|Deck")
+	int32 UpgradeLevel = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|Deck")
+	int32 Count = 0;
+};
+
+/** One immutable offer or decision record, retained in chronological order. */
+USTRUCT(BlueprintType)
+struct WORLDWALKERPROTOTYPE_API FFantasyRunDecisionRecord
+{
+	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|History")
+	FName EventType;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|History")
+	int32 Chapter = 1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|History")
+	int32 Depth = 0;
+
+	/** Pipe-delimited stable IDs or authored option strings in visible order. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|History")
+	FString CandidateSignature;
+
+	/** Associated or selected CardId/NodeId/EventId, or None for an explicit skip. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|History")
+	FName SelectionId;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Run|History")
+	int32 SelectionIndex = INDEX_NONE;
 };

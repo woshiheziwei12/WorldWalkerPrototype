@@ -968,7 +968,7 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 	FString Title;
 	FString Lore;
 	TArray<FString> Choices;
-	const UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
 		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr;
 	const bool bMage = Progression
@@ -1026,6 +1026,10 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 		ChoiceDescriptions.Add(FText::FromString(Choices[ChoiceIndex]));
 	}
 	SpawnWorldChoices(true, ChoiceTitles, ChoiceDescriptions, ChoiceColors);
+	if (Progression)
+	{
+		Progression->RecordEventOffer(EventId, FString::Join(Choices, TEXT("|")));
+	}
 	UE_LOG(
 		LogTemp,
 		Display,
@@ -1151,6 +1155,10 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 		TEXT("W01_EVENT_RESOLVED Event=%s Choice=%d"),
 		*CurrentEventId.ToString(),
 		ChoiceIndex);
+	if (Progression)
+	{
+		Progression->RecordEventSelection(CurrentEventId, ChoiceIndex);
+	}
 	SyncRunHealthFromPlayer();
 	CompleteActiveNode(Result);
 }
@@ -1360,12 +1368,11 @@ void AWorldWalkerGameModeBase::StartCombat(
 		ActiveCardCombat->GetStartingDeckCount());
 	if (RandomProgression)
 	{
-		RandomProgression->LogStructuredEvent(
-			TEXT("BattleStarted"),
-			{{TEXT("enemyId"), ActiveFantasyEnemyDefinition
-				? ActiveFantasyEnemyDefinition->EnemyId.ToString()
-				: TEXT("Unknown")}},
-			{{TEXT("playerDeckCount"), ActiveCardCombat->GetStartingDeckCount()}});
+		RandomProgression->RecordBattleStarted(
+			ActiveFantasyEnemyDefinition
+				? ActiveFantasyEnemyDefinition->EnemyId
+				: NAME_None,
+			ActiveCardCombat->GetStartingDeckCount());
 	}
 }
 
@@ -2250,19 +2257,22 @@ void AWorldWalkerGameModeBase::FinishCombat(const bool bPlayerWon)
 	CurrentEnemyTurnCardNames.Reset();
 	SyncRunHealthFromPlayer();
 	RefreshCombatUI();
+	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	const FName EnemyId = ActiveFantasyEnemyDefinition
+		? ActiveFantasyEnemyDefinition->EnemyId
+		: NAME_None;
 	if (!bPlayerWon)
 	{
-		if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
-			? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
-			: nullptr)
+		if (Progression)
 		{
-			Progression->LogStructuredEvent(
-				TEXT("RunEnded"),
-				{{TEXT("reason"), TEXT("Defeat")},
-				 {TEXT("enemyId"), ActiveFantasyEnemyDefinition
-					? ActiveFantasyEnemyDefinition->EnemyId.ToString()
-					: TEXT("Unknown")}});
+			Progression->EndRun(EFantasyRunEndReason::Defeat, EnemyId);
 		}
+	}
+	else if (Progression)
+	{
+		Progression->RecordEnemyDefeated(EnemyId);
 	}
 
 	if (bPlayerWon && ActiveEnemy)
@@ -2303,6 +2313,19 @@ void AWorldWalkerGameModeBase::BeginVictoryReward()
 	bRewardReadyToLeave = false;
 	bRewardWasSkipped = false;
 	FantasyRunFlowState = EFantasyRunFlowState::RewardChoice;
+	TArray<FString> RewardCandidateIds;
+	RewardCandidateIds.Reserve(PendingRewardChoices.Num());
+	for (const UCardDefinition* Card : PendingRewardChoices)
+	{
+		RewardCandidateIds.Add(Card ? Card->CardId.ToString() : TEXT("None"));
+	}
+	if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr)
+	{
+		Progression->RecordRewardOffer(
+			FString::Join(RewardCandidateIds, TEXT("|")));
+	}
 
 	AWorldWalkerPlayerController* Controller = GetWorldWalkerController();
 	if (!Controller || !bAwaitingRewardSelection)
@@ -2341,18 +2364,6 @@ void AWorldWalkerGameModeBase::BeginVictoryReward()
 		*PendingRewardChoices[0]->CardId.ToString(),
 		*PendingRewardChoices[1]->CardId.ToString(),
 		*PendingRewardChoices[2]->CardId.ToString());
-	if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
-		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
-		: nullptr)
-	{
-		Progression->LogStructuredEvent(
-			TEXT("RewardOffered"),
-			{{TEXT("signature"), FString::Printf(
-				TEXT("%s|%s|%s"),
-				*PendingRewardChoices[0]->CardId.ToString(),
-				*PendingRewardChoices[1]->CardId.ToString(),
-				*PendingRewardChoices[2]->CardId.ToString())}});
-	}
 }
 
 void AWorldWalkerGameModeBase::HandleRewardSelection(const int32 RewardIndex)
@@ -2399,10 +2410,7 @@ void AWorldWalkerGameModeBase::HandleRewardSelection(const int32 RewardIndex)
 		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr)
 	{
-		Progression->LogStructuredEvent(
-			TEXT("RewardSelected"),
-			{{TEXT("cardId"), RewardCard->CardId.ToString()},
-			 {TEXT("decision"), TEXT("Claimed")}});
+		Progression->RecordRewardSelection(RewardCard->CardId, false, RewardIndex);
 	}
 }
 
@@ -2433,10 +2441,7 @@ void AWorldWalkerGameModeBase::HandleRewardSkip()
 		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr)
 	{
-		Progression->LogStructuredEvent(
-			TEXT("RewardSelected"),
-			{{TEXT("cardId"), TEXT("None")},
-			 {TEXT("decision"), TEXT("Skipped")}});
+		Progression->RecordRewardSelection(NAME_None, true, INDEX_NONE);
 	}
 }
 
