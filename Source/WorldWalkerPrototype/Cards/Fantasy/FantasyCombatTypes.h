@@ -46,7 +46,12 @@ enum class EFantasyCombatEffectType : uint8
 	GainValor,
 	GainAction,
 	GainMana,
-	DiscardRandom
+	DiscardRandom,
+	LoseMana,
+	AddTemporaryCard,
+	ConsumeStatusForDamage,
+	ConsumeStatusForBlock,
+	DamagePerMana
 };
 
 UENUM(BlueprintType)
@@ -56,7 +61,9 @@ enum class EFantasyCombatStatus : uint8
 	Exposed,
 	Weak,
 	Strength,
-	Poison
+	Poison,
+	Burning,
+	Chill
 };
 
 USTRUCT(BlueprintType)
@@ -75,6 +82,18 @@ struct WORLDWALKERPROTOTYPE_API FFantasyCombatEffectSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect")
 	EFantasyCombatStatus Status = EFantasyCombatStatus::None;
+
+	/** Stable payload ID, currently used by AddTemporaryCard. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect")
+	FName PayloadId;
+
+	/** Per-battle insertion cap for AddTemporaryCard; zero means uncapped. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect", meta=(ClampMin="0"))
+	int32 Limit = 0;
+
+	/** Scalar used by status-consumption and mana-scaling effects. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect", meta=(ClampMin="0"))
+	int32 Multiplier = 1;
 
 	/** Piercing damage bypasses temporary Block but still receives other modifiers. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Effect")
@@ -106,6 +125,14 @@ struct WORLDWALKERPROTOTYPE_API FFantasyCombatRuntimeState
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status")
 	int32 Poison = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status")
+	int32 Burning = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status")
+	int32 Chill = 0;
+
+	int32 GetStatus(EFantasyCombatStatus Status) const;
 
 	void AddStatus(EFantasyCombatStatus Status, int32 Amount);
 	void RemoveStatus(EFantasyCombatStatus Status, int32 Amount);

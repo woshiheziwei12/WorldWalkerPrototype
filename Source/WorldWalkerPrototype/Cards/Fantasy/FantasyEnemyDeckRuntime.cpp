@@ -304,6 +304,13 @@ int32 UFantasyEnemyDeckRuntime::AddMana(const int32 Amount)
 	return CurrentMana - Previous;
 }
 
+int32 UFantasyEnemyDeckRuntime::RemoveMana(const int32 Amount)
+{
+	const int32 Previous = CurrentMana;
+	CurrentMana = FMath::Max(0, CurrentMana - FMath::Max(0, Amount));
+	return Previous - CurrentMana;
+}
+
 int32 UFantasyEnemyDeckRuntime::DiscardRandom(const int32 Count)
 {
 	const int32 Requested = FMath::Max(0, Count);

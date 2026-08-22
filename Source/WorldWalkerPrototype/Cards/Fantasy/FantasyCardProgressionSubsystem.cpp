@@ -1,6 +1,7 @@
 #include "Cards/Fantasy/FantasyCardProgressionSubsystem.h"
 
 #include "Cards/CardDefinition.h"
+#include "Cards/Fantasy/FantasyCampaignDefinition.h"
 #include "Cards/Fantasy/FantasyChapterDefinition.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
@@ -9,7 +10,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M1-v3"));
+const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M2-v1"));
 
 namespace
 {
@@ -178,6 +179,8 @@ void UFantasyCardProgressionSubsystem::EnsureRunStarted()
 	RunMaxHealth = 100;
 	CurrentRunHealth = RunMaxHealth;
 	RouteChoices.Reset();
+	ChapterDefinition = nullptr;
+	CampaignDefinition = nullptr;
 	LoadChapterDefinition();
 	LogStructuredEvent(TEXT("RunStarted"));
 	RebuildRouteChoices();
@@ -208,6 +211,8 @@ void UFantasyCardProgressionSubsystem::ResetRun()
 	DefeatedEnemyIds.Reset();
 	DecisionHistory.Reset();
 	RouteChoices.Reset();
+	ChapterDefinition = nullptr;
+	CampaignDefinition = nullptr;
 	ActiveNode = FFantasyRouteNodeChoice();
 	SelectedProfession = EFantasyPlayerProfession::None;
 	CurrentChapter = 1;
@@ -789,8 +794,21 @@ bool UFantasyCardProgressionSubsystem::CompleteActiveNode()
 	bHasActiveNode = false;
 	if (bCompletedBoss)
 	{
-		bChapterComplete = true;
-		RouteChoices.Reset();
+		const FFantasyCampaignChapterSlot* NextChapter = CampaignDefinition
+			? CampaignDefinition->FindChapter(CurrentChapter + 1)
+			: nullptr;
+		if (NextChapter && NextChapter->bOpen && !NextChapter->Definition.IsNull())
+		{
+			++CurrentChapter;
+			ChapterDepth = 0;
+			ChapterDefinition = nullptr;
+			RebuildRouteChoices();
+		}
+		else
+		{
+			bChapterComplete = true;
+			RouteChoices.Reset();
+		}
 	}
 	else
 	{
@@ -859,9 +877,17 @@ bool UFantasyCardProgressionSubsystem::LoadChapterDefinition()
 	{
 		return true;
 	}
-	ChapterDefinition = LoadObject<UFantasyChapterDefinition>(
-		nullptr,
-		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/Encounters/DA_Chapter_W01_AshenKingdom.DA_Chapter_W01_AshenKingdom"));
+	if (!LoadCampaignDefinition())
+	{
+		return false;
+	}
+	const FFantasyCampaignChapterSlot* Slot = CampaignDefinition->FindChapter(CurrentChapter);
+	if (!Slot || !Slot->bOpen || Slot->Definition.IsNull())
+	{
+		UE_LOG(LogTemp, Error, TEXT("W01 chapter %d is closed or missing."), CurrentChapter);
+		return false;
+	}
+	ChapterDefinition = Slot->Definition.LoadSynchronous();
 	if (!ChapterDefinition)
 	{
 		UE_LOG(LogTemp, Error, TEXT("W01 chapter definition failed to load."));
@@ -876,6 +902,31 @@ bool UFantasyCardProgressionSubsystem::LoadChapterDefinition()
 			TEXT("W01 chapter definition is invalid. Errors=%s"),
 			*FString::Join(ValidationErrors, TEXT(" | ")));
 		ChapterDefinition = nullptr;
+		return false;
+	}
+	return true;
+}
+
+bool UFantasyCardProgressionSubsystem::LoadCampaignDefinition()
+{
+	if (CampaignDefinition)
+	{
+		return true;
+	}
+	CampaignDefinition = LoadObject<UFantasyCampaignDefinition>(
+		nullptr,
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/Encounters/DA_Campaign_W01_AshenKingdom.DA_Campaign_W01_AshenKingdom"));
+	if (!CampaignDefinition)
+	{
+		UE_LOG(LogTemp, Error, TEXT("W01 campaign definition failed to load."));
+		return false;
+	}
+	const TArray<FString> Errors = CampaignDefinition->ValidateDefinition();
+	if (!Errors.IsEmpty())
+	{
+		UE_LOG(LogTemp, Error, TEXT("W01 campaign definition is invalid. Errors=%s"),
+			*FString::Join(Errors, TEXT(" | ")));
+		CampaignDefinition = nullptr;
 		return false;
 	}
 	return true;

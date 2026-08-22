@@ -50,6 +50,11 @@ public:
 	int32 AddValor(int32 Amount);
 	int32 AddActionPoints(int32 Amount);
 	int32 AddMana(int32 Amount);
+	int32 RemoveMana(int32 Amount);
+	/** Adds battle-only cards to discard while enforcing a per-card insertion cap. */
+	int32 AddTemporaryCardToDiscard(UCardDefinition* Card, int32 Count, int32 PerBattleCap = 0);
+	/** Upgrades the first eligible level-zero copy in deterministic deck order. */
+	bool UpgradeFirstEligibleRunCard();
 	int32 DiscardRandomCards(int32 Count);
 
 	void AddBlock(int32 Amount);
@@ -103,6 +108,8 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UCardDefinition>> EquipmentZone;
+
+	TMap<FName, int32> TemporaryCardInsertions;
 
 	UPROPERTY(EditDefaultsOnly, Category="Cards", meta=(ClampMin="1"))
 	int32 MaxEnergy = 3;

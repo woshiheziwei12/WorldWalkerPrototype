@@ -4,6 +4,7 @@
 
 #include "Cards/CardDefinition.h"
 #include "Cards/Fantasy/FantasyChapterDefinition.h"
+#include "Cards/Fantasy/FantasyCampaignDefinition.h"
 #include "Cards/Fantasy/FantasyEnemyDefinition.h"
 #include "Engine/AssetManager.h"
 
@@ -48,7 +49,9 @@ namespace
 			TEXT("Scarecrow"), TEXT("FortuneTeller"),
 			TEXT("DragonWhelp"), TEXT("HeadlessKnight"),
 			TEXT("ScarecrowElite"), TEXT("FortuneTellerElite"),
-			TEXT("HeadlessKnightBoss")};
+			TEXT("HeadlessKnightBoss"), TEXT("ForestWolf"),
+			TEXT("PoisonSpider"), TEXT("Treant"), TEXT("TavernDrunk"),
+			TEXT("RangerHunter"), TEXT("WitchAcolyte")};
 
 		TArray<UFantasyEnemyDefinition*> Enemies;
 		for (const FString& EnemyId : EnemyIds)
@@ -73,7 +76,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FFantasyCardContentContractsTest::RunTest(const FString& Parameters)
 {
 	const TArray<UCardDefinition*> Cards = LoadW01Cards();
-	TestEqual(TEXT("W01 contains the generated 52 card definitions"), Cards.Num(), 52);
+	TestEqual(TEXT("W01 contains the generated 85 card definitions"), Cards.Num(), 85);
 
 	TSet<FName> CardIds;
 	TSet<FSoftObjectPath> ClaimedUpgradeTargets;
@@ -145,7 +148,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FFantasyEnemyContentContractsTest::RunTest(const FString& Parameters)
 {
 	const TArray<UFantasyEnemyDefinition*> Enemies = LoadActiveW01Enemies();
-	TestEqual(TEXT("All 11 active W01 enemy definitions load"), Enemies.Num(), 11);
+	TestEqual(TEXT("All 17 active W01 enemy definitions load"), Enemies.Num(), 17);
 
 	TSet<FName> EnemyIds;
 	int32 NormalCount = 0;
@@ -172,6 +175,15 @@ bool FFantasyEnemyContentContractsTest::RunTest(const FString& Parameters)
 		TestTrue(*FString::Printf(TEXT("Enemy has a presentation profile: %s"), *Context), StaticEnum<EFantasyEnemyVisualProfile>()->IsValidEnumValue(static_cast<int64>(Enemy->VisualProfile)));
 		TestTrue(*FString::Printf(TEXT("Enemy has a safe fallback intent: %s"), *Context), !Enemy->IntentCycle.IsEmpty());
 		TestTrue(*FString::Printf(TEXT("Enemy has a real deck: %s"), *Context), !Enemy->Deck.IsEmpty());
+		TSet<FName> MechanicIds;
+		for (const FFantasyCombatMechanicRule& Rule : Enemy->Mechanics)
+		{
+			TestFalse(*FString::Printf(TEXT("Mechanic ID is set: %s"), *Context), Rule.MechanicId.IsNone());
+			TestFalse(*FString::Printf(TEXT("Mechanic ID is unique: %s"), *Context), MechanicIds.Contains(Rule.MechanicId));
+			MechanicIds.Add(Rule.MechanicId);
+			TestTrue(*FString::Printf(TEXT("Mechanic has an effect or suppression: %s"), *Context),
+				!Rule.Effects.IsEmpty() || !Rule.SuppressTargetMechanicId.IsNone());
+		}
 
 		bool bCanGenerateMana = false;
 		bool bHasInitiallyPlayableCard = false;
@@ -229,7 +241,7 @@ bool FFantasyEnemyContentContractsTest::RunTest(const FString& Parameters)
 			Enemy->EncounterTier == EFantasyEncounterTier::Boss);
 	}
 
-	TestEqual(TEXT("Chapter one has eight normal encounters"), NormalCount, 8);
+	TestEqual(TEXT("Chapter one has fourteen normal encounters"), NormalCount, 14);
 	TestEqual(TEXT("Chapter one has two elite encounters"), EliteCount, 2);
 	TestEqual(TEXT("Chapter one has one boss encounter"), BossCount, 1);
 	return true;
@@ -255,7 +267,7 @@ bool FFantasyChapterContentContractsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Chapter number is one"), Chapter->ChapterNumber, 1);
 	TestEqual(TEXT("Chapter has six route depths"), Chapter->TotalDepths, 6);
 	TestEqual(TEXT("All six depth rules are authored"), Chapter->DepthDefinitions.Num(), 6);
-	TestEqual(TEXT("All eleven encounters are in the chapter pool"), Chapter->EncounterPool.Num(), 11);
+	TestEqual(TEXT("All seventeen encounters are in the chapter pool"), Chapter->EncounterPool.Num(), 17);
 	const TArray<FString> ValidationErrors = Chapter->ValidateDefinition();
 	for (const FString& Error : ValidationErrors)
 	{
@@ -303,6 +315,14 @@ bool FFantasyChapterContentContractsTest::RunTest(const FString& Parameters)
 			*FString::Printf(TEXT("Depth %d has the authored choice count"), Depth),
 			FirstOffer.Num(),
 			ExpectedChoiceCount);
+		const int32 ExpectedCombatCount[] = {3, 0, 3, 2, 0, 1};
+		int32 ActualCombatCount = 0;
+		for (const FFantasyRouteNodeChoice& Choice : FirstOffer)
+		{
+			ActualCombatCount += Choice.IsCombat() ? 1 : 0;
+		}
+		TestEqual(*FString::Printf(TEXT("Depth %d enforces its combat quota"), Depth),
+			ActualCombatCount, ExpectedCombatCount[Depth]);
 		TArray<FName> FirstIds;
 		TArray<FName> ReplayIds;
 		for (const FFantasyRouteNodeChoice& Choice : FirstOffer)
@@ -324,8 +344,7 @@ bool FFantasyChapterContentContractsTest::RunTest(const FString& Parameters)
 						*FString::Printf(TEXT("Enemy depth metadata admits depth %d"), Depth),
 						(*Enemy)->MinDepth <= Depth && (*Enemy)->MaxDepth >= Depth);
 					const EFantasyEncounterTier ExpectedTier = Depth == 5
-						? EFantasyEncounterTier::Boss
-						: Depth == 4 ? EFantasyEncounterTier::Elite : EFantasyEncounterTier::Normal;
+						? EFantasyEncounterTier::Boss : EFantasyEncounterTier::Normal;
 					TestEqual(
 						*FString::Printf(TEXT("Enemy tier matches depth %d"), Depth),
 						(*Enemy)->EncounterTier,
@@ -406,6 +425,29 @@ bool FFantasyChapterContentContractsTest::RunTest(const FString& Parameters)
 		}
 	}
 	TestEqual(TEXT("Constrained encounters use distinct families"), ConstrainedFamilies.Num(), 2);
+
+	const UFantasyCampaignDefinition* Campaign = LoadObject<UFantasyCampaignDefinition>(
+		nullptr,
+		TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/Encounters/DA_Campaign_W01_AshenKingdom.DA_Campaign_W01_AshenKingdom"));
+	TestNotNull(TEXT("W01 campaign definition loads"), Campaign);
+	if (Campaign)
+	{
+		TestEqual(TEXT("Campaign reserves three chapters"), Campaign->PlannedChapterCount, 3);
+		TestEqual(TEXT("Only chapter one is open"), Campaign->OpenChapterCount, 1);
+		TestEqual(TEXT("Campaign has three slots"), Campaign->Chapters.Num(), 3);
+		const FFantasyCampaignChapterSlot* ChapterOne = Campaign->FindChapter(1);
+		const FFantasyCampaignChapterSlot* ChapterTwo = Campaign->FindChapter(2);
+		const FFantasyCampaignChapterSlot* ChapterThree = Campaign->FindChapter(3);
+		TestTrue(TEXT("Chapter one slot is open and linked"),
+			ChapterOne && ChapterOne->bOpen && !ChapterOne->Definition.IsNull());
+		TestTrue(TEXT("Chapter two slot is closed"), ChapterTwo && !ChapterTwo->bOpen);
+		TestTrue(TEXT("Chapter three slot is closed"), ChapterThree && !ChapterThree->bOpen);
+		const TArray<FString> CampaignErrors = Campaign->ValidateDefinition();
+		for (const FString& Error : CampaignErrors)
+		{
+			AddError(FString::Printf(TEXT("Campaign contract: %s"), *Error));
+		}
+	}
 	return true;
 }
 

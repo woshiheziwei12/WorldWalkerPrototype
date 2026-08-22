@@ -319,10 +319,12 @@ void AWorldWalkerGameModeBase::HandleM0RunAutomationStep()
 			M0AutomationDeckViewPhase = 2;
 			return;
 		}
-		// Fight at depth 0, take a safe event/rest choice at depths 1-4, then fight the boss.
+		// Honor the M2 chapter quota: fight at depths 0 and 2, take safe non-combat
+		// branches at 1/3/4, then fight the boss at depth 5.
 		for (int32 ChoiceIndex = 0; ChoiceIndex < Progression->GetRouteChoices().Num(); ++ChoiceIndex)
 		{
 			const bool bNeedsCombat = Progression->GetChapterDepth() == 0
+				|| Progression->GetChapterDepth() == 2
 				|| Progression->GetChapterDepth() >= 5;
 			if (Progression->GetRouteChoices()[ChoiceIndex].IsCombat() == bNeedsCombat)
 			{
@@ -1097,8 +1099,8 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 		Lore = TEXT("无名者们为你留下火种、旧盾和一句祝词。黑棘庭院已在前方。");
 		Choices = {
 			TEXT("靠近营火休息：恢复 35 点生命"),
-			TEXT("接过旧盾：下一战获得 8 格挡"),
-			TEXT("保持警惕：不获得任何效果，继续旅途")};
+			TEXT("借火淬炼：升级牌组中第一张可升级卡牌"),
+			TEXT("接过旧盾：下一战获得 8 格挡")};
 	}
 
 	CurrentEventId = EventId;
@@ -1235,15 +1237,18 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 		}
 		else if (ChoiceIndex == 1)
 		{
+			const bool bUpgraded = ActiveCardCombat && ActiveCardCombat->UpgradeFirstEligibleRunCard();
+			Result = bUpgraded
+				? TEXT("火星沿着牌面游走，一张卡牌完成了升级。")
+				: TEXT("当前牌组没有可升级的卡牌，你只在火边稍作休整。");
+		}
+		else
+		{
 			if (Progression)
 			{
 				Progression->AddPendingBattleBoon(8, 0);
 			}
 			Result = TEXT("你将旧盾挂在背后。下一战初始格挡 +8。");
-		}
-		else
-		{
-			Result = TEXT("你没有停留，只把火光记在了心里。");
 		}
 	}
 
@@ -1410,6 +1415,9 @@ void AWorldWalkerGameModeBase::StartCombat(
 	bEnemyReactivePassiveTriggered = false;
 	PlayerFantasyState = FFantasyCombatRuntimeState();
 	EnemyFantasyState = FFantasyCombatRuntimeState();
+	MechanicTurnTriggerCounts.Reset();
+	MechanicBattleTriggerCounts.Reset();
+	MechanicSuppressedTurns.Reset();
 	if (ActiveFantasyEnemyDefinition)
 	{
 		ActiveEnemy->GetCombatantComponent()->ConfigureMaxHealth(ActiveFantasyEnemyDefinition->MaxHealth);
@@ -1432,6 +1440,7 @@ void AWorldWalkerGameModeBase::StartCombat(
 		ActiveCardCombat->AddBlock(InitialBlock);
 		ActiveCardCombat->AddValor(InitialValor);
 	}
+	DispatchEnemyMechanics(EFantasyMechanicTrigger::BattleStarted);
 
 	FantasyRunFlowState = EFantasyRunFlowState::PlayerTurn;
 	ActivePlayer->SetCombatLocked(true);
@@ -1632,6 +1641,16 @@ void AWorldWalkerGameModeBase::HandleEnemyTurn()
 	EnemyFantasyState.Block = 0;
 	ApplyEnemyTurnStartEquipment();
 	++CurrentEnemyTurnNumber;
+	MechanicTurnTriggerCounts.Reset();
+	DispatchEnemyMechanics(EFantasyMechanicTrigger::EnemyTurnStarted);
+	for (auto It = MechanicSuppressedTurns.CreateIterator(); It; ++It)
+	{
+		It.Value() = FMath::Max(0, It.Value() - 1);
+		if (It.Value() == 0)
+		{
+			It.RemoveCurrent();
+		}
+	}
 	CurrentEnemyTurnCardNames.Reset();
 	if (ActiveEnemyDeck && ActiveEnemyDeck->IsInitialized())
 	{
@@ -1753,6 +1772,7 @@ void AWorldWalkerGameModeBase::FinishEnemyTurnSequence()
 	}
 
 	ResolveEndOfTurnPoison(false);
+	EnemyFantasyState.RemoveStatus(EFantasyCombatStatus::Chill, 1);
 	SyncRunHealthFromPlayer();
 	if (!ActiveEnemy->GetCombatantComponent()->IsAlive())
 	{
@@ -1813,6 +1833,7 @@ void AWorldWalkerGameModeBase::ResolvePlayerCardEffects(UCardDefinition* Card)
 	}
 
 	bool bWeakConsumedForAttack = false;
+	int32 TotalHealthDamage = 0;
 	for (const FFantasyCombatEffectSpec& Effect : Card->Effects)
 	{
 		switch (Effect.EffectType)
@@ -1827,6 +1848,7 @@ void AWorldWalkerGameModeBase::ResolvePlayerCardEffects(UCardDefinition* Card)
 					bIsAttack && !bWeakConsumedForAttack,
 					Effect.bPiercing);
 				ActiveEnemy->GetCombatantComponent()->ReceiveDamage(HealthDamage);
+				TotalHealthDamage += HealthDamage;
 				if (HealthDamage > 0)
 				{
 					ActiveEnemy->PlayIntentAnimation(EWorldWalkerEnemyAnimationCue::HitReact);
@@ -1905,10 +1927,58 @@ void AWorldWalkerGameModeBase::ResolvePlayerCardEffects(UCardDefinition* Card)
 				ActiveEnemyDeck->DiscardRandom(Effect.Magnitude);
 			}
 			break;
+		case EFantasyCombatEffectType::LoseMana:
+			if (Effect.Target == EFantasyCombatTarget::Self)
+			{
+				ActiveCardCombat->RemoveMana(Effect.Magnitude);
+			}
+			else if (ActiveEnemyDeck)
+			{
+				ActiveEnemyDeck->RemoveMana(Effect.Magnitude);
+			}
+			break;
+		case EFantasyCombatEffectType::AddTemporaryCard:
+			if (Effect.Target == EFantasyCombatTarget::Self)
+			{
+				ActiveCardCombat->AddTemporaryCardToDiscard(
+					ActiveCardCombat->FindCardDefinition(Effect.PayloadId), Effect.Magnitude, Effect.Limit);
+			}
+			break;
+		case EFantasyCombatEffectType::ConsumeStatusForDamage:
+			if (Effect.Target == EFantasyCombatTarget::Opponent)
+			{
+				const int32 StatusLayers = EnemyFantasyState.GetStatus(Effect.Status);
+				EnemyFantasyState.RemoveStatus(Effect.Status, StatusLayers);
+				const int32 HealthDamage = ResolveDamageAgainstEnemy(
+					StatusLayers * FMath::Max(0, Effect.Multiplier), false, false, Effect.bPiercing);
+				ActiveEnemy->GetCombatantComponent()->ReceiveDamage(HealthDamage);
+				TotalHealthDamage += HealthDamage;
+			}
+			break;
+		case EFantasyCombatEffectType::ConsumeStatusForBlock:
+			{
+				const int32 StatusLayers = EnemyFantasyState.GetStatus(Effect.Status);
+				EnemyFantasyState.RemoveStatus(Effect.Status, StatusLayers);
+				ActiveCardCombat->AddBlock(StatusLayers * FMath::Max(0, Effect.Multiplier));
+			}
+			break;
+		case EFantasyCombatEffectType::DamagePerMana:
+			if (Effect.Target == EFantasyCombatTarget::Opponent)
+			{
+				const int32 ScaledDamage = Effect.Magnitude
+					+ ActiveCardCombat->GetCurrentMana() * FMath::Max(0, Effect.Multiplier);
+				const int32 HealthDamage = ResolveDamageAgainstEnemy(
+					ScaledDamage, false, false, Effect.bPiercing);
+				ActiveEnemy->GetCombatantComponent()->ReceiveDamage(HealthDamage);
+				TotalHealthDamage += HealthDamage;
+			}
+			break;
 		default:
 			break;
 		}
 	}
+	DispatchEnemyMechanics(EFantasyMechanicTrigger::DamageResolved, Card, TotalHealthDamage);
+	DispatchEnemyMechanics(EFantasyMechanicTrigger::PlayerCardResolved, Card, TotalHealthDamage);
 }
 
 int32 AWorldWalkerGameModeBase::ResolveDamageAgainstEnemy(
@@ -1947,6 +2017,7 @@ int32 AWorldWalkerGameModeBase::ResolveDamageAgainstPlayer(
 	{
 		Damage += EnemyFantasyState.Strength;
 		Damage += ActiveEnemyDeck ? ActiveEnemyDeck->GetAttackBonus() : 0;
+		Damage = FMath::Max(0, Damage - EnemyFantasyState.Chill);
 		if (bConsumeWeak && EnemyFantasyState.Weak > 0)
 		{
 			Damage = FMath::FloorToInt(static_cast<float>(Damage) * 0.75f);
@@ -2077,6 +2148,8 @@ void AWorldWalkerGameModeBase::ResolveEnemyCardEffects(UCardDefinition* Card)
 		bHasOpponentDamage ? EWorldWalkerEnemyAnimationCue::Attack : EWorldWalkerEnemyAnimationCue::Empower);
 
 	bool bWeakConsumed = false;
+	const int32 PlayerBlockBeforeCard = ActiveCardCombat->GetCurrentBlock();
+	int32 TotalHealthDamage = 0;
 	for (const FFantasyCombatEffectSpec& Effect : Card->Effects)
 	{
 		switch (Effect.EffectType)
@@ -2094,6 +2167,7 @@ void AWorldWalkerGameModeBase::ResolveEnemyCardEffects(UCardDefinition* Card)
 					bIsAttackCard && !bWeakConsumed,
 					Effect.bPiercing);
 				ActivePlayer->GetCombatantComponent()->ReceiveDamage(HealthDamage);
+				TotalHealthDamage += HealthDamage;
 				if (HealthDamage > 0)
 				{
 					ActivePlayer->PlayFantasyHitReactionAnimation();
@@ -2193,6 +2267,155 @@ void AWorldWalkerGameModeBase::ResolveEnemyCardEffects(UCardDefinition* Card)
 			else
 			{
 				ActiveCardCombat->DiscardRandomCards(Effect.Magnitude);
+			}
+			break;
+		case EFantasyCombatEffectType::LoseMana:
+			if (Effect.Target == EFantasyCombatTarget::Self)
+			{
+				ActiveEnemyDeck->RemoveMana(Effect.Magnitude);
+			}
+			else
+			{
+				ActiveCardCombat->RemoveMana(Effect.Magnitude);
+			}
+			break;
+		case EFantasyCombatEffectType::AddTemporaryCard:
+			if (Effect.Target == EFantasyCombatTarget::Opponent)
+			{
+				ActiveCardCombat->AddTemporaryCardToDiscard(
+					ActiveCardCombat->FindCardDefinition(Effect.PayloadId), Effect.Magnitude, Effect.Limit);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	if (bHasOpponentDamage)
+	{
+		DispatchEnemyMechanics(
+			EFantasyMechanicTrigger::EnemyAttackResolved,
+			Card,
+			TotalHealthDamage,
+			PlayerBlockBeforeCard);
+	}
+}
+
+void AWorldWalkerGameModeBase::DispatchEnemyMechanics(
+	const EFantasyMechanicTrigger Trigger,
+	const UCardDefinition* SourceCard,
+	const int32 ActualDamage,
+	const int32 TargetBlockBefore)
+{
+	if (!ActiveFantasyEnemyDefinition)
+	{
+		return;
+	}
+	for (const FFantasyCombatMechanicRule& Rule : ActiveFantasyEnemyDefinition->Mechanics)
+	{
+		if (Rule.MechanicId.IsNone() || Rule.Trigger != Trigger
+			|| MechanicSuppressedTurns.FindRef(Rule.MechanicId) > 0
+			|| ActualDamage < Rule.MinActualDamage
+			|| (Rule.MaxTargetBlock >= 0 && TargetBlockBefore > Rule.MaxTargetBlock)
+			|| (!Rule.RequiredSourceCardTag.IsNone()
+				&& (!SourceCard || !SourceCard->BuildTags.Contains(Rule.RequiredSourceCardTag)))
+			|| (Rule.Limit == EFantasyMechanicLimit::OncePerTurn
+				&& MechanicTurnTriggerCounts.FindRef(Rule.MechanicId) > 0)
+			|| (Rule.Limit == EFantasyMechanicLimit::OncePerBattle
+				&& MechanicBattleTriggerCounts.FindRef(Rule.MechanicId) > 0))
+		{
+			continue;
+		}
+
+		++MechanicTurnTriggerCounts.FindOrAdd(Rule.MechanicId);
+		++MechanicBattleTriggerCounts.FindOrAdd(Rule.MechanicId);
+		ExecuteEnemyMechanicEffects(Rule.Effects);
+		if (!Rule.SuppressTargetMechanicId.IsNone() && Rule.SuppressTurns > 0)
+		{
+			int32& Remaining = MechanicSuppressedTurns.FindOrAdd(Rule.SuppressTargetMechanicId);
+			Remaining = FMath::Max(Remaining, Rule.SuppressTurns);
+		}
+		if (UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+			? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+			: nullptr)
+		{
+			Progression->LogStructuredEvent(
+				TEXT("MechanicTriggered"),
+				{{TEXT("enemyId"), ActiveFantasyEnemyDefinition->EnemyId.ToString()},
+				 {TEXT("mechanicId"), Rule.MechanicId.ToString()}},
+				{{TEXT("turn"), CurrentEnemyTurnNumber}, {TEXT("actualDamage"), ActualDamage}});
+		}
+		UE_LOG(LogTemp, Display, TEXT("W01_MECHANIC_TRIGGERED Enemy=%s Mechanic=%s Turn=%d"),
+			*ActiveFantasyEnemyDefinition->EnemyId.ToString(), *Rule.MechanicId.ToString(), CurrentEnemyTurnNumber);
+	}
+}
+
+void AWorldWalkerGameModeBase::ExecuteEnemyMechanicEffects(
+	const TArray<FFantasyCombatEffectSpec>& Effects)
+{
+	if (!ActivePlayer || !ActiveEnemy || !ActiveCardCombat)
+	{
+		return;
+	}
+	for (const FFantasyCombatEffectSpec& Effect : Effects)
+	{
+		switch (Effect.EffectType)
+		{
+		case EFantasyCombatEffectType::Damage:
+			if (Effect.Target == EFantasyCombatTarget::Opponent)
+			{
+				const int32 HealthDamage = ResolveDamageAgainstPlayer(
+					Effect.Magnitude, false, false, Effect.bPiercing);
+				ActivePlayer->GetCombatantComponent()->ReceiveDamage(HealthDamage);
+				if (HealthDamage > 0)
+				{
+					ActivePlayer->PlayFantasyHitReactionAnimation();
+				}
+			}
+			else
+			{
+				ActiveEnemy->GetCombatantComponent()->ReceiveDamage(
+					EnemyFantasyState.AbsorbDamage(Effect.Magnitude));
+			}
+			break;
+		case EFantasyCombatEffectType::Block:
+			if (Effect.Target == EFantasyCombatTarget::Self)
+			{
+				EnemyFantasyState.Block += FMath::Max(0, Effect.Magnitude);
+			}
+			else
+			{
+				ActiveCardCombat->AddBlock(Effect.Magnitude);
+			}
+			break;
+		case EFantasyCombatEffectType::ApplyStatus:
+			(Effect.Target == EFantasyCombatTarget::Self ? EnemyFantasyState : PlayerFantasyState)
+				.AddStatus(Effect.Status, Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::DiscardRandom:
+			if (Effect.Target == EFantasyCombatTarget::Self && ActiveEnemyDeck)
+			{
+				ActiveEnemyDeck->DiscardRandom(Effect.Magnitude);
+			}
+			else
+			{
+				ActiveCardCombat->DiscardRandomCards(Effect.Magnitude);
+			}
+			break;
+		case EFantasyCombatEffectType::LoseMana:
+			if (Effect.Target == EFantasyCombatTarget::Self && ActiveEnemyDeck)
+			{
+				ActiveEnemyDeck->RemoveMana(Effect.Magnitude);
+			}
+			else
+			{
+				ActiveCardCombat->RemoveMana(Effect.Magnitude);
+			}
+			break;
+		case EFantasyCombatEffectType::AddTemporaryCard:
+			if (Effect.Target == EFantasyCombatTarget::Opponent)
+			{
+				ActiveCardCombat->AddTemporaryCardToDiscard(
+					ActiveCardCombat->FindCardDefinition(Effect.PayloadId), Effect.Magnitude, Effect.Limit);
 			}
 			break;
 		default:

@@ -36,6 +36,7 @@ public:
 
 	int32 AddAction(int32 Amount);
 	int32 AddMana(int32 Amount);
+	int32 RemoveMana(int32 Amount);
 	/** Draws up to the current enemy hand limit. Used by resolved Draw card effects. */
 	int32 DrawCards(int32 Count);
 	/** Draws without the current-turn hand cap. Reserved for delayed Counter resolution. */

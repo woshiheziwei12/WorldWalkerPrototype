@@ -10,6 +10,8 @@ namespace
 		case EFantasyCombatStatus::Weak: return TEXT("虚弱");
 		case EFantasyCombatStatus::Strength: return TEXT("力量");
 		case EFantasyCombatStatus::Poison: return TEXT("中毒");
+		case EFantasyCombatStatus::Burning: return TEXT("燃烧");
+		case EFantasyCombatStatus::Chill: return TEXT("寒冷");
 		default: return TEXT("状态");
 		}
 	}
@@ -55,6 +57,16 @@ FString FFantasyCombatEffectSpec::BuildRulesFragment() const
 		return FString::Printf(TEXT("获得 %d 点法力"), Magnitude);
 	case EFantasyCombatEffectType::DiscardRandom:
 		return FString::Printf(TEXT("随机丢弃 %d 张牌"), Magnitude);
+	case EFantasyCombatEffectType::LoseMana:
+		return FString::Printf(TEXT("使%s失去 %d 点法力"), TargetLabel, Magnitude);
+	case EFantasyCombatEffectType::AddTemporaryCard:
+		return FString::Printf(TEXT("向%s弃牌堆加入 %d 张临时牌[%s]"), TargetLabel, Magnitude, *PayloadId.ToString());
+	case EFantasyCombatEffectType::ConsumeStatusForDamage:
+		return FString::Printf(TEXT("消耗%s全部%s，每层造成 %d 点伤害"), TargetLabel, GetStatusLabel(Status), Multiplier);
+	case EFantasyCombatEffectType::ConsumeStatusForBlock:
+		return FString::Printf(TEXT("消耗敌人全部%s，每层获得 %d 点格挡"), GetStatusLabel(Status), Multiplier);
+	case EFantasyCombatEffectType::DamagePerMana:
+		return FString::Printf(TEXT("造成 %d 点伤害，并按每点法力追加 %d 点"), Magnitude, Multiplier);
 	default:
 		return TEXT("未知效果");
 	}
@@ -69,6 +81,8 @@ void FFantasyCombatRuntimeState::AddStatus(const EFantasyCombatStatus Status, co
 	case EFantasyCombatStatus::Weak: Weak += SafeAmount; break;
 	case EFantasyCombatStatus::Strength: Strength += SafeAmount; break;
 	case EFantasyCombatStatus::Poison: Poison += SafeAmount; break;
+	case EFantasyCombatStatus::Burning: Burning += SafeAmount; break;
+	case EFantasyCombatStatus::Chill: Chill += SafeAmount; break;
 	default: break;
 	}
 }
@@ -82,7 +96,23 @@ void FFantasyCombatRuntimeState::RemoveStatus(const EFantasyCombatStatus Status,
 	case EFantasyCombatStatus::Weak: Weak = FMath::Max(0, Weak - SafeAmount); break;
 	case EFantasyCombatStatus::Strength: Strength = FMath::Max(0, Strength - SafeAmount); break;
 	case EFantasyCombatStatus::Poison: Poison = FMath::Max(0, Poison - SafeAmount); break;
+	case EFantasyCombatStatus::Burning: Burning = FMath::Max(0, Burning - SafeAmount); break;
+	case EFantasyCombatStatus::Chill: Chill = FMath::Max(0, Chill - SafeAmount); break;
 	default: break;
+	}
+}
+
+int32 FFantasyCombatRuntimeState::GetStatus(const EFantasyCombatStatus Status) const
+{
+	switch (Status)
+	{
+	case EFantasyCombatStatus::Exposed: return Exposed;
+	case EFantasyCombatStatus::Weak: return Weak;
+	case EFantasyCombatStatus::Strength: return Strength;
+	case EFantasyCombatStatus::Poison: return Poison;
+	case EFantasyCombatStatus::Burning: return Burning;
+	case EFantasyCombatStatus::Chill: return Chill;
+	default: return 0;
 	}
 }
 
@@ -102,5 +132,7 @@ FString FFantasyCombatRuntimeState::BuildSummary() const
 	if (Weak > 0) Parts.Add(FString::Printf(TEXT("虚弱 %d"), Weak));
 	if (Strength > 0) Parts.Add(FString::Printf(TEXT("力量 %d"), Strength));
 	if (Poison > 0) Parts.Add(FString::Printf(TEXT("中毒 %d"), Poison));
+	if (Burning > 0) Parts.Add(FString::Printf(TEXT("燃烧 %d"), Burning));
+	if (Chill > 0) Parts.Add(FString::Printf(TEXT("寒冷 %d"), Chill));
 	return Parts.IsEmpty() ? TEXT("无状态") : FString::Join(Parts, TEXT(" | "));
 }

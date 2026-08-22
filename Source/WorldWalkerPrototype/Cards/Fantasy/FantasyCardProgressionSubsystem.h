@@ -7,6 +7,7 @@
 
 class UCardDefinition;
 class UFantasyChapterDefinition;
+class UFantasyCampaignDefinition;
 
 /**
  * Keeps the W01 classic-mode run alive while the player travels between maps.
@@ -104,6 +105,7 @@ private:
 	void ResolveRunConfiguration();
 	void ResolveRunIdentityFields();
 	bool LoadChapterDefinition();
+	bool LoadCampaignDefinition();
 	void RebuildRouteChoices();
 	void BuildEmergencyRouteFallback();
 	void AddDecisionRecord(
@@ -115,6 +117,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UFantasyChapterDefinition> ChapterDefinition;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UFantasyCampaignDefinition> CampaignDefinition;
 
 	UPROPERTY(Transient)
 	TMap<FName, int32> GrantedCardCopies;

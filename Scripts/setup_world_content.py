@@ -454,6 +454,9 @@ def _effect(
     status=unreal.FantasyCombatStatus.NONE,
     piercing=False,
     scales_with_strength=False,
+    payload_id="",
+    limit=0,
+    multiplier=1,
 ):
     return {
         "effect_type": effect_type,
@@ -462,6 +465,9 @@ def _effect(
         "status": status,
         "piercing": piercing,
         "scales_with_strength": scales_with_strength,
+        "payload_id": payload_id,
+        "limit": limit,
+        "multiplier": multiplier,
     }
 
 
@@ -488,6 +494,9 @@ def _card(
     equipment_draw=0,
     profession=None,
     school=unreal.CardSchool.NONE,
+    upgrade_level=0,
+    upgrade_card_id=None,
+    build_tags=(),
 ):
     if profession is None:
         profession = (
@@ -518,6 +527,9 @@ def _card(
         "equipment_attack": equipment_attack,
         "equipment_block": equipment_block,
         "equipment_draw": equipment_draw,
+        "upgrade_level": upgrade_level,
+        "upgrade_card_id": upgrade_card_id,
+        "build_tags": tuple(build_tags),
     }
 
 
@@ -960,6 +972,214 @@ MAGE_REWARD_CARD_SPECS = (
     ),
 )
 
+M2_MAGE_CARD_SPECS = (
+    _card(
+        "DA_Card_MageEmberSigil", "Mage_EmberSigil", "余烬印记",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.BURNING),),
+        "T_Card_ArcaneSpark", "【M2 火焰原型】施加 2 层燃烧。",
+        reward_eligible=True, mana_cost=1,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_EmberSigilPlus",
+        build_tags=("Archetype.Fire", "Element.Fire"),
+    ),
+    _card(
+        "DA_Card_MageEmberSigilPlus", "Mage_EmberSigilPlus", "余烬印记+",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.BURNING),),
+        "T_Card_ArcaneSpark", "【M2 火焰升级】施加 3 层燃烧。",
+        mana_cost=1, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Fire", "Element.Fire"),
+    ),
+    _card(
+        "DA_Card_MageFlameFan", "Mage_FlameFan", "焰扇",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.BURNING)),
+        "T_Card_ArcaneSpark", "【M2 火焰原型】造成 4 伤害并施加 2 层燃烧。",
+        reward_eligible=True, mana_cost=2,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_FlameFanPlus",
+        build_tags=("Archetype.Fire", "Element.Fire"),
+    ),
+    _card(
+        "DA_Card_MageFlameFanPlus", "Mage_FlameFanPlus", "焰扇+",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.BURNING)),
+        "T_Card_ArcaneSpark", "【M2 火焰升级】造成 5 伤害并施加 3 层燃烧。",
+        mana_cost=2, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Fire", "Element.Fire"),
+    ),
+    _card(
+        "DA_Card_MageConflagrate", "Mage_Conflagrate", "引燃",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_DAMAGE, 0,
+                 status=unreal.FantasyCombatStatus.BURNING, multiplier=3),),
+        "T_Card_ArcaneSpark", "【M2 火焰原型】消耗全部燃烧，每层造成 3 伤害。",
+        reward_eligible=True, mana_cost=2,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_ConflagratePlus",
+        build_tags=("Archetype.Fire", "Element.Fire"),
+    ),
+    _card(
+        "DA_Card_MageConflagratePlus", "Mage_ConflagratePlus", "引燃+",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_DAMAGE, 0,
+                 status=unreal.FantasyCombatStatus.BURNING, multiplier=4),),
+        "T_Card_ArcaneSpark", "【M2 火焰升级】消耗全部燃烧，每层造成 4 伤害。",
+        mana_cost=2, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Fire", "Element.Fire"),
+    ),
+    _card(
+        "DA_Card_MageFrostBolt", "Mage_FrostBolt", "寒霜箭",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.CHILL)),
+        "T_Card_ArcaneSpark", "【M2 冰霜原型】造成 4 伤害并施加 2 层寒冷。",
+        reward_eligible=True, mana_cost=1,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_FrostBoltPlus", build_tags=("Archetype.Frost",),
+    ),
+    _card(
+        "DA_Card_MageFrostBoltPlus", "Mage_FrostBoltPlus", "寒霜箭+",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.CHILL)),
+        "T_Card_ArcaneSpark", "【M2 冰霜升级】造成 5 伤害并施加 3 层寒冷。",
+        mana_cost=1, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Frost",),
+    ),
+    _card(
+        "DA_Card_MageColdWard", "Mage_ColdWard", "冷雾护符",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.CHILL),
+         _effect(unreal.FantasyCombatEffectType.BLOCK, 5,
+                 unreal.FantasyCombatTarget.SELF)),
+        "T_Card_KiteShieldGuard", "【M2 冰霜原型】施加 2 层寒冷并获得 5 格挡。",
+        reward_eligible=True, mana_cost=2,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_ColdWardPlus", build_tags=("Archetype.Frost",),
+    ),
+    _card(
+        "DA_Card_MageColdWardPlus", "Mage_ColdWardPlus", "冷雾护符+",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.CHILL),
+         _effect(unreal.FantasyCombatEffectType.BLOCK, 7,
+                 unreal.FantasyCombatTarget.SELF)),
+        "T_Card_KiteShieldGuard", "【M2 冰霜升级】施加 3 层寒冷并获得 7 格挡。",
+        mana_cost=2, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Frost",),
+    ),
+    _card(
+        "DA_Card_MageIceHarvest", "Mage_IceHarvest", "采冰",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_BLOCK, 0,
+                 status=unreal.FantasyCombatStatus.CHILL, multiplier=3),),
+        "T_Card_KiteShieldGuard", "【M2 冰霜原型】消耗全部寒冷，每层获得 3 格挡。",
+        reward_eligible=True, mana_cost=1,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_IceHarvestPlus", build_tags=("Archetype.Frost",),
+    ),
+    _card(
+        "DA_Card_MageIceHarvestPlus", "Mage_IceHarvestPlus", "采冰+",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_BLOCK, 0,
+                 status=unreal.FantasyCombatStatus.CHILL, multiplier=4),),
+        "T_Card_KiteShieldGuard", "【M2 冰霜升级】消耗全部寒冷，每层获得 4 格挡。",
+        mana_cost=1, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Frost",),
+    ),
+    _card(
+        "DA_Card_MageManaThread", "Mage_ManaThread", "法力丝线",
+        unreal.CardType.MANA,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 4,
+                 unreal.FantasyCombatTarget.SELF),
+         _effect(unreal.FantasyCombatEffectType.DRAW, 1,
+                 unreal.FantasyCombatTarget.SELF)),
+        "T_Card_ReadOpening", "【M2 奥术原型】获得 4 法力并抽 1 张牌。",
+        reward_eligible=True, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_ManaThreadPlus", build_tags=("Archetype.Arcane",),
+    ),
+    _card(
+        "DA_Card_MageManaThreadPlus", "Mage_ManaThreadPlus", "法力丝线+",
+        unreal.CardType.MANA,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 5,
+                 unreal.FantasyCombatTarget.SELF),
+         _effect(unreal.FantasyCombatEffectType.DRAW, 1,
+                 unreal.FantasyCombatTarget.SELF)),
+        "T_Card_ReadOpening", "【M2 奥术升级】获得 5 法力并抽 1 张牌。",
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Arcane",),
+    ),
+    _card(
+        "DA_Card_MageArcaneFocus", "Mage_ArcaneFocus", "奥术专注",
+        unreal.CardType.ACTION,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 2,
+                 unreal.FantasyCombatTarget.SELF),
+         _effect(unreal.FantasyCombatEffectType.DRAW, 2,
+                 unreal.FantasyCombatTarget.SELF)),
+        "T_Card_ReadOpening", "【M2 奥术原型】获得 2 法力并抽 2 张牌。",
+        reward_eligible=True, action_cost=1,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_ArcaneFocusPlus", build_tags=("Archetype.Arcane",),
+    ),
+    _card(
+        "DA_Card_MageArcaneFocusPlus", "Mage_ArcaneFocusPlus", "奥术专注+",
+        unreal.CardType.ACTION,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 3,
+                 unreal.FantasyCombatTarget.SELF),
+         _effect(unreal.FantasyCombatEffectType.DRAW, 2,
+                 unreal.FantasyCombatTarget.SELF)),
+        "T_Card_ReadOpening", "【M2 奥术升级】获得 3 法力并抽 2 张牌。",
+        action_cost=1, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Arcane",),
+    ),
+    _card(
+        "DA_Card_MageOverload", "Mage_Overload", "奥术过载",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE_PER_MANA, 4, multiplier=2),),
+        "T_Card_ArcaneSpark", "【M2 奥术原型】造成 4 伤害，结算法力每点追加 2 伤害。",
+        reward_eligible=True, mana_cost=2,
+        profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE,
+        upgrade_card_id="Mage_OverloadPlus", build_tags=("Archetype.Arcane",),
+    ),
+    _card(
+        "DA_Card_MageOverloadPlus", "Mage_OverloadPlus", "奥术过载+",
+        unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE_PER_MANA, 5, multiplier=3),),
+        "T_Card_ArcaneSpark", "【M2 奥术升级】造成 5 伤害，结算法力每点追加 3 伤害。",
+        mana_cost=2, profession=unreal.FantasyPlayerProfession.MAGE,
+        school=unreal.CardSchool.ARCANE, upgrade_level=1,
+        build_tags=("Archetype.Arcane",),
+    ),
+)
+
 
 ENEMY_CARD_SPECS = (
     _card(
@@ -1198,13 +1418,77 @@ ENEMY_CARD_SPECS = (
     ),
 )
 
+M2_ENEMY_CARD_SPECS = (
+    _card("DA_EnemyCard_WolfBite", "Enemy_WolfBite", "狼咬", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),),
+          "T_Card_LongSwordSlash", _enemy_description("稳定撕咬。"), card_set_id="W01_Enemy"),
+    _card("DA_EnemyCard_WolfMaul", "Enemy_WolfMaul", "扑杀", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 7),),
+          "T_Card_LongSwordSlash", _enemy_description("高伤害扑击。"), card_set_id="W01_Enemy"),
+    _card("DA_EnemyCard_SpiderBite", "Enemy_SpiderBite", "毒牙", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 3),
+           _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                   status=unreal.FantasyCombatStatus.POISON)),
+          "T_Card_ArcaneSpark", _enemy_description("伤害并施加中毒。"), card_set_id="W01_Enemy"),
+    _card("DA_EnemyCard_Venom", "Enemy_Venom", "吐毒", unreal.CardType.ACTION,
+          (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                   status=unreal.FantasyCombatStatus.POISON),),
+          "T_Card_ArcaneSpark", _enemy_description("叠加中毒。"), card_set_id="W01_Enemy", action_cost=1),
+    _card("DA_EnemyCard_TreantSlam", "Enemy_TreantSlam", "枝干横扫", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),),
+          "T_Card_LongSwordSlash", _enemy_description("以枝干攻击。"), card_set_id="W01_Enemy"),
+    _card("DA_EnemyCard_Bark", "Enemy_Bark", "树皮", unreal.CardType.ACTION,
+          (_effect(unreal.FantasyCombatEffectType.BLOCK, 4,
+                   unreal.FantasyCombatTarget.SELF),),
+          "T_Card_KiteShieldGuard", _enemy_description("获得格挡。"), card_set_id="W01_Enemy", action_cost=1),
+    _card("DA_EnemyCard_DrunkLow", "Enemy_DrunkLow", "踉跄挥击", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 3),),
+          "T_Card_LongSwordSlash", _enemy_description("低伤害波动牌。"), card_set_id="W01_Enemy"),
+    _card("DA_EnemyCard_DrunkHigh", "Enemy_DrunkHigh", "酒瓶重砸", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 9),),
+          "T_Card_LongSwordSlash", _enemy_description("高伤害波动牌。"), card_set_id="W01_Enemy"),
+    _card("DA_EnemyCard_DrunkSpill", "Enemy_DrunkSpill", "酒液飞溅", unreal.CardType.ACTION,
+          (_effect(unreal.FantasyCombatEffectType.DISCARD_RANDOM, 1,
+                   unreal.FantasyCombatTarget.SELF),
+           _effect(unreal.FantasyCombatEffectType.DISCARD_RANDOM, 1,
+                   unreal.FantasyCombatTarget.OPPONENT)),
+          "T_Card_ReadOpening", _enemy_description("双方各随机弃一张牌。"), card_set_id="W01_Enemy", action_cost=1),
+    _card("DA_EnemyCard_HunterLongbow", "Enemy_HunterLongbow", "长弓", unreal.CardType.EQUIPMENT,
+          (), "T_Card_LongSwordSlash", _enemy_description("装备后攻击 +2。"),
+          card_set_id="W01_Enemy", equipment_attack=2),
+    _card("DA_EnemyCard_HunterShot", "Enemy_HunterShot", "猎手射击", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),),
+          "T_Card_LongSwordSlash", _enemy_description("受到长弓加成的攻击。"), card_set_id="W01_Enemy"),
+    _card("DA_EnemyCard_WitchHex", "Enemy_WitchHex", "塞入诅咒", unreal.CardType.SPELL,
+          (_effect(unreal.FantasyCombatEffectType.ADD_TEMPORARY_CARD, 1,
+                   payload_id="Mage_HexCurse", limit=3),),
+          "T_Card_ArcaneSpark", _enemy_description("向玩家弃牌堆塞入临时诅咒，每战最多 3 张。"),
+          card_set_id="W01_Enemy", mana_cost=1),
+    _card("DA_EnemyCard_WitchDrain", "Enemy_WitchDrain", "法力抽离", unreal.CardType.SPELL,
+          (_effect(unreal.FantasyCombatEffectType.LOSE_MANA, 2),),
+          "T_Card_ArcaneSpark", _enemy_description("使玩家失去 2 法力。"),
+          card_set_id="W01_Enemy", mana_cost=1),
+    _card("DA_EnemyCard_WitchBolt", "Enemy_WitchBolt", "巫术飞弹", unreal.CardType.SPELL,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4),),
+          "T_Card_ArcaneSpark", _enemy_description("基础巫术伤害。"),
+          card_set_id="W01_Enemy", mana_cost=1),
+    _card("DA_Card_MageHexCurse", "Mage_HexCurse", "枯萎诅咒", unreal.CardType.SPECIAL,
+          (_effect(unreal.FantasyCombatEffectType.LOSE_MANA, 1,
+                   unreal.FantasyCombatTarget.SELF),),
+          "T_Card_ArcaneSpark", "【战斗临时牌】打出时失去 1 法力，随后消耗。",
+          profession=unreal.FantasyPlayerProfession.MAGE, exhaust=True,
+          build_tags=("Temporary.Curse",)),
+)
+
 
 CARD_SPECS = (
     PLAYER_CARD_SPECS
     + PLAYER_REWARD_CARD_SPECS
     + MAGE_CARD_SPECS
     + MAGE_REWARD_CARD_SPECS
+    + M2_MAGE_CARD_SPECS
     + ENEMY_CARD_SPECS
+    + M2_ENEMY_CARD_SPECS
 )
 
 
@@ -1271,6 +1555,7 @@ def _card_contract(spec):
         for effect in spec["effects"]
         if effect["effect_type"] in effect_tags
     )
+    tags.extend(spec.get("build_tags", ()))
     tags.append(
         "Pool.Starter"
         if is_starter
@@ -1292,6 +1577,31 @@ def _fallback_intent(intent_id, display_name, effects):
     }
 
 
+def _mechanic(
+    mechanic_id,
+    trigger,
+    effects=(),
+    *,
+    required_tag="",
+    min_actual_damage=0,
+    max_target_block=-1,
+    limit=unreal.FantasyMechanicLimit.UNLIMITED,
+    suppress_target="",
+    suppress_turns=0,
+):
+    return {
+        "mechanic_id": mechanic_id,
+        "trigger": trigger,
+        "effects": tuple(effects),
+        "required_tag": required_tag,
+        "min_actual_damage": min_actual_damage,
+        "max_target_block": max_target_block,
+        "limit": limit,
+        "suppress_target": suppress_target,
+        "suppress_turns": suppress_turns,
+    }
+
+
 def _enemy(
     asset_name,
     enemy_id,
@@ -1309,6 +1619,7 @@ def _enemy(
     starting_mana=0,
     cards_per_turn=2,
     boss=False,
+    mechanics=(),
 ):
     return {
         "asset_name": asset_name,
@@ -1326,6 +1637,7 @@ def _enemy(
         "visual_profile": visual_profile,
         "boss": boss,
         "intents": tuple(fallback_intents),
+        "mechanics": tuple(mechanics),
     }
 
 
@@ -1518,6 +1830,80 @@ ENEMY_SPECS = (
     ),
 )
 
+M2_ENEMY_SPECS = (
+    _enemy(
+        "DA_Enemy_ForestWolf", "ForestWolf", "森林狼", 36,
+        (("Enemy_WolfBite", 3), ("Enemy_WolfMaul", 2)),
+        unreal.FantasyEnemyVisualProfile.BAT,
+        "ForestWolf.Pursuit", "追击", "攻击实际造成生命伤害且攻击前玩家格挡不高于 2 时，每回合首次追击 3 点。",
+        (_fallback_intent("FallbackWolf", "狼咬（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),)),),
+        max_hand=3, max_action=1, cards_per_turn=1,
+        mechanics=(_mechanic(
+            "ForestWolf.Pursuit", unreal.FantasyMechanicTrigger.ENEMY_ATTACK_RESOLVED,
+            (_effect(unreal.FantasyCombatEffectType.DAMAGE, 3),),
+            min_actual_damage=1, max_target_block=2,
+            limit=unreal.FantasyMechanicLimit.ONCE_PER_TURN,
+        ),),
+    ),
+    _enemy(
+        "DA_Enemy_PoisonSpider", "PoisonSpider", "毒蜘蛛", 34,
+        (("Enemy_SpiderBite", 3), ("Enemy_Venom", 2)),
+        unreal.FantasyEnemyVisualProfile.SLIME,
+        "PoisonSpider.Venom", "毒腺", "通过卡牌效果持续施加中毒。",
+        (_fallback_intent("FallbackVenom", "毒牙（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                                   status=unreal.FantasyCombatStatus.POISON),)),),
+        max_hand=3, max_action=1, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_Treant", "Treant", "树精", 54,
+        (("Enemy_TreantSlam", 3), ("Enemy_Bark", 2)),
+        unreal.FantasyEnemyVisualProfile.WARRIOR,
+        "Treant.Growth", "生长", "敌方回合开始获得 5 格挡；玩家火焰牌会压制下一次生长。",
+        (_fallback_intent("FallbackSlam", "横扫（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),)),),
+        max_hand=3, max_action=1, cards_per_turn=1,
+        mechanics=(
+            _mechanic("Treant.Growth", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+                      (_effect(unreal.FantasyCombatEffectType.BLOCK, 5,
+                               unreal.FantasyCombatTarget.SELF),)),
+            _mechanic("Treant.FireSuppression", unreal.FantasyMechanicTrigger.DAMAGE_RESOLVED,
+                      required_tag="Element.Fire", suppress_target="Treant.Growth", suppress_turns=1),
+        ),
+    ),
+    _enemy(
+        "DA_Enemy_TavernDrunk", "TavernDrunk", "酒馆醉汉", 42,
+        (("Enemy_DrunkLow", 3), ("Enemy_DrunkHigh", 2), ("Enemy_DrunkSpill", 2)),
+        unreal.FantasyEnemyVisualProfile.WARRIOR,
+        "TavernDrunk.Swing", "醉步", "牌组同时包含高低伤害，并可能让双方随机弃牌。",
+        (_fallback_intent("FallbackBottle", "酒瓶挥击（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),)),),
+        max_hand=4, max_action=1, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_RangerHunter", "RangerHunter", "游侠猎手", 46,
+        (("Enemy_HunterLongbow", 1), ("Enemy_HunterShot", 5)),
+        unreal.FantasyEnemyVisualProfile.WARRIOR,
+        "RangerHunter.Longbow", "长弓", "长弓进入装备区后，后续攻击获得 2 点加成。",
+        (_fallback_intent("FallbackShot", "射击（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),)),),
+        max_hand=4, max_action=1, cards_per_turn=2,
+    ),
+    _enemy(
+        "DA_Enemy_WitchAcolyte", "WitchAcolyte", "女巫学徒", 44,
+        (("Enemy_Mana", 2), ("Enemy_WitchHex", 2),
+         ("Enemy_WitchDrain", 2), ("Enemy_WitchBolt", 2)),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "WitchAcolyte.Hex", "诅咒", "塞入每战有上限的临时诅咒，并直接削减玩家法力。",
+        (_fallback_intent("FallbackHex", "法力抽离（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.LOSE_MANA, 2),)),),
+        max_hand=4, max_action=1, starting_mana=1, cards_per_turn=2,
+    ),
+)
+
+ENEMY_SPECS = ENEMY_SPECS + M2_ENEMY_SPECS
+
 
 ENEMY_CONTENT_CONTRACTS = {
     "DrowsyBat": (unreal.FantasyEncounterTier.NORMAL, "Beast", 1, 0, 0, 1.0),
@@ -1531,6 +1917,12 @@ ENEMY_CONTENT_CONTRACTS = {
     "ScarecrowElite": (unreal.FantasyEncounterTier.ELITE, "Construct", 6, 4, 4, 1.35),
     "FortuneTellerElite": (unreal.FantasyEncounterTier.ELITE, "Seer", 6, 4, 4, 1.35),
     "HeadlessKnightBoss": (unreal.FantasyEncounterTier.BOSS, "Undead", 8, 5, 5, 2.0),
+    "ForestWolf": (unreal.FantasyEncounterTier.NORMAL, "ForestBeast", 1, 0, 3, 1.0),
+    "PoisonSpider": (unreal.FantasyEncounterTier.NORMAL, "Vermin", 1, 0, 3, 1.0),
+    "Treant": (unreal.FantasyEncounterTier.NORMAL, "ForestSpirit", 2, 0, 3, 1.0),
+    "TavernDrunk": (unreal.FantasyEncounterTier.NORMAL, "VillageHuman", 2, 0, 3, 1.0),
+    "RangerHunter": (unreal.FantasyEncounterTier.NORMAL, "Ranger", 3, 0, 3, 1.0),
+    "WitchAcolyte": (unreal.FantasyEncounterTier.NORMAL, "BlackForest", 3, 0, 3, 1.0),
 }
 
 
@@ -1538,30 +1930,36 @@ CHAPTER_DEPTH_SPECS = (
     {
         "depth": 0,
         "tier": unreal.FantasyEncounterTier.NORMAL,
-        "non_combat": (
-            ("D0_MoonlitWell", "月下古井", "恢复、牺牲换牌或洗掉一张基础攻击。",
-             unreal.FantasyRouteNodeType.EVENT, "MoonlitWell", 1.0),
-        ),
+        "choice_count": 3,
+        "combat_choice_count": 3,
+        "non_combat": (),
     },
     {
         "depth": 1,
         "tier": unreal.FantasyEncounterTier.NORMAL,
+        "choice_count": 3,
+        "combat_choice_count": 0,
         "non_combat": (
+            ("D1_MoonlitWell", "月下古井", "恢复、牺牲换牌或洗掉一张基础攻击。",
+             unreal.FantasyRouteNodeType.EVENT, "MoonlitWell", 1.0),
             ("D1_AshenSmith", "灰烬铁匠", "负伤换取一张职业牌，或移除一张普通攻击。",
              unreal.FantasyRouteNodeType.EVENT, "AshenSmith", 1.0),
+            ("D1_ExileCamp", "流亡者营火", "恢复生命、升级卡牌或获取下一战格挡。",
+             unreal.FantasyRouteNodeType.REST, "ExileCamp", 1.0),
         ),
     },
     {
         "depth": 2,
         "tier": unreal.FantasyEncounterTier.NORMAL,
-        "non_combat": (
-            ("D2_ExileCamp", "流亡者营火", "休整恢复生命，或带着临时护甲进入下一战。",
-             unreal.FantasyRouteNodeType.REST, "ExileCamp", 1.0),
-        ),
+        "choice_count": 3,
+        "combat_choice_count": 3,
+        "non_combat": (),
     },
     {
         "depth": 3,
         "tier": unreal.FantasyEncounterTier.NORMAL,
+        "choice_count": 3,
+        "combat_choice_count": 2,
         "non_combat": (
             ("D3_MoonlitWell", "月下古井", "恢复、牺牲换取职业牌或移除一张基础攻击。",
              unreal.FantasyRouteNodeType.EVENT, "MoonlitWell", 1.0),
@@ -1569,8 +1967,14 @@ CHAPTER_DEPTH_SPECS = (
     },
     {
         "depth": 4,
-        "tier": unreal.FantasyEncounterTier.ELITE,
+        "tier": unreal.FantasyEncounterTier.NORMAL,
+        "choice_count": 3,
+        "combat_choice_count": 0,
         "non_combat": (
+            ("D4_MoonlitWell", "月下古井", "守关战前用生命交换牌组调整。",
+             unreal.FantasyRouteNodeType.EVENT, "MoonlitWell", 1.0),
+            ("D4_AshenSmith", "灰烬铁匠", "守关战前获取职业牌、删牌或格挡。",
+             unreal.FantasyRouteNodeType.EVENT, "AshenSmith", 1.0),
             ("D4_ExileCamp", "流亡者营火", "守关战前最后一次休整。",
              unreal.FantasyRouteNodeType.REST, "ExileCamp", 1.0),
         ),
@@ -1696,6 +2100,9 @@ def make_combat_effect(spec):
         "scales_with_strength",
         spec.get("scales_with_strength", False),
     )
+    effect.set_editor_property("payload_id", unreal.Name(spec.get("payload_id", "")))
+    effect.set_editor_property("limit", spec.get("limit", 0))
+    effect.set_editor_property("multiplier", spec.get("multiplier", 1))
     return effect
 
 
@@ -1831,6 +2238,22 @@ def make_enemy_deck_entry(card_id, copies, card_assets_by_id):
     return entry
 
 
+def make_enemy_mechanic(spec):
+    rule = unreal.FantasyCombatMechanicRule()
+    rule.set_editor_property("mechanic_id", unreal.Name(spec["mechanic_id"]))
+    rule.set_editor_property("trigger", spec["trigger"])
+    rule.set_editor_property("required_source_card_tag", unreal.Name(spec["required_tag"]))
+    rule.set_editor_property("min_actual_damage", spec["min_actual_damage"])
+    rule.set_editor_property("max_target_block", spec["max_target_block"])
+    rule.set_editor_property("limit", spec["limit"])
+    rule.set_editor_property("suppress_target_mechanic_id", unreal.Name(spec["suppress_target"]))
+    rule.set_editor_property("suppress_turns", spec["suppress_turns"])
+    rule.set_editor_property(
+        "effects", [make_combat_effect(effect) for effect in spec["effects"]]
+    )
+    return rule
+
+
 def ensure_enemy_definition(spec, card_assets_by_id):
     asset_path = f"{W01_ENEMY_ROOT}/{spec['asset_name']}"
     enemy = (
@@ -1893,6 +2316,10 @@ def ensure_enemy_definition(spec, card_assets_by_id):
     enemy.set_editor_property(
         "passive_description",
         spec["passive_description"],
+    )
+    enemy.set_editor_property(
+        "mechanics",
+        [make_enemy_mechanic(mechanic) for mechanic in spec.get("mechanics", ())],
     )
     enemy.set_editor_property("visual_profile", spec["visual_profile"])
     enemy.set_editor_property("boss", spec.get("boss", False))
@@ -1982,6 +2409,42 @@ def ensure_chapter_definition():
     return asset_path
 
 
+def ensure_campaign_definition(chapter_path):
+    asset_name = "DA_Campaign_W01_AshenKingdom"
+    asset_path = f"{W01_CHAPTER_ROOT}/{asset_name}"
+    campaign = (
+        unreal.EditorAssetLibrary.load_asset(asset_path)
+        if unreal.EditorAssetLibrary.does_asset_exist(asset_path)
+        else None
+    )
+    if campaign is None:
+        factory = unreal.DataAssetFactory()
+        factory.set_editor_property(
+            "data_asset_class", unreal.FantasyCampaignDefinition
+        )
+        campaign = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+            asset_name, W01_CHAPTER_ROOT, unreal.FantasyCampaignDefinition, factory
+        )
+        if campaign is None:
+            raise RuntimeError(f"Failed to create FantasyCampaignDefinition: {asset_path}")
+
+    chapter = unreal.EditorAssetLibrary.load_asset(chapter_path)
+    slots = []
+    for number in range(1, 4):
+        slot = unreal.FantasyCampaignChapterSlot()
+        slot.set_editor_property("chapter_id", unreal.Name(f"W01.AshenKingdom.Chapter{number}"))
+        slot.set_editor_property("chapter_number", number)
+        slot.set_editor_property("open", number == 1)
+        slot.set_editor_property("definition", chapter if number == 1 else None)
+        slots.append(slot)
+    campaign.set_editor_property("campaign_id", unreal.Name("W01.AshenKingdom"))
+    campaign.set_editor_property("planned_chapter_count", 3)
+    campaign.set_editor_property("open_chapter_count", 1)
+    campaign.set_editor_property("chapters", slots)
+    unreal.EditorAssetLibrary.save_loaded_asset(campaign, only_if_is_dirty=False)
+    return asset_path
+
+
 def main():
     validate_main_world_dependencies()
     for root in (
@@ -2063,21 +2526,27 @@ def main():
             f"Enemy content ready: {enemy_spec['enemy_id']} -> {enemy_path}"
         )
     chapter_path = ensure_chapter_definition()
+    campaign_path = ensure_campaign_definition(chapter_path)
     unreal.log(
         "W01_CHAPTER_DEFINITION_SETUP_COMPLETE "
         f"asset={chapter_path} depths={len(CHAPTER_DEPTH_SPECS)} "
         f"encounters={len(ENEMY_SPECS)} generator=weighted-constrained"
     )
     unreal.log(
+        "W01_CAMPAIGN_DEFINITION_SETUP_COMPLETE "
+        f"asset={campaign_path} planned_chapters=3 open_chapters=1"
+    )
+    unreal.log(
         "W01_ENEMY_DECK_SETUP_COMPLETE "
-        f"cards={len(ENEMY_CARD_SPECS)} enemies={len(ENEMY_SPECS)} "
+        f"cards={sum(1 for spec in CARD_SPECS if spec.get('card_set_id') == 'W01_Enemy')} "
+        f"enemies={len(ENEMY_SPECS)} "
         f"deck_copies={enemy_deck_copy_count} "
         "evidence=verified-minimum-names copies=project-tuned"
     )
     unreal.log(
         "W01_CONTENT_CONTRACT_SETUP_COMPLETE "
         f"cards={len(CARD_SPECS)} enemies={len(ENEMY_SPECS)} "
-        "normal=8 elite=2 boss=1 upgrade_rule=single-level"
+        "normal=14 elite=2 boss=1 upgrade_rule=single-level"
     )
 
     # Definitions above are saved at their point of mutation. Avoid recursively

@@ -23,6 +23,7 @@ class UFantasyEnemyDeckRuntime;
 class UFantasyCardProgressionSubsystem;
 class UTexture2D;
 struct FFantasyEnemyIntentStep;
+enum class EFantasyMechanicTrigger : uint8;
 class UWorldDefinition;
 
 UCLASS()
@@ -94,6 +95,12 @@ private:
 		bool bPiercing);
 	void ResolveEndOfTurnPoison(bool bPlayerTurnEnded);
 	void ApplyEnemyTurnStartEquipment();
+	void DispatchEnemyMechanics(
+		EFantasyMechanicTrigger Trigger,
+		const UCardDefinition* SourceCard = nullptr,
+		int32 ActualDamage = 0,
+		int32 TargetBlockBefore = 0);
+	void ExecuteEnemyMechanicEffects(const TArray<FFantasyCombatEffectSpec>& Effects);
 	bool TryTriggerEnemyDefeatPassive();
 	void RestoreRunHealthToPlayer();
 	void SyncRunHealthFromPlayer();
@@ -159,6 +166,9 @@ private:
 	FFantasyCombatTiming CombatTiming;
 	int32 CurrentEnemyIntentIndex = 0;
 	int32 CurrentEnemyTurnNumber = 0;
+	TMap<FName, int32> MechanicTurnTriggerCounts;
+	TMap<FName, int32> MechanicBattleTriggerCounts;
+	TMap<FName, int32> MechanicSuppressedTurns;
 	FName CurrentEventId;
 	bool bEnemyDefeatPassiveConsumed = false;
 	bool bEnemyReactivePassiveTriggered = false;

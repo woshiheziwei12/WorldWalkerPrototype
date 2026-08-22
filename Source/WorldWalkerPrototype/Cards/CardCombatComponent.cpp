@@ -190,6 +190,7 @@ bool UCardCombatComponent::StartBattle(const FName CardSetId)
 	DiscardPile.Reset();
 	ExhaustPile.Reset();
 	EquipmentZone.Reset();
+	TemporaryCardInsertions.Reset();
 	CurrentEnergy = 0;
 	CurrentActionPoints = 0;
 	CurrentMana = 0;
@@ -575,6 +576,65 @@ int32 UCardCombatComponent::AddMana(const int32 Amount)
 	const int32 Previous = CurrentMana;
 	CurrentMana = FMath::Max(0, CurrentMana + FMath::Max(0, Amount));
 	return CurrentMana - Previous;
+}
+
+int32 UCardCombatComponent::RemoveMana(const int32 Amount)
+{
+	const int32 Previous = CurrentMana;
+	CurrentMana = FMath::Max(0, CurrentMana - FMath::Max(0, Amount));
+	return Previous - CurrentMana;
+}
+
+int32 UCardCombatComponent::AddTemporaryCardToDiscard(
+	UCardDefinition* Card,
+	const int32 Count,
+	const int32 PerBattleCap)
+{
+	if (!Card || Count <= 0)
+	{
+		return 0;
+	}
+
+	int32& Inserted = TemporaryCardInsertions.FindOrAdd(Card->CardId);
+	const int32 Allowed = PerBattleCap > 0
+		? FMath::Min(Count, FMath::Max(0, PerBattleCap - Inserted))
+		: Count;
+	for (int32 Index = 0; Index < Allowed; ++Index)
+	{
+		DiscardPile.Add(Card);
+	}
+	Inserted += Allowed;
+	return Allowed;
+}
+
+bool UCardCombatComponent::UpgradeFirstEligibleRunCard()
+{
+	if (!GetWorld() || !GetWorld()->GetGameInstance())
+	{
+		return false;
+	}
+	UFantasyCardProgressionSubsystem* Progression =
+		GetWorld()->GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
+	if (!Progression)
+	{
+		return false;
+	}
+
+	for (int32 Index = 0; Index < StartingDeck.Num(); ++Index)
+	{
+		UCardDefinition* BaseCard = StartingDeck[Index];
+		if (!BaseCard || BaseCard->UpgradeLevel != 0 || BaseCard->UpgradeCard.IsNull())
+		{
+			continue;
+		}
+		UCardDefinition* Upgrade = BaseCard->UpgradeCard.LoadSynchronous();
+		if (Upgrade && Progression->UpgradeCardCopy(BaseCard))
+		{
+			StartingDeck[Index] = Upgrade;
+			return true;
+		}
+	}
+	return false;
 }
 
 int32 UCardCombatComponent::DiscardRandomCards(const int32 Count)

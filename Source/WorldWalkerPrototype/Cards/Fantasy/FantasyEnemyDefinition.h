@@ -58,6 +58,61 @@ struct WORLDWALKERPROTOTYPE_API FFantasyEnemyIntentStep
 	FString BuildPreviewText(int32 CurrentStrength) const;
 };
 
+UENUM(BlueprintType)
+enum class EFantasyMechanicTrigger : uint8
+{
+	BattleStarted,
+	EnemyTurnStarted,
+	EnemyAttackResolved,
+	PlayerCardResolved,
+	DamageResolved
+};
+
+UENUM(BlueprintType)
+enum class EFantasyMechanicLimit : uint8
+{
+	Unlimited,
+	OncePerTurn,
+	OncePerBattle
+};
+
+/** Data-authored combat reaction shared by all enemy definitions; no enemy-name branching is required. */
+USTRUCT(BlueprintType)
+struct WORLDWALKERPROTOTYPE_API FFantasyCombatMechanicRule
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic")
+	FName MechanicId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic")
+	EFantasyMechanicTrigger Trigger = EFantasyMechanicTrigger::EnemyTurnStarted;
+
+	/** Optional source-card build tag requirement, for example Element.Fire. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic")
+	FName RequiredSourceCardTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic", meta=(ClampMin="0"))
+	int32 MinActualDamage = 0;
+
+	/** Negative disables the pre-hit target-block check. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic", meta=(ClampMin="-1"))
+	int32 MaxTargetBlock = -1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic")
+	EFantasyMechanicLimit Limit = EFantasyMechanicLimit::Unlimited;
+
+	/** When set, triggering this rule suppresses the target rule for SuppressTurns enemy turns. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic")
+	FName SuppressTargetMechanicId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic", meta=(ClampMin="0"))
+	int32 SuppressTurns = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mechanic")
+	TArray<FFantasyCombatEffectSpec> Effects;
+};
+
 UCLASS(BlueprintType)
 class WORLDWALKERPROTOTYPE_API UFantasyEnemyDefinition : public UPrimaryDataAsset
 {
@@ -127,6 +182,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Passive", meta=(MultiLine="true"))
 	FText PassiveDescription;
+
+	/** Generic data-driven reactions and turn-start mechanics for this encounter. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Mechanics")
+	TArray<FFantasyCombatMechanicRule> Mechanics;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Enemy|Presentation")
 	EFantasyEnemyVisualProfile VisualProfile = EFantasyEnemyVisualProfile::Warrior;
