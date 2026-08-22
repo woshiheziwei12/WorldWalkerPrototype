@@ -30,7 +30,9 @@ enum class EFantasyPlayerProfession : uint8
 {
 	None,
 	Knight,
-	Mage
+	Mage,
+	Ranger,
+	Nun
 };
 
 /** Explicit run difficulty participates in all deterministic seed derivation. */

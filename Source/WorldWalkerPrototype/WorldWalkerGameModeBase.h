@@ -102,7 +102,9 @@ private:
 		const UCardDefinition* SourceCard = nullptr,
 		int32 ActualDamage = 0,
 		int32 TargetBlockBefore = 0);
-	void ExecuteEnemyMechanicEffects(const TArray<FFantasyCombatEffectSpec>& Effects);
+	void ExecuteEnemyMechanicEffects(
+		const TArray<FFantasyCombatEffectSpec>& Effects,
+		const UCardDefinition* SourceCard = nullptr);
 	void LoadBlessingDefinitions();
 	UFantasyBlessingDefinition* SelectAvailableBlessing(FName StreamName);
 	void DispatchPlayerBlessings(
@@ -187,6 +189,7 @@ private:
 	TMap<FName, int32> MechanicTurnTriggerCounts;
 	TMap<FName, int32> MechanicBattleTriggerCounts;
 	TMap<FName, int32> MechanicSuppressedTurns;
+	bool bEnemyFirstPlayerCardImmune = false;
 	TMap<FName, TObjectPtr<UFantasyBlessingDefinition>> BlessingDefinitions;
 	TMap<FName, int32> BlessingBattleTriggerCounts;
 	FName CurrentEventId;

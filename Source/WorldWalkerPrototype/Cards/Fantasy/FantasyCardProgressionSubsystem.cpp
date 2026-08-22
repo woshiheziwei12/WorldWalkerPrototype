@@ -10,7 +10,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M3-v1"));
+const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M5-v1"));
 
 namespace
 {
@@ -147,6 +147,8 @@ FString UFantasyCardProgressionSubsystem::GetProfessionDisplayName() const
 	{
 	case EFantasyPlayerProfession::Mage: return TEXT("法师（小女巫）");
 	case EFantasyPlayerProfession::Knight: return TEXT("女骑士");
+	case EFantasyPlayerProfession::Ranger: return TEXT("游侠");
+	case EFantasyPlayerProfession::Nun: return TEXT("修女");
 	case EFantasyPlayerProfession::None:
 	default: return TEXT("尚未选择");
 	}

@@ -51,7 +51,11 @@ enum class EFantasyCombatEffectType : uint8
 	AddTemporaryCard,
 	ConsumeStatusForDamage,
 	ConsumeStatusForBlock,
-	DamagePerMana
+	DamagePerMana,
+	/** Replays a safe subset of the triggering player's card effects from the enemy perspective. */
+	CopySourceCard,
+	/** Makes the opponent-facing effects of the next player card fizzle. */
+	GrantFirstCardImmunity
 };
 
 UENUM(BlueprintType)

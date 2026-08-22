@@ -87,10 +87,20 @@ AWorldWalkerGameModeBase::AWorldWalkerGameModeBase()
 	if (FParse::Value(
 		FCommandLine::Get(),
 		TEXT("W01M0Profession="),
-		AutomationProfession)
-		&& AutomationProfession.Equals(TEXT("Knight"), ESearchCase::IgnoreCase))
+		AutomationProfession))
 	{
-		M0AutomationProfession = EFantasyPlayerProfession::Knight;
+		if (AutomationProfession.Equals(TEXT("Knight"), ESearchCase::IgnoreCase))
+		{
+			M0AutomationProfession = EFantasyPlayerProfession::Knight;
+		}
+		else if (AutomationProfession.Equals(TEXT("Ranger"), ESearchCase::IgnoreCase))
+		{
+			M0AutomationProfession = EFantasyPlayerProfession::Ranger;
+		}
+		else if (AutomationProfession.Equals(TEXT("Nun"), ESearchCase::IgnoreCase))
+		{
+			M0AutomationProfession = EFantasyPlayerProfession::Nun;
+		}
 	}
 	CombatTiming = FFantasyCombatTiming::ForAutomationMode(
 		FParse::Param(FCommandLine::Get(), TEXT("W01FastCombat")));
@@ -287,7 +297,7 @@ void AWorldWalkerGameModeBase::InitializeM0RunAutomation()
 		LogTemp,
 		Display,
 		TEXT("W01_M0_AUTOMATION_STARTED Profession=%s RetryPhase=%d"),
-		M0AutomationProfession == EFantasyPlayerProfession::Knight ? TEXT("Knight") : TEXT("Mage"),
+		*StaticEnum<EFantasyPlayerProfession>()->GetNameStringByValue(static_cast<int64>(M0AutomationProfession)),
 		GM0AutomationInjectedDefeat ? 1 : 0);
 	GetWorldTimerManager().SetTimer(
 		M0RunAutomationTimer,
@@ -317,7 +327,9 @@ void AWorldWalkerGameModeBase::HandleM0RunAutomationStep()
 	{
 	case EFantasyRunFlowState::ProfessionChoice:
 		HandleProfessionSelection(
-			M0AutomationProfession == EFantasyPlayerProfession::Mage ? 0 : 1);
+			M0AutomationProfession == EFantasyPlayerProfession::Mage ? 0
+			: M0AutomationProfession == EFantasyPlayerProfession::Knight ? 1
+			: M0AutomationProfession == EFantasyPlayerProfession::Ranger ? 2 : 3);
 		return;
 
 	case EFantasyRunFlowState::RouteChoice:
@@ -697,9 +709,11 @@ void AWorldWalkerGameModeBase::PresentProfessionChoices()
 		Controller->SetDeckAccessEnabled(false);
 		Controller->ShowProfessionSelection({
 			TEXT("法师（小女巫）\n法力牌积累资源，以火焰、寒冰和毒系咒术终结战斗"),
-			TEXT("女骑士\n免费攻击、行动牌与装备构成稳定攻防")});
+			TEXT("女骑士\n免费攻击、行动牌与装备构成稳定攻防"),
+			TEXT("游侠\n精准射击、敏捷循环与毒素叠加"),
+			TEXT("修女\n祷告防护、神圣裁决与虔诚法力")});
 	}
-	UE_LOG(LogTemp, Display, TEXT("W01_PROFESSION_CHOICES_READY Count=2"));
+	UE_LOG(LogTemp, Display, TEXT("W01_PROFESSION_CHOICES_READY Count=4"));
 }
 
 void AWorldWalkerGameModeBase::HandleProfessionSelection(const int32 ChoiceIndex)
@@ -712,7 +726,11 @@ void AWorldWalkerGameModeBase::HandleProfessionSelection(const int32 ChoiceIndex
 		? EFantasyPlayerProfession::Mage
 		: ChoiceIndex == 1
 			? EFantasyPlayerProfession::Knight
-			: EFantasyPlayerProfession::None;
+			: ChoiceIndex == 2
+				? EFantasyPlayerProfession::Ranger
+				: ChoiceIndex == 3
+					? EFantasyPlayerProfession::Nun
+					: EFantasyPlayerProfession::None;
 	UFantasyCardProgressionSubsystem* Progression =
 		GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>();
 	if (!Progression || !Progression->SelectProfession(Profession))
@@ -1109,10 +1127,14 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
 		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr;
-	const bool bMage = Progression
-		&& Progression->GetSelectedProfession() == EFantasyPlayerProfession::Mage;
-	const FString GiftCardName = bMage ? TEXT("风之石") : TEXT("迅捷攻击");
-	const FString SmithCardName = bMage ? TEXT("冰盾") : TEXT("绝对防御");
+	const EFantasyPlayerProfession Profession = Progression
+		? Progression->GetSelectedProfession() : EFantasyPlayerProfession::Knight;
+	const FString GiftCardName = Profession == EFantasyPlayerProfession::Mage ? TEXT("风之石")
+		: Profession == EFantasyPlayerProfession::Ranger ? TEXT("迅捷射击")
+		: Profession == EFantasyPlayerProfession::Nun ? TEXT("圣光") : TEXT("迅捷攻击");
+	const FString SmithCardName = Profession == EFantasyPlayerProfession::Mage ? TEXT("冰盾")
+		: Profession == EFantasyPlayerProfession::Ranger ? TEXT("闪避")
+		: Profession == EFantasyPlayerProfession::Nun ? TEXT("庇护") : TEXT("绝对防御");
 	const bool bNewEvent = CurrentEventId != EventId;
 	if (bNewEvent)
 	{
@@ -1269,13 +1291,28 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 		return ActiveCardCombat
 			&& ActiveCardCombat->GrantRunCard(ActiveCardCombat->FindCardDefinition(CardId));
 	};
-	const bool bMage = Progression
-		&& Progression->GetSelectedProfession() == EFantasyPlayerProfession::Mage;
-	const FName BasicAttackId = bMage ? FName(TEXT("Mage_NormalAttack")) : FName(TEXT("Knight_NormalAttack"));
-	const FName GiftCardId = bMage ? FName(TEXT("Mage_WindStone")) : FName(TEXT("Knight_SwiftAttack"));
-	const FName SmithCardId = bMage ? FName(TEXT("Mage_IceShield")) : FName(TEXT("Knight_AbsoluteDefense"));
-	const TCHAR* GiftCardName = bMage ? TEXT("风之石") : TEXT("迅捷攻击");
-	const TCHAR* SmithCardName = bMage ? TEXT("冰盾") : TEXT("绝对防御");
+	const EFantasyPlayerProfession Profession = Progression
+		? Progression->GetSelectedProfession() : EFantasyPlayerProfession::Knight;
+	FName BasicAttackId(TEXT("Knight_NormalAttack"));
+	FName GiftCardId(TEXT("Knight_SwiftAttack"));
+	FName SmithCardId(TEXT("Knight_AbsoluteDefense"));
+	const TCHAR* GiftCardName = TEXT("迅捷攻击");
+	const TCHAR* SmithCardName = TEXT("绝对防御");
+	if (Profession == EFantasyPlayerProfession::Mage)
+	{
+		BasicAttackId = TEXT("Mage_NormalAttack"); GiftCardId = TEXT("Mage_WindStone");
+		SmithCardId = TEXT("Mage_IceShield"); GiftCardName = TEXT("风之石"); SmithCardName = TEXT("冰盾");
+	}
+	else if (Profession == EFantasyPlayerProfession::Ranger)
+	{
+		BasicAttackId = TEXT("Ranger_NormalAttack"); GiftCardId = TEXT("Ranger_QuickShot");
+		SmithCardId = TEXT("Ranger_Dodge"); GiftCardName = TEXT("迅捷射击"); SmithCardName = TEXT("闪避");
+	}
+	else if (Profession == EFantasyPlayerProfession::Nun)
+	{
+		BasicAttackId = TEXT("Nun_NormalAttack"); GiftCardId = TEXT("Nun_HolyLight");
+		SmithCardId = TEXT("Nun_Shelter"); GiftCardName = TEXT("圣光"); SmithCardName = TEXT("庇护");
+	}
 
 	if (CurrentEventId == TEXT("WanderingMerchant"))
 	{
@@ -1656,6 +1693,7 @@ void AWorldWalkerGameModeBase::StartCombat(
 	MechanicTurnTriggerCounts.Reset();
 	MechanicBattleTriggerCounts.Reset();
 	MechanicSuppressedTurns.Reset();
+	bEnemyFirstPlayerCardImmune = false;
 	BlessingBattleTriggerCounts.Reset();
 	if (ActiveFantasyEnemyDefinition)
 	{
@@ -2076,10 +2114,15 @@ void AWorldWalkerGameModeBase::ResolvePlayerCardEffects(UCardDefinition* Card)
 		break;
 	}
 
+	const bool bCardOpponentEffectsImmune = bEnemyFirstPlayerCardImmune;
 	bool bWeakConsumedForAttack = false;
 	int32 TotalHealthDamage = 0;
 	for (const FFantasyCombatEffectSpec& Effect : Card->Effects)
 	{
+		if (bCardOpponentEffectsImmune && Effect.Target == EFantasyCombatTarget::Opponent)
+		{
+			continue;
+		}
 		switch (Effect.EffectType)
 		{
 		case EFantasyCombatEffectType::Damage:
@@ -2220,6 +2263,13 @@ void AWorldWalkerGameModeBase::ResolvePlayerCardEffects(UCardDefinition* Card)
 		default:
 			break;
 		}
+	}
+	if (bCardOpponentEffectsImmune)
+	{
+		bEnemyFirstPlayerCardImmune = false;
+		UE_LOG(LogTemp, Display, TEXT("W01_FIRST_CARD_IMMUNITY_CONSUMED Enemy=%s Card=%s"),
+			ActiveFantasyEnemyDefinition ? *ActiveFantasyEnemyDefinition->EnemyId.ToString() : TEXT("Unknown"),
+			*Card->CardId.ToString());
 	}
 	DispatchEnemyMechanics(EFantasyMechanicTrigger::DamageResolved, Card, TotalHealthDamage);
 	DispatchEnemyMechanics(EFantasyMechanicTrigger::PlayerCardResolved, Card, TotalHealthDamage);
@@ -2576,7 +2626,7 @@ void AWorldWalkerGameModeBase::DispatchEnemyMechanics(
 
 		++MechanicTurnTriggerCounts.FindOrAdd(Rule.MechanicId);
 		++MechanicBattleTriggerCounts.FindOrAdd(Rule.MechanicId);
-		ExecuteEnemyMechanicEffects(Rule.Effects);
+		ExecuteEnemyMechanicEffects(Rule.Effects, SourceCard);
 		if (!Rule.SuppressTargetMechanicId.IsNone() && Rule.SuppressTurns > 0)
 		{
 			int32& Remaining = MechanicSuppressedTurns.FindOrAdd(Rule.SuppressTargetMechanicId);
@@ -2598,7 +2648,8 @@ void AWorldWalkerGameModeBase::DispatchEnemyMechanics(
 }
 
 void AWorldWalkerGameModeBase::ExecuteEnemyMechanicEffects(
-	const TArray<FFantasyCombatEffectSpec>& Effects)
+	const TArray<FFantasyCombatEffectSpec>& Effects,
+	const UCardDefinition* SourceCard)
 {
 	if (!ActivePlayer || !ActiveEnemy || !ActiveCardCombat)
 	{
@@ -2644,6 +2695,34 @@ void AWorldWalkerGameModeBase::ExecuteEnemyMechanicEffects(
 			{
 				ActivePlayer->GetCombatantComponent()->RestoreHealth(Effect.Magnitude);
 			}
+			break;
+		case EFantasyCombatEffectType::CopySourceCard:
+			if (SourceCard)
+			{
+				for (const FFantasyCombatEffectSpec& SourceEffect : SourceCard->Effects)
+				{
+					if (SourceEffect.EffectType == EFantasyCombatEffectType::Damage
+						&& SourceEffect.Target == EFantasyCombatTarget::Opponent)
+					{
+						const int32 HealthDamage = ResolveDamageAgainstPlayer(
+							FMath::Min(12, SourceEffect.Magnitude), false, false, SourceEffect.bPiercing);
+						ActivePlayer->GetCombatantComponent()->ReceiveDamage(HealthDamage);
+					}
+					else if (SourceEffect.EffectType == EFantasyCombatEffectType::Block
+						&& SourceEffect.Target == EFantasyCombatTarget::Self)
+					{
+						EnemyFantasyState.Block += FMath::Max(0, SourceEffect.Magnitude);
+					}
+					else if (SourceEffect.EffectType == EFantasyCombatEffectType::ApplyStatus
+						&& SourceEffect.Target == EFantasyCombatTarget::Opponent)
+					{
+						PlayerFantasyState.AddStatus(SourceEffect.Status, SourceEffect.Magnitude);
+					}
+				}
+			}
+			break;
+		case EFantasyCombatEffectType::GrantFirstCardImmunity:
+			bEnemyFirstPlayerCardImmune = true;
 			break;
 		case EFantasyCombatEffectType::ApplyStatus:
 			(Effect.Target == EFantasyCombatTarget::Self ? EnemyFantasyState : PlayerFantasyState)

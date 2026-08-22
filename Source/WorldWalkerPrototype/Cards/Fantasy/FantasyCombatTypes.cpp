@@ -67,6 +67,10 @@ FString FFantasyCombatEffectSpec::BuildRulesFragment() const
 		return FString::Printf(TEXT("消耗敌人全部%s，每层获得 %d 点格挡"), GetStatusLabel(Status), Multiplier);
 	case EFantasyCombatEffectType::DamagePerMana:
 		return FString::Printf(TEXT("造成 %d 点伤害，并按每点法力追加 %d 点"), Magnitude, Multiplier);
+	case EFantasyCombatEffectType::CopySourceCard:
+		return TEXT("复制触发牌的伤害、防御或状态效果");
+	case EFantasyCombatEffectType::GrantFirstCardImmunity:
+		return TEXT("免疫玩家下一张牌的敌方目标效果");
 	default:
 		return TEXT("未知效果");
 	}

@@ -538,9 +538,9 @@ void AWorldWalkerCharacter::ApplyW02AnimeMaterialTuning()
 void AWorldWalkerCharacter::ConfigureFantasyProfession(
 	const EFantasyPlayerProfession Profession)
 {
-	RequestedFantasyProfession = Profession == EFantasyPlayerProfession::Mage
-		? EFantasyPlayerProfession::Mage
-		: EFantasyPlayerProfession::Knight;
+	RequestedFantasyProfession = Profession == EFantasyPlayerProfession::None
+		? EFantasyPlayerProfession::Knight
+		: Profession;
 	if (bFantasyFormAvailable)
 	{
 		LoadFantasyPresentationAssets();
@@ -677,7 +677,11 @@ bool AWorldWalkerCharacter::LoadFantasyPresentationAssets()
 	FantasySpellAnimation = nullptr;
 	FantasyHitReactionAnimation = nullptr;
 
-	const int32 FirstProfileIndex = RequestedFantasyProfession == EFantasyPlayerProfession::Mage ? 0 : 1;
+	// Ranger and Nun currently use the closest complete compatible presentation
+	// (Rogue and Wizard respectively) while retaining distinct decks and UI identity.
+	const int32 FirstProfileIndex =
+		(RequestedFantasyProfession == EFantasyPlayerProfession::Mage
+			|| RequestedFantasyProfession == EFantasyPlayerProfession::Nun) ? 0 : 1;
 	for (int32 ProfileIndex = FirstProfileIndex; ProfileIndex < UE_ARRAY_COUNT(Profiles); ++ProfileIndex)
 	{
 		const FPlayerPresentationProfile& Profile = Profiles[ProfileIndex];

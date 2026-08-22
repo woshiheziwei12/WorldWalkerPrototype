@@ -52,7 +52,17 @@ namespace
 			TEXT("HeadlessKnightBoss"), TEXT("ForestWolf"),
 			TEXT("PoisonSpider"), TEXT("Treant"), TEXT("TavernDrunk"),
 			TEXT("RangerHunter"), TEXT("WitchAcolyte"), TEXT("WolfKing"),
-			TEXT("BlackForestWitch"), TEXT("MagicMirrorGuardian")};
+			TEXT("BlackForestWitch"), TEXT("MagicMirrorGuardian"),
+			TEXT("ChurchPenitent"), TEXT("WanderingGhost"), TEXT("Gargoyle"),
+			TEXT("MagicMirror"), TEXT("AlchemicalConstruct"), TEXT("FallenCleric"),
+			TEXT("GiantSpiderMatriarch"), TEXT("BlackForestHunter"),
+			TEXT("BlackthornCrossbowman"), TEXT("GraveyardGuard"),
+			TEXT("MoonHare"), TEXT("MossTroll"), TEXT("PlagueRat"), TEXT("BriarDryad"),
+			TEXT("HighwayBandit"), TEXT("BellKeeper"), TEXT("GraveRobber"), TEXT("CandleNun"),
+			TEXT("ClockworkHound"), TEXT("LivingArmor"), TEXT("CursedPortrait"),
+			TEXT("BloodAlchemist"), TEXT("BoneScribe"), TEXT("CastleJester"),
+			TEXT("MoonlitWerewolf"), TEXT("PlagueDoctor"), TEXT("IronInquisitor"),
+			TEXT("MirrorDuelist"), TEXT("AncientTreantSovereign"), TEXT("BlackthornRegent")};
 
 		TArray<UFantasyEnemyDefinition*> Enemies;
 		for (const FString& EnemyId : EnemyIds)
@@ -77,7 +87,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FFantasyCardContentContractsTest::RunTest(const FString& Parameters)
 {
 	const TArray<UCardDefinition*> Cards = LoadW01Cards();
-	TestEqual(TEXT("W01 contains the generated 103 card definitions"), Cards.Num(), 103);
+	TestEqual(TEXT("W01 contains the generated 211 card definitions"), Cards.Num(), 211);
 
 	TSet<FName> CardIds;
 	TSet<FSoftObjectPath> ClaimedUpgradeTargets;
@@ -149,7 +159,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FFantasyEnemyContentContractsTest::RunTest(const FString& Parameters)
 {
 	const TArray<UFantasyEnemyDefinition*> Enemies = LoadActiveW01Enemies();
-	TestEqual(TEXT("All 20 active W01 enemy definitions load"), Enemies.Num(), 20);
+	TestEqual(TEXT("All 50 active W01 enemy definitions load"), Enemies.Num(), 50);
 
 	TSet<FName> EnemyIds;
 	int32 NormalCount = 0;
@@ -227,7 +237,8 @@ bool FFantasyEnemyContentContractsTest::RunTest(const FString& Parameters)
 			break;
 		case EFantasyEncounterTier::Elite:
 			++EliteCount;
-			TestEqual(*FString::Printf(TEXT("Elite is in depth 4: %s"), *Context), Enemy->MinDepth, 4);
+			TestTrue(*FString::Printf(TEXT("Elite is in depth 3-4: %s"), *Context),
+				Enemy->MinDepth >= 3 && Enemy->MaxDepth <= 4);
 			break;
 		case EFantasyEncounterTier::Boss:
 			++BossCount;
@@ -243,9 +254,9 @@ bool FFantasyEnemyContentContractsTest::RunTest(const FString& Parameters)
 			Enemy->EncounterTier == EFantasyEncounterTier::Boss);
 	}
 
-	TestEqual(TEXT("Chapter one has fourteen normal encounters"), NormalCount, 14);
-	TestEqual(TEXT("Chapter one has two elite encounters"), EliteCount, 2);
-	TestEqual(TEXT("Open campaign has four boss encounters"), BossCount, 4);
+	TestEqual(TEXT("Campaign has thirty-four normal encounters"), NormalCount, 34);
+	TestEqual(TEXT("Campaign has ten elite encounters"), EliteCount, 10);
+	TestEqual(TEXT("Open campaign has six boss encounters"), BossCount, 6);
 	return true;
 }
 

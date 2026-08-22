@@ -5,7 +5,7 @@ const FPrimaryAssetType UFantasyChapterDefinition::PrimaryAssetType(
 
 namespace
 {
-	uint32 HashStableUtf8(const FString& Value)
+	uint32 HashChapterStableUtf8(const FString& Value)
 	{
 		const FTCHARToUTF8 Utf8(*Value);
 		uint32 Hash = 2166136261u;
@@ -27,7 +27,7 @@ namespace
 		const uint32 SeedHash = HashCombineFast(
 			GetTypeHash(RouteSeed),
 			HashCombineFast(
-				HashStableUtf8(ContentVersion),
+				HashChapterStableUtf8(ContentVersion),
 				HashCombineFast(
 					GetTypeHash(static_cast<uint8>(Difficulty)),
 					HashCombineFast(GetTypeHash(Chapter), GetTypeHash(Depth)))));

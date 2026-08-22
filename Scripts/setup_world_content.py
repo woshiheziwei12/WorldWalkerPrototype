@@ -1318,6 +1318,159 @@ M3_MAGE_CARD_SPECS = sum((
 ), ())
 
 
+def _profession_reward_pair(profession_key, profession_enum, stem, display_name,
+                            archetype, index, is_nun=False):
+    card_id = f"{profession_key}_{stem}"
+    upgrade_id = f"{card_id}Plus"
+    tags = (f"Archetype.{profession_key}.{archetype}",)
+    if not is_nun and archetype == "Precision":
+        card_type = unreal.CardType.ATTACK
+        base_effects = (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6 + index),)
+        plus_effects = (_effect(unreal.FantasyCombatEffectType.DAMAGE, 9 + index),)
+        artwork = "T_Card_LongSwordSlash"
+        action_cost = mana_cost = 0
+    elif not is_nun and archetype == "Agility":
+        card_type = unreal.CardType.ACTION
+        base_effects = (_effect(unreal.FantasyCombatEffectType.BLOCK, 4 + index,
+                                unreal.FantasyCombatTarget.SELF),
+                        _effect(unreal.FantasyCombatEffectType.DRAW, 1,
+                                unreal.FantasyCombatTarget.SELF))
+        plus_effects = (_effect(unreal.FantasyCombatEffectType.BLOCK, 7 + index,
+                                unreal.FantasyCombatTarget.SELF),
+                        _effect(unreal.FantasyCombatEffectType.DRAW, 1 + (index % 2),
+                                unreal.FantasyCombatTarget.SELF))
+        artwork = "T_Card_ReadOpening"
+        action_cost, mana_cost = 1, 0
+    elif not is_nun:
+        card_type = unreal.CardType.ACTION
+        base_effects = (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2 + index // 2,
+                                status=unreal.FantasyCombatStatus.POISON),)
+        plus_effects = (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 4 + index // 2,
+                                status=unreal.FantasyCombatStatus.POISON),)
+        artwork = "T_Card_ArcaneSpark"
+        action_cost, mana_cost = 1, 0
+    elif archetype == "Prayer":
+        card_type = unreal.CardType.PRAYER
+        base_effects = (_effect(unreal.FantasyCombatEffectType.BLOCK, 5 + index,
+                                unreal.FantasyCombatTarget.SELF),
+                        _effect(unreal.FantasyCombatEffectType.HEAL, 2 + index // 2,
+                                unreal.FantasyCombatTarget.SELF))
+        plus_effects = (_effect(unreal.FantasyCombatEffectType.BLOCK, 8 + index,
+                                unreal.FantasyCombatTarget.SELF),
+                        _effect(unreal.FantasyCombatEffectType.HEAL, 4 + index // 2,
+                                unreal.FantasyCombatTarget.SELF))
+        artwork = "T_Card_KnightsPrayer"
+        action_cost = mana_cost = 0
+    elif archetype == "Judgment":
+        card_type = unreal.CardType.ATTACK
+        base_effects = (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5 + index,
+                                piercing=index >= 4),)
+        plus_effects = (_effect(unreal.FantasyCombatEffectType.DAMAGE, 8 + index,
+                                piercing=index >= 3),)
+        artwork = "T_Card_LionheartJudgment"
+        action_cost = mana_cost = 0
+    else:
+        card_type = unreal.CardType.SPELL
+        base_effects = (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 3 + index // 2,
+                                unreal.FantasyCombatTarget.SELF),
+                        _effect(unreal.FantasyCombatEffectType.DRAW, 1,
+                                unreal.FantasyCombatTarget.SELF))
+        plus_effects = (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 5 + index // 2,
+                                unreal.FantasyCombatTarget.SELF),
+                        _effect(unreal.FantasyCombatEffectType.DRAW, 2,
+                                unreal.FantasyCombatTarget.SELF))
+        artwork = "T_Card_ArcaneSpark"
+        action_cost, mana_cost = 0, 1
+    return (
+        _card(f"DA_Card_{profession_key}{stem}", card_id, display_name, card_type,
+              base_effects, artwork, f"【M5 {archetype} 构筑】{profession_key}职业奖励牌。",
+              reward_eligible=True, action_cost=action_cost, mana_cost=mana_cost,
+              profession=profession_enum, upgrade_card_id=upgrade_id, build_tags=tags),
+        _card(f"DA_Card_{profession_key}{stem}Plus", upgrade_id, f"{display_name}+", card_type,
+              plus_effects, artwork, f"【M5 {archetype} 升级】唯一一级升级。",
+              action_cost=action_cost, mana_cost=mana_cost, profession=profession_enum,
+              upgrade_level=1, build_tags=tags),
+    )
+
+
+RANGER_CARD_SPECS = (
+    _card("DA_Card_RangerNormalAttack", "Ranger_NormalAttack", "短弓射击", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 8),), "T_Card_LongSwordSlash",
+          "【M5 游侠初始牌】稳定射击。", copies=4, profession=unreal.FantasyPlayerProfession.RANGER),
+    _card("DA_Card_RangerQuickShot", "Ranger_QuickShot", "迅捷射击", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),
+           _effect(unreal.FantasyCombatEffectType.DRAW, 1, unreal.FantasyCombatTarget.SELF)),
+          "T_Card_LongSwordSlash", "【M5 游侠初始牌】攻击并抽牌。", copies=2,
+          profession=unreal.FantasyPlayerProfession.RANGER),
+    _card("DA_Card_RangerFocus", "Ranger_Focus", "猎人专注", unreal.CardType.ACTION,
+          (_effect(unreal.FantasyCombatEffectType.DRAW, 2, unreal.FantasyCombatTarget.SELF),),
+          "T_Card_ReadOpening", "【M5 游侠初始牌】整理手牌。", copies=1, action_cost=1,
+          profession=unreal.FantasyPlayerProfession.RANGER),
+    _card("DA_Card_RangerLongbow", "Ranger_Longbow", "长弓", unreal.CardType.EQUIPMENT, (),
+          "T_Card_LongSwordSlash", "【M5 游侠初始牌】攻击牌伤害 +2。", copies=1,
+          equipment_attack=3, profession=unreal.FantasyPlayerProfession.RANGER),
+    _card("DA_Card_RangerDodge", "Ranger_Dodge", "闪避", unreal.CardType.ACTION,
+          (_effect(unreal.FantasyCombatEffectType.BLOCK, 10, unreal.FantasyCombatTarget.SELF),),
+          "T_Card_KiteShieldGuard", "【M5 游侠初始牌】获得格挡。", copies=1, action_cost=1,
+          profession=unreal.FantasyPlayerProfession.RANGER),
+    _card("DA_Card_RangerVenomTip", "Ranger_VenomTip", "淬毒箭", unreal.CardType.ACTION,
+          (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 5,
+                   status=unreal.FantasyCombatStatus.POISON),),
+          "T_Card_ArcaneSpark", "【M5 游侠初始牌】施加中毒。", copies=1, action_cost=1,
+          profession=unreal.FantasyPlayerProfession.RANGER),
+)
+
+NUN_CARD_SPECS = (
+    _card("DA_Card_NunNormalAttack", "Nun_NormalAttack", "圣杖轻击", unreal.CardType.ATTACK,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5),), "T_Card_LongSwordSlash",
+          "【M5 修女初始牌】稳定攻击。", copies=3, profession=unreal.FantasyPlayerProfession.NUN),
+    _card("DA_Card_NunPrayer", "Nun_Prayer", "晨祷", unreal.CardType.PRAYER,
+          (_effect(unreal.FantasyCombatEffectType.BLOCK, 5, unreal.FantasyCombatTarget.SELF),),
+          "T_Card_KnightsPrayer", "【M5 修女初始牌】获得格挡。", copies=2,
+          profession=unreal.FantasyPlayerProfession.NUN),
+    _card("DA_Card_NunFocus", "Nun_Focus", "静思", unreal.CardType.ACTION,
+          (_effect(unreal.FantasyCombatEffectType.DRAW, 2, unreal.FantasyCombatTarget.SELF),),
+          "T_Card_ReadOpening", "【M5 修女初始牌】抽取两张牌。", copies=1, action_cost=1,
+          profession=unreal.FantasyPlayerProfession.NUN),
+    _card("DA_Card_NunHolyLight", "Nun_HolyLight", "圣光", unreal.CardType.SPELL,
+          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 7),), "T_Card_ArcaneSpark",
+          "【M5 修女初始牌】神圣伤害。", copies=1, mana_cost=1,
+          profession=unreal.FantasyPlayerProfession.NUN),
+    _card("DA_Card_NunRosary", "Nun_Rosary", "念珠", unreal.CardType.MANA,
+          (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 5, unreal.FantasyCombatTarget.SELF),),
+          "T_Card_ArcaneSpark", "【M5 修女初始牌】获得法力。", copies=1,
+          profession=unreal.FantasyPlayerProfession.NUN),
+    _card("DA_Card_NunShelter", "Nun_Shelter", "庇护", unreal.CardType.PRAYER,
+          (_effect(unreal.FantasyCombatEffectType.BLOCK, 8, unreal.FantasyCombatTarget.SELF),
+           _effect(unreal.FantasyCombatEffectType.HEAL, 3, unreal.FantasyCombatTarget.SELF)),
+          "T_Card_KnightsPrayer", "【M5 修女初始牌】防护并治疗。", copies=2,
+          profession=unreal.FantasyPlayerProfession.NUN),
+)
+
+RANGER_REWARD_NAMES = {
+    "Precision": ("鹰眼", "穿云箭", "弱点标记", "连珠箭", "狙击", "风切", "猎杀时刻", "终焉箭"),
+    "Agility": ("轻足", "翻滚", "乘风", "备用箭袋", "疾跑", "侧身闪", "叶影", "无踪"),
+    "Poison": ("毒藤箭", "蛇毒", "孢子囊", "腐蚀箭", "毒雾", "蝎尾", "剧毒爆发", "百毒归一"),
+}
+NUN_REWARD_NAMES = {
+    "Prayer": ("晚祷", "守夜", "圣歌", "恩典", "静默礼拜", "群星祷文", "赦免", "永恒庇护"),
+    "Judgment": ("戒律", "惩戒", "圣印", "破邪", "裁决之光", "审判钟", "净罪", "末日审判"),
+    "Devotion": ("虔诚", "奉献", "圣泉", "启示", "神恩", "信仰回响", "灵魂共鸣", "神迹"),
+}
+RANGER_REWARD_CARD_SPECS = sum((
+    _profession_reward_pair("Ranger", unreal.FantasyPlayerProfession.RANGER,
+                            f"{archetype}{index + 1}", name, archetype, index)
+    for archetype, names in RANGER_REWARD_NAMES.items()
+    for index, name in enumerate(names)
+), ())
+NUN_REWARD_CARD_SPECS = sum((
+    _profession_reward_pair("Nun", unreal.FantasyPlayerProfession.NUN,
+                            f"{archetype}{index + 1}", name, archetype, index, True)
+    for archetype, names in NUN_REWARD_NAMES.items()
+    for index, name in enumerate(names)
+), ())
+
+
 BLESSING_SPECS = (
     ("IronWill", "钢铁意志", "每场战斗开始时获得 8 格挡。", None,
      unreal.FantasyBlessingTrigger.BATTLE_STARTED,
@@ -1676,6 +1829,10 @@ CARD_SPECS = (
     + MAGE_REWARD_CARD_SPECS
 	+ M2_MAGE_CARD_SPECS
 	+ M3_MAGE_CARD_SPECS
+	+ RANGER_CARD_SPECS
+	+ RANGER_REWARD_CARD_SPECS
+	+ NUN_CARD_SPECS
+	+ NUN_REWARD_CARD_SPECS
     + ENEMY_CARD_SPECS
     + M2_ENEMY_CARD_SPECS
 )
@@ -1690,22 +1847,14 @@ def _card_contract(spec):
         owner_tag = "Owner.Enemy"
     elif is_starter:
         rarity = unreal.FantasyCardRarity.STARTER
-        owner_tag = (
-            "Profession.Mage"
-            if spec["profession"] == unreal.FantasyPlayerProfession.MAGE
-            else "Profession.Knight"
-        )
+        owner_tag = f"Profession.{str(spec['profession']).split('.')[-1].title()}"
     else:
         rarity = (
             unreal.FantasyCardRarity.COMMON
             if spec.get("reward_eligible", False)
             else unreal.FantasyCardRarity.UNCOMMON
         )
-        owner_tag = (
-            "Profession.Mage"
-            if spec["profession"] == unreal.FantasyPlayerProfession.MAGE
-            else "Profession.Knight"
-        )
+        owner_tag = f"Profession.{str(spec['profession']).split('.')[-1].title()}"
 
     card_type_tags = {
         unreal.CardType.ATTACK: "Type.Attack",
@@ -2068,7 +2217,7 @@ M2_ENEMY_SPECS = (
         "TavernDrunk.Swing", "醉步", "牌组同时包含高低伤害，并可能让双方随机弃牌。",
         (_fallback_intent("FallbackBottle", "酒瓶挥击（兼容意图）",
                           (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),)),),
-        max_hand=4, max_action=1, cards_per_turn=2,
+        max_hand=4, max_action=1, starting_mana=3, cards_per_turn=2,
     ),
     _enemy(
         "DA_Enemy_RangerHunter", "RangerHunter", "游侠猎手", 46,
@@ -2139,7 +2288,263 @@ M3_BOSS_SPECS = (
     ),
 )
 
-ENEMY_SPECS = ENEMY_SPECS + M2_ENEMY_SPECS + M3_BOSS_SPECS
+M4_ENEMY_SPECS = (
+    _enemy(
+        "DA_Enemy_ChurchPenitent", "ChurchPenitent", "教会忏悔者", 56,
+        (("Enemy_Repentance", 3), ("Enemy_Hypnosis", 2), ("Enemy_Mana", 2)),
+        unreal.FantasyEnemyVisualProfile.SKELETON,
+        "ChurchPenitent.Penance", "苦修", "玩家每回合打出第二张牌时受到 1 点穿刺伤害。",
+        (_fallback_intent("FallbackPenance", "忏悔（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 4, piercing=True),)),),
+        max_hand=4, max_action=1, starting_mana=2, cards_per_turn=2,
+        mechanics=(_mechanic(
+            "ChurchPenitent.Penance", unreal.FantasyMechanicTrigger.PLAYER_CARD_RESOLVED,
+            (_effect(unreal.FantasyCombatEffectType.DAMAGE, 1, piercing=True),),
+            limit=unreal.FantasyMechanicLimit.ONCE_PER_TURN),),
+    ),
+    _enemy(
+        "DA_Enemy_WanderingGhost", "WanderingGhost", "游荡幽灵", 52,
+        (("Enemy_LifeSteal", 3), ("Enemy_Flinch", 2), ("Enemy_ElementalWave", 2)),
+        unreal.FantasyEnemyVisualProfile.SKELETON,
+        "WanderingGhost.Ethereal", "灵体", "战斗开始获得首牌免疫；玩家第一张牌的敌方目标效果会失效。",
+        (_fallback_intent("FallbackHaunt", "幽触（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),)),),
+        max_hand=4, max_action=1, starting_mana=2, cards_per_turn=2,
+        mechanics=(_mechanic(
+            "WanderingGhost.Ethereal", unreal.FantasyMechanicTrigger.BATTLE_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.GRANT_FIRST_CARD_IMMUNITY, 1,
+                     unreal.FantasyCombatTarget.SELF),),
+            limit=unreal.FantasyMechanicLimit.ONCE_PER_BATTLE),),
+    ),
+    _enemy(
+        "DA_Enemy_Gargoyle", "Gargoyle", "石像鬼", 68,
+        (("Enemy_Bark", 2), ("Enemy_Bash", 3), ("Enemy_WolfMaul", 2)),
+        unreal.FantasyEnemyVisualProfile.SLIME,
+        "Gargoyle.Awakening", "苏醒", "以 16 点石肤格挡开战，随后每回合获得 1 力量。",
+        (_fallback_intent("FallbackStoneClaw", "石爪（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 7),)),),
+        max_hand=4, max_action=1, cards_per_turn=2,
+        mechanics=(
+            _mechanic("Gargoyle.StoneSleep", unreal.FantasyMechanicTrigger.BATTLE_STARTED,
+                      (_effect(unreal.FantasyCombatEffectType.BLOCK, 16,
+                               unreal.FantasyCombatTarget.SELF),),
+                      limit=unreal.FantasyMechanicLimit.ONCE_PER_BATTLE),
+            _mechanic("Gargoyle.Awakening", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+                      (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                               unreal.FantasyCombatTarget.SELF,
+                               unreal.FantasyCombatStatus.STRENGTH),)),
+        ),
+    ),
+    _enemy(
+        "DA_Enemy_MagicMirror", "MagicMirror", "魔法镜像", 64,
+        (("Enemy_CrystalBall", 2), ("Enemy_Wisdom", 2),
+         ("Enemy_ElementalWave", 2), ("Enemy_FireBlast", 2)),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "MagicMirror.Echo", "回响", "玩家每回合首次出牌后，复制其中安全的伤害、防御或状态效果。",
+        (_fallback_intent("FallbackEcho", "镜光回响（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 7),)),),
+        max_hand=4, max_action=1, starting_mana=3, cards_per_turn=2,
+        mechanics=(_mechanic(
+            "MagicMirror.Echo", unreal.FantasyMechanicTrigger.PLAYER_CARD_RESOLVED,
+            (_effect(unreal.FantasyCombatEffectType.COPY_SOURCE_CARD, 1,
+                     unreal.FantasyCombatTarget.SELF),),
+            limit=unreal.FantasyMechanicLimit.ONCE_PER_TURN),),
+    ),
+    _enemy(
+        "DA_Enemy_AlchemicalConstruct", "AlchemicalConstruct", "炼金造物", 66,
+        (("Enemy_AcidSpray", 2), ("Enemy_Heal", 2),
+         ("Enemy_DrunkSpill", 2), ("Enemy_Bash", 2)),
+        unreal.FantasyEnemyVisualProfile.SLIME,
+        "AlchemicalConstruct.Reaction", "炼金循环", "敌方回合开始时恢复 2 生命并向玩家施加 1 中毒。",
+        (_fallback_intent("FallbackAcid", "酸液（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                                   status=unreal.FantasyCombatStatus.POISON),)),),
+        max_hand=4, max_action=1, starting_mana=3, cards_per_turn=2,
+        mechanics=(_mechanic(
+            "AlchemicalConstruct.Reaction", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.HEAL, 2,
+                     unreal.FantasyCombatTarget.SELF),
+             _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                     unreal.FantasyCombatTarget.OPPONENT,
+                     unreal.FantasyCombatStatus.POISON)),),),
+    ),
+    _enemy(
+        "DA_Enemy_FallenCleric", "FallenCleric", "堕落圣职者", 70,
+        (("Enemy_Mana", 2), ("Enemy_Heal", 3),
+         ("Enemy_Repentance", 3), ("Enemy_WitchDrain", 2)),
+        unreal.FantasyEnemyVisualProfile.SKELETON,
+        "FallenCleric.ProfaneGrace", "亵渎恩典", "敌方回合开始恢复 4 生命并造成 2 点穿刺伤害。",
+        (_fallback_intent("FallbackGrace", "亵渎祷言（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 5, piercing=True),)),),
+        max_hand=5, max_action=1, starting_mana=3, cards_per_turn=2,
+        mechanics=(_mechanic(
+            "FallenCleric.ProfaneGrace", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.HEAL, 4,
+                     unreal.FantasyCombatTarget.SELF),
+             _effect(unreal.FantasyCombatEffectType.DAMAGE, 2, piercing=True)),),),
+    ),
+    _enemy(
+        "DA_Enemy_GiantSpiderMatriarch", "GiantSpiderMatriarch", "巨型蜘蛛母体", 96,
+        (("Enemy_SpiderBite", 4), ("Enemy_Venom", 3), ("Enemy_WitchHex", 2)),
+        unreal.FantasyEnemyVisualProfile.SLIME,
+        "GiantSpiderMatriarch.Brood", "毒巢", "每个敌方回合额外向玩家施加 1 中毒。",
+        (_fallback_intent("FallbackBrood", "母体毒牙（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 8),)),),
+        max_hand=5, max_action=2, starting_mana=3, cards_per_turn=3,
+        mechanics=(_mechanic(
+            "GiantSpiderMatriarch.Brood", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                     unreal.FantasyCombatTarget.OPPONENT,
+                     unreal.FantasyCombatStatus.POISON),),),),
+    ),
+    _enemy(
+        "DA_Enemy_BlackForestHunter", "BlackForestHunter", "黑森林猎杀者", 100,
+        (("Enemy_HunterLongbow", 1), ("Enemy_HunterShot", 5), ("Enemy_Hypnosis", 2)),
+        unreal.FantasyEnemyVisualProfile.WARRIOR,
+        "BlackForestHunter.Mark", "猎杀标记", "战斗开始令玩家获得 1 破绽；每回合继续磨砺力量。",
+        (_fallback_intent("FallbackMarkedShot", "标记射击（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 9),)),),
+        max_hand=5, max_action=2, cards_per_turn=3,
+        mechanics=(
+            _mechanic("BlackForestHunter.Mark", unreal.FantasyMechanicTrigger.BATTLE_STARTED,
+                      (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                               unreal.FantasyCombatTarget.OPPONENT,
+                               unreal.FantasyCombatStatus.EXPOSED),),
+                      limit=unreal.FantasyMechanicLimit.ONCE_PER_BATTLE),
+            _mechanic("BlackForestHunter.Aim", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+                      (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                               unreal.FantasyCombatTarget.SELF,
+                               unreal.FantasyCombatStatus.STRENGTH),)),
+        ),
+    ),
+    _enemy(
+        "DA_Enemy_BlackthornCrossbowman", "BlackthornCrossbowman", "黑棘弩手", 104,
+        (("Enemy_HunterLongbow", 1), ("Enemy_HunterShot", 4),
+         ("Enemy_WolfMaul", 2), ("Enemy_NoEntry", 2)),
+        unreal.FantasyEnemyVisualProfile.WARRIOR,
+        "BlackthornCrossbowman.Charge", "公开蓄力", "每回合开始获得 1 力量；被动摘要公开其持续蓄力压力。",
+        (_fallback_intent("FallbackBolt", "蓄力弩矢（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 10),)),),
+        max_hand=5, max_action=2, cards_per_turn=3,
+        mechanics=(_mechanic(
+            "BlackthornCrossbowman.Charge", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                     unreal.FantasyCombatTarget.SELF,
+                     unreal.FantasyCombatStatus.STRENGTH),),),),
+    ),
+    _enemy(
+        "DA_Enemy_GraveyardGuard", "GraveyardGuard", "墓园守卫", 108,
+        (("Enemy_ShortSword", 1), ("Enemy_NoEntry", 3),
+         ("Enemy_Flinch", 2), ("Enemy_Repentance", 3)),
+        unreal.FantasyEnemyVisualProfile.SKELETON,
+        "GraveyardGuard.Counterwall", "反制壁垒", "战斗开始获得 14 格挡，牌组同时包含装备、防御与弃牌。",
+        (_fallback_intent("FallbackGuardCleave", "墓园斩（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 9),)),),
+        max_hand=5, max_action=2, starting_mana=2, cards_per_turn=3,
+        mechanics=(_mechanic(
+            "GraveyardGuard.Counterwall", unreal.FantasyMechanicTrigger.BATTLE_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.BLOCK, 14,
+                     unreal.FantasyCombatTarget.SELF),),
+            limit=unreal.FantasyMechanicLimit.ONCE_PER_BATTLE),),
+    ),
+)
+
+M5_ENEMY_NAMES = (
+    ("MoonHare", "月影兔", unreal.FantasyEncounterTier.NORMAL, "MoonBeast", 2),
+    ("MossTroll", "苔藓巨魔", unreal.FantasyEncounterTier.NORMAL, "Troll", 2),
+    ("PlagueRat", "疫病鼠", unreal.FantasyEncounterTier.NORMAL, "Vermin", 2),
+    ("BriarDryad", "荆棘树灵", unreal.FantasyEncounterTier.NORMAL, "ForestSpirit", 2),
+    ("HighwayBandit", "拦路盗匪", unreal.FantasyEncounterTier.NORMAL, "Bandit", 2),
+    ("BellKeeper", "丧钟守人", unreal.FantasyEncounterTier.NORMAL, "Church", 2),
+    ("GraveRobber", "掘墓人", unreal.FantasyEncounterTier.NORMAL, "Graveyard", 2),
+    ("CandleNun", "烛火修女", unreal.FantasyEncounterTier.NORMAL, "Church", 3),
+    ("ClockworkHound", "发条猎犬", unreal.FantasyEncounterTier.NORMAL, "Clockwork", 3),
+    ("LivingArmor", "活化铠甲", unreal.FantasyEncounterTier.NORMAL, "Armor", 3),
+    ("CursedPortrait", "诅咒肖像", unreal.FantasyEncounterTier.NORMAL, "Portrait", 3),
+    ("BloodAlchemist", "血炼金师", unreal.FantasyEncounterTier.NORMAL, "Alchemy", 3),
+    ("BoneScribe", "白骨书记", unreal.FantasyEncounterTier.NORMAL, "Undead", 3),
+    ("CastleJester", "古堡弄臣", unreal.FantasyEncounterTier.NORMAL, "Court", 3),
+    ("MoonlitWerewolf", "月夜狼人", unreal.FantasyEncounterTier.ELITE, "MoonBeast", 2),
+    ("PlagueDoctor", "瘟疫医师", unreal.FantasyEncounterTier.ELITE, "Plague", 2),
+    ("IronInquisitor", "钢铁审判官", unreal.FantasyEncounterTier.ELITE, "Inquisition", 3),
+    ("MirrorDuelist", "镜中决斗者", unreal.FantasyEncounterTier.ELITE, "Mirror", 3),
+    ("AncientTreantSovereign", "远古树王", unreal.FantasyEncounterTier.BOSS, "ForestSpirit", 2),
+    ("BlackthornRegent", "黑棘摄政王", unreal.FantasyEncounterTier.BOSS, "Blackthorn", 3),
+)
+
+
+def _build_m5_enemies():
+    results = []
+    for index, (enemy_id, display_name, tier, family, chapter) in enumerate(M5_ENEMY_NAMES):
+        is_elite = tier == unreal.FantasyEncounterTier.ELITE
+        is_boss = tier == unreal.FantasyEncounterTier.BOSS
+        health = (148 + index * 3) if is_boss else (102 + index * 2) if is_elite else (58 + index * 2)
+        deck = (("Enemy_WolfBite", 3), ("Enemy_Bark", 2), ("Enemy_DrunkSpill", 2))
+        if index % 3 == 1:
+            deck = (("Enemy_HunterShot", 4), ("Enemy_NoEntry", 2), ("Enemy_HunterLongbow", 1))
+        elif index % 3 == 2:
+            deck = (("Enemy_Mana", 2), ("Enemy_WitchBolt", 3), ("Enemy_Heal", 2))
+        mechanic_id = f"{enemy_id}.Core"
+        if index % 4 == 0:
+            effects = (_effect(unreal.FantasyCombatEffectType.BLOCK, 4 + (2 if is_elite or is_boss else 0),
+                               unreal.FantasyCombatTarget.SELF),)
+            trigger = unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED
+            limit = unreal.FantasyMechanicLimit.UNLIMITED
+            rule_text = "每回合建立可预期的防线。"
+        elif index % 4 == 1:
+            effects = (_effect(unreal.FantasyCombatEffectType.DAMAGE, 1 + (1 if is_elite or is_boss else 0),
+                               piercing=True),)
+            trigger = unreal.FantasyMechanicTrigger.PLAYER_CARD_RESOLVED
+            limit = unreal.FantasyMechanicLimit.ONCE_PER_TURN
+            rule_text = "每回合首次响应玩家出牌并造成穿刺压力。"
+        elif index % 4 == 2:
+            effects = (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                               unreal.FantasyCombatTarget.SELF,
+                               unreal.FantasyCombatStatus.STRENGTH),)
+            trigger = unreal.FantasyMechanicTrigger.BATTLE_STARTED
+            limit = unreal.FantasyMechanicLimit.ONCE_PER_BATTLE
+            rule_text = "开战时获得力量，要求玩家调整伤害竞速。"
+        else:
+            effects = (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1 + (1 if is_boss else 0),
+                               unreal.FantasyCombatTarget.OPPONENT,
+                               unreal.FantasyCombatStatus.POISON),)
+            trigger = unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED
+            limit = unreal.FantasyMechanicLimit.UNLIMITED
+            rule_text = "回合开始施加持续状态压力。"
+        mechanics = [_mechanic(mechanic_id, trigger, effects, limit=limit)]
+        if enemy_id == "MirrorDuelist":
+            mechanics = [_mechanic(
+                mechanic_id, unreal.FantasyMechanicTrigger.PLAYER_CARD_RESOLVED,
+                (_effect(unreal.FantasyCombatEffectType.COPY_SOURCE_CARD, 1,
+                         unreal.FantasyCombatTarget.SELF),),
+                limit=unreal.FantasyMechanicLimit.ONCE_PER_TURN)]
+            rule_text = "每回合复制玩家第一张牌中安全的伤害、防御或状态效果。"
+        if is_boss:
+            mechanics.append(_mechanic(
+                f"{enemy_id}.PhasePressure", unreal.FantasyMechanicTrigger.DAMAGE_RESOLVED,
+                (_effect(unreal.FantasyCombatEffectType.BLOCK, 3,
+                         unreal.FantasyCombatTarget.SELF),),
+                min_actual_damage=8, limit=unreal.FantasyMechanicLimit.ONCE_PER_TURN))
+            rule_text += "受到单次 8 点以上生命伤害后每回合首次获得 3 格挡，形成阶段压力。"
+        results.append(_enemy(
+            f"DA_Enemy_{enemy_id}", enemy_id, display_name, health, deck,
+            unreal.FantasyEnemyVisualProfile.WIZARD if index % 3 == 2
+            else unreal.FantasyEnemyVisualProfile.SKELETON if index % 3 == 1
+            else unreal.FantasyEnemyVisualProfile.WARRIOR,
+            mechanic_id, "核心机制", rule_text,
+            (_fallback_intent(f"Fallback{enemy_id}", "应急攻击（兼容意图）",
+                              (_effect(unreal.FantasyCombatEffectType.DAMAGE,
+                                       10 if is_boss else 8 if is_elite else 6),)),),
+            max_hand=5 if is_elite or is_boss else 4,
+            max_action=2 if is_elite or is_boss else 1,
+            starting_mana=3 if index % 3 == 2 else 0,
+            cards_per_turn=3 if is_elite or is_boss else 2,
+            boss=is_boss, mechanics=tuple(mechanics)))
+    return tuple(results)
+
+
+M5_ENEMY_SPECS = _build_m5_enemies()
+ENEMY_SPECS = ENEMY_SPECS + M2_ENEMY_SPECS + M3_BOSS_SPECS + M4_ENEMY_SPECS + M5_ENEMY_SPECS
 
 
 ENEMY_CONTENT_CONTRACTS = {
@@ -2163,13 +2568,41 @@ ENEMY_CONTENT_CONTRACTS = {
     "WolfKing": (unreal.FantasyEncounterTier.BOSS, "ForestBeast", 9, 5, 5, 2.0),
     "BlackForestWitch": (unreal.FantasyEncounterTier.BOSS, "BlackForest", 9, 5, 5, 2.0),
     "MagicMirrorGuardian": (unreal.FantasyEncounterTier.BOSS, "Construct", 10, 5, 5, 2.0),
+    "ChurchPenitent": (unreal.FantasyEncounterTier.NORMAL, "Church", 5, 0, 3, 1.0),
+    "WanderingGhost": (unreal.FantasyEncounterTier.NORMAL, "UndeadSpirit", 5, 0, 3, 1.0),
+    "Gargoyle": (unreal.FantasyEncounterTier.NORMAL, "StoneConstruct", 6, 1, 3, 1.0),
+    "MagicMirror": (unreal.FantasyEncounterTier.NORMAL, "Mirror", 7, 1, 3, 1.0),
+    "AlchemicalConstruct": (unreal.FantasyEncounterTier.NORMAL, "Alchemy", 7, 1, 3, 1.0),
+    "FallenCleric": (unreal.FantasyEncounterTier.NORMAL, "FallenChurch", 8, 2, 3, 1.0),
+    "GiantSpiderMatriarch": (unreal.FantasyEncounterTier.ELITE, "Vermin", 8, 3, 4, 1.35),
+    "BlackForestHunter": (unreal.FantasyEncounterTier.ELITE, "BlackForest", 8, 3, 4, 1.35),
+    "BlackthornCrossbowman": (unreal.FantasyEncounterTier.ELITE, "Blackthorn", 9, 3, 4, 1.35),
+    "GraveyardGuard": (unreal.FantasyEncounterTier.ELITE, "Graveyard", 9, 3, 4, 1.35),
 }
+
+for enemy_id, _display_name, tier, family, chapter in M5_ENEMY_NAMES:
+    min_depth = 5 if tier == unreal.FantasyEncounterTier.BOSS else 3 if tier == unreal.FantasyEncounterTier.ELITE else 0
+    max_depth = 5 if tier == unreal.FantasyEncounterTier.BOSS else 4 if tier == unreal.FantasyEncounterTier.ELITE else 3
+    ENEMY_CONTENT_CONTRACTS[enemy_id] = (
+        tier, family, 10 if tier == unreal.FantasyEncounterTier.BOSS else 8 if tier == unreal.FantasyEncounterTier.ELITE else 6,
+        min_depth, max_depth, 2.0 if tier == unreal.FantasyEncounterTier.BOSS else 1.35 if tier == unreal.FantasyEncounterTier.ELITE else 1.0)
 
 ENEMY_CHAPTERS = {
     "WolfKing": 2,
     "BlackForestWitch": 2,
     "MagicMirrorGuardian": 3,
+    "ChurchPenitent": 2,
+    "WanderingGhost": 2,
+    "Gargoyle": 2,
+    "MagicMirror": 3,
+    "AlchemicalConstruct": 3,
+    "FallenCleric": 3,
+    "GiantSpiderMatriarch": 2,
+    "BlackForestHunter": 2,
+    "BlackthornCrossbowman": 3,
+    "GraveyardGuard": 3,
 }
+ENEMY_CHAPTERS.update({enemy_id: chapter for enemy_id, _name, _tier, _family, chapter in M5_ENEMY_NAMES})
 
 
 CHAPTER_DEPTH_SPECS = (
@@ -2254,7 +2687,7 @@ def chapter_depth_specs(chapter_number):
          )},
         {"depth": 2, "tier": unreal.FantasyEncounterTier.NORMAL,
          "choice_count": 3, "combat_choice_count": 3, "non_combat": ()},
-        {"depth": 3, "tier": unreal.FantasyEncounterTier.NORMAL,
+        {"depth": 3, "tier": unreal.FantasyEncounterTier.ELITE,
          "choice_count": 3, "combat_choice_count": 2, "non_combat": (
              (f"{prefix}D3_Chest", "遗失宝箱", "打开一枚封印锁扣。",
               unreal.FantasyRouteNodeType.TREASURE, "AncientChest", 1.0),
@@ -2819,23 +3252,31 @@ def main():
     )
     knight_starter_copy_count = sum(spec["copies"] for spec in PLAYER_CARD_SPECS)
     mage_starter_copy_count = sum(spec["copies"] for spec in MAGE_CARD_SPECS)
+    ranger_starter_copy_count = sum(spec["copies"] for spec in RANGER_CARD_SPECS)
+    nun_starter_copy_count = sum(spec["copies"] for spec in NUN_CARD_SPECS)
     knight_reward_count = sum(
         1 for spec in PLAYER_REWARD_CARD_SPECS
         if spec.get("reward_eligible", False)
     )
-    mage_reward_count = sum(
-        1 for spec in MAGE_REWARD_CARD_SPECS
-        if spec.get("reward_eligible", False)
-    )
+    reward_counts_by_profession = {
+        profession: sum(1 for spec in CARD_SPECS
+                        if spec.get("reward_eligible", False)
+                        and spec.get("profession") == profession)
+        for profession in (unreal.FantasyPlayerProfession.KNIGHT,
+                           unreal.FantasyPlayerProfession.MAGE,
+                           unreal.FantasyPlayerProfession.RANGER,
+                           unreal.FantasyPlayerProfession.NUN)
+    }
+    mage_reward_count = reward_counts_by_profession[unreal.FantasyPlayerProfession.MAGE]
     unreal.log(
         "W01_CARD_PROGRESSION_SETUP_COMPLETE "
         f"definitions={len(CARD_SPECS)} rewards={reward_count}"
     )
     unreal.log(
         "W01_CLASSIC_PLAYER_CARD_SETUP_COMPLETE "
-        f"professions=2 starter_definitions="
-        f"{len(PLAYER_CARD_SPECS) + len(MAGE_CARD_SPECS)} "
-        f"starter_copies={knight_starter_copy_count + mage_starter_copy_count} "
+        f"professions=4 starter_definitions="
+        f"{len(PLAYER_CARD_SPECS) + len(MAGE_CARD_SPECS) + len(RANGER_CARD_SPECS) + len(NUN_CARD_SPECS)} "
+        f"starter_copies={knight_starter_copy_count + mage_starter_copy_count + ranger_starter_copy_count + nun_starter_copy_count} "
         f"rewards={reward_count} "
         "evidence=verified-names copies=project-tuned"
     )
@@ -2849,6 +3290,16 @@ def main():
         "W01_KNIGHT_CARD_SETUP_COMPLETE "
         f"starter_definitions={len(PLAYER_CARD_SPECS)} "
         f"starter_copies={knight_starter_copy_count} rewards={knight_reward_count}"
+    )
+    unreal.log(
+        "W01_RANGER_CARD_SETUP_COMPLETE "
+        f"starter_definitions={len(RANGER_CARD_SPECS)} starter_copies={ranger_starter_copy_count} "
+        f"rewards={reward_counts_by_profession[unreal.FantasyPlayerProfession.RANGER]} archetypes=3"
+    )
+    unreal.log(
+        "W01_NUN_CARD_SETUP_COMPLETE "
+        f"starter_definitions={len(NUN_CARD_SPECS)} starter_copies={nun_starter_copy_count} "
+        f"rewards={reward_counts_by_profession[unreal.FantasyPlayerProfession.NUN]} archetypes=3"
     )
 
     for blessing_spec in BLESSING_SPECS:
@@ -2889,7 +3340,7 @@ def main():
     unreal.log(
         "W01_CONTENT_CONTRACT_SETUP_COMPLETE "
         f"cards={len(CARD_SPECS)} enemies={len(ENEMY_SPECS)} "
-        "normal=14 elite=2 boss=4 upgrade_rule=single-level"
+        "normal=34 elite=10 boss=6 upgrade_rule=single-level"
     )
 
     # Definitions above are saved at their point of mutation. Avoid recursively
