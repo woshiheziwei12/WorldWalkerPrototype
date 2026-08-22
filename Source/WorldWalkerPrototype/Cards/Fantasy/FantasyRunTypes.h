@@ -66,6 +66,8 @@ enum class EFantasyRouteNodeType : uint8
 	EliteCombat,
 	Event,
 	Rest,
+	Shop,
+	Treasure,
 	Boss
 };
 /** A visible route choice. PayloadId resolves to an enemy or event definition. */

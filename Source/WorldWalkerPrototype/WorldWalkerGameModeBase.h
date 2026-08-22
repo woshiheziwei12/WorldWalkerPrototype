@@ -20,10 +20,12 @@ class UCardCombatComponent;
 class UCardDefinition;
 class UFantasyEnemyDefinition;
 class UFantasyEnemyDeckRuntime;
+class UFantasyBlessingDefinition;
 class UFantasyCardProgressionSubsystem;
 class UTexture2D;
 struct FFantasyEnemyIntentStep;
 enum class EFantasyMechanicTrigger : uint8;
+enum class EFantasyBlessingTrigger : uint8;
 class UWorldDefinition;
 
 UCLASS()
@@ -101,6 +103,13 @@ private:
 		int32 ActualDamage = 0,
 		int32 TargetBlockBefore = 0);
 	void ExecuteEnemyMechanicEffects(const TArray<FFantasyCombatEffectSpec>& Effects);
+	void LoadBlessingDefinitions();
+	UFantasyBlessingDefinition* SelectAvailableBlessing(FName StreamName);
+	void DispatchPlayerBlessings(
+		EFantasyBlessingTrigger Trigger,
+		const UCardDefinition* SourceCard = nullptr,
+		int32 ActualDamage = 0);
+	void ExecutePlayerBlessingEffects(const TArray<FFantasyCombatEffectSpec>& Effects);
 	bool TryTriggerEnemyDefeatPassive();
 	void RestoreRunHealthToPlayer();
 	void SyncRunHealthFromPlayer();
@@ -157,6 +166,15 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UCardDefinition>> PendingRewardChoices;
 
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UCardDefinition>> PendingShopCards;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCardDefinition> PendingTreasureCard;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UFantasyBlessingDefinition> PendingEventBlessing;
+
 	FTimerHandle EnemyTurnTimer;
 	FTimerHandle M0RunAutomationTimer;
 	TArray<FString> CurrentEnemyTurnCardNames;
@@ -169,7 +187,11 @@ private:
 	TMap<FName, int32> MechanicTurnTriggerCounts;
 	TMap<FName, int32> MechanicBattleTriggerCounts;
 	TMap<FName, int32> MechanicSuppressedTurns;
+	TMap<FName, TObjectPtr<UFantasyBlessingDefinition>> BlessingDefinitions;
+	TMap<FName, int32> BlessingBattleTriggerCounts;
 	FName CurrentEventId;
+	FString PendingEventFeedback;
+	int32 PendingEventChoiceCount = 0;
 	bool bEnemyDefeatPassiveConsumed = false;
 	bool bEnemyReactivePassiveTriggered = false;
 	bool bM0RunAutomationEnabled = false;

@@ -4,12 +4,14 @@
 #include "Characters/WorldWalkerEnemy.h"
 #include "Cards/CardCombatComponent.h"
 #include "Cards/CardDefinition.h"
+#include "Cards/Fantasy/FantasyBlessingDefinition.h"
 #include "Cards/Fantasy/FantasyCardProgressionSubsystem.h"
 #include "Cards/Fantasy/FantasyEnemyDeckRuntime.h"
 #include "Cards/Fantasy/FantasyEnemyDefinition.h"
 #include "CollisionQueryParams.h"
 #include "Combat/CombatantComponent.h"
 #include "Engine/Texture2D.h"
+#include "Engine/AssetManager.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -58,6 +60,18 @@ namespace
 		case ECardType::Counter: return EFantasyAudioCue::Counter;
 		case ECardType::Action:
 		default: return EFantasyAudioCue::Defense;
+		}
+	}
+
+	int32 GetCardShopPrice(const UCardDefinition* Card)
+	{
+		if (!Card) return 0;
+		switch (Card->Rarity)
+		{
+		case EFantasyCardRarity::Rare: return 85;
+		case EFantasyCardRarity::Uncommon: return 65;
+		case EFantasyCardRarity::Common:
+		default: return 45;
 		}
 	}
 }
@@ -336,8 +350,24 @@ void AWorldWalkerGameModeBase::HandleM0RunAutomationStep()
 		return;
 
 	case EFantasyRunFlowState::EventChoice:
-		// Choice 0 always restores health or is otherwise the safest deterministic branch.
-		HandleEventSelection(0);
+		if (CurrentEventId == TEXT("WanderingMerchant"))
+		{
+			for (int32 Index = 0; Index < PendingShopCards.Num(); ++Index)
+			{
+				if (PendingShopCards[Index]
+					&& Progression->GetGold() >= GetCardShopPrice(PendingShopCards[Index]))
+				{
+					HandleEventSelection(Index);
+					return;
+				}
+			}
+			HandleEventSelection(PendingEventChoiceCount - 1);
+		}
+		else
+		{
+			// Choice 0 restores health, takes treasure gold, or is the safest branch.
+			HandleEventSelection(0);
+		}
 		return;
 
 	case EFantasyRunFlowState::Exploration:
@@ -801,7 +831,7 @@ void AWorldWalkerGameModeBase::ResumeOrPresentFantasyRun()
 		if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
 		{
 			Controller->ShowNodeResolution(
-				TEXT("你已完成灰烬章节。可继续探索世界，或从返回门回到主世界。"),
+				TEXT("你已完成三章十八层旅途。可继续探索世界，或从返回门回到主世界。"),
 				true);
 		}
 		return;
@@ -847,6 +877,14 @@ void AWorldWalkerGameModeBase::PresentRouteChoices()
 		case EFantasyRouteNodeType::Rest:
 			TypeLabel = TEXT("休整");
 			ChoiceColor = FLinearColor(0.12f, 0.72f, 0.36f, 1.0f);
+			break;
+		case EFantasyRouteNodeType::Shop:
+			TypeLabel = TEXT("商店");
+			ChoiceColor = FLinearColor(0.86f, 0.57f, 0.09f, 1.0f);
+			break;
+		case EFantasyRouteNodeType::Treasure:
+			TypeLabel = TEXT("宝箱");
+			ChoiceColor = FLinearColor(0.10f, 0.72f, 0.78f, 1.0f);
 			break;
 		case EFantasyRouteNodeType::Boss:
 			TypeLabel = TEXT("守关战");
@@ -1075,7 +1113,63 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 		&& Progression->GetSelectedProfession() == EFantasyPlayerProfession::Mage;
 	const FString GiftCardName = bMage ? TEXT("风之石") : TEXT("迅捷攻击");
 	const FString SmithCardName = bMage ? TEXT("冰盾") : TEXT("绝对防御");
-	if (EventId == TEXT("MoonlitWell"))
+	const bool bNewEvent = CurrentEventId != EventId;
+	if (bNewEvent)
+	{
+		PendingShopCards.Reset();
+		PendingTreasureCard = nullptr;
+		PendingEventBlessing = nullptr;
+		PendingEventFeedback.Reset();
+	}
+	if (EventId == TEXT("WanderingMerchant"))
+	{
+		Title = TEXT("夜路商队");
+		Lore = FString::Printf(TEXT("车灯下摆着卡牌、药剂与封蜡圣徽。当前金币：%d。"),
+			Progression ? Progression->GetGold() : 0);
+		if (PendingShopCards.IsEmpty() && ActiveCardCombat)
+		{
+			for (UCardDefinition* Card : ActiveCardCombat->BuildRewardChoices(5))
+			{
+				PendingShopCards.Add(Card);
+			}
+			while (PendingShopCards.Num() < 5) PendingShopCards.Add(nullptr);
+		}
+		if (!PendingEventBlessing) PendingEventBlessing = SelectAvailableBlessing(TEXT("ShopBlessing"));
+		for (const UCardDefinition* Card : PendingShopCards)
+		{
+			Choices.Add(Card
+				? FString::Printf(TEXT("购买【%s】（%d 金币）"), *Card->DisplayName.ToString(), GetCardShopPrice(Card))
+				: TEXT("该卡牌已售出"));
+		}
+		const int32 DeletePrice = 60 + (Progression ? Progression->GetDeletionCount() * 20 : 0);
+		Choices.Add(FString::Printf(TEXT("删除 1 张基础攻击（%d 金币）"), DeletePrice));
+		Choices.Add(TEXT("恢复 25 点生命（35 金币）"));
+		Choices.Add(PendingEventBlessing
+			? FString::Printf(TEXT("购买祝福【%s】（%d 金币）"),
+				*PendingEventBlessing->DisplayName.ToString(), PendingEventBlessing->ShopPrice)
+			: TEXT("祝福已售罄"));
+		Choices.Add(TEXT("离开商店（不消费）"));
+	}
+	else if (EventId == TEXT("AncientChest"))
+	{
+		Title = TEXT("封印宝箱");
+		Lore = TEXT("三枚锁扣只能开启一枚：金币、祝福或一张旅途卡牌。");
+		if (bNewEvent && ActiveCardCombat)
+		{
+			const TArray<UCardDefinition*> Cards = ActiveCardCombat->BuildRewardChoices(1);
+			PendingTreasureCard = Cards.IsEmpty() ? nullptr : Cards[0];
+			PendingEventBlessing = SelectAvailableBlessing(TEXT("TreasureBlessing"));
+		}
+		Choices = {
+			TEXT("开启金币锁：获得 45 金币"),
+			PendingEventBlessing
+				? FString::Printf(TEXT("开启圣徽锁：获得【%s】"), *PendingEventBlessing->DisplayName.ToString())
+				: TEXT("开启圣徽锁：转化为 30 金币"),
+			PendingTreasureCard
+				? FString::Printf(TEXT("开启卡牌锁：获得【%s】"), *PendingTreasureCard->DisplayName.ToString())
+				: TEXT("开启卡牌锁：转化为 30 金币")};
+	}
+	else if (EventId == TEXT("MoonlitWell"))
 	{
 		Title = TEXT("月下古井");
 		Lore = TEXT("井水映出了三个不同的你。每一道倒影都会永久改变本次旅途。");
@@ -1104,26 +1198,32 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 	}
 
 	CurrentEventId = EventId;
+	PendingEventChoiceCount = Choices.Num();
 	FantasyRunFlowState = EFantasyRunFlowState::EventChoice;
 	ActivePlayer->SetCombatLocked(false);
 	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
 	{
 		Controller->ExitCombatToExploration(FString::Printf(
-			TEXT("%s\n%s\n走入一枚符文，直接刻下选择。"),
+			TEXT("%s\n%s%s\n走入一枚符文，直接刻下选择。"),
 			*Title,
-			*Lore));
+			*Lore,
+			PendingEventFeedback.IsEmpty()
+				? TEXT("")
+				: *FString::Printf(TEXT("\n上次交易：%s"), *PendingEventFeedback)));
 	}
 	TArray<FText> ChoiceTitles;
 	TArray<FText> ChoiceDescriptions;
-	const TArray<FLinearColor> ChoiceColors = {
+	const TArray<FLinearColor> Palette = {
 		FLinearColor(0.78f, 0.18f, 0.08f, 1.0f),
 		FLinearColor(0.86f, 0.57f, 0.09f, 1.0f),
 		FLinearColor(0.16f, 0.48f, 0.92f, 1.0f)};
+	TArray<FLinearColor> ChoiceColors;
 	for (int32 ChoiceIndex = 0; ChoiceIndex < Choices.Num(); ++ChoiceIndex)
 	{
 		ChoiceTitles.Add(FText::FromString(FString::Printf(
 			TEXT("选择 %d"), ChoiceIndex + 1)));
 		ChoiceDescriptions.Add(FText::FromString(Choices[ChoiceIndex]));
+		ChoiceColors.Add(Palette[ChoiceIndex % Palette.Num()]);
 	}
 	SpawnWorldChoices(true, ChoiceTitles, ChoiceDescriptions, ChoiceColors);
 	if (Progression)
@@ -1141,7 +1241,7 @@ void AWorldWalkerGameModeBase::PresentEventChoices(const FName EventId)
 void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 {
 	if (FantasyRunFlowState != EFantasyRunFlowState::EventChoice || !ActivePlayer
-		|| ChoiceIndex < 0 || ChoiceIndex > 2)
+		|| ChoiceIndex < 0 || ChoiceIndex >= PendingEventChoiceCount)
 	{
 		return;
 	}
@@ -1177,7 +1277,132 @@ void AWorldWalkerGameModeBase::HandleEventSelection(const int32 ChoiceIndex)
 	const TCHAR* GiftCardName = bMage ? TEXT("风之石") : TEXT("迅捷攻击");
 	const TCHAR* SmithCardName = bMage ? TEXT("冰盾") : TEXT("绝对防御");
 
-	if (CurrentEventId == TEXT("MoonlitWell"))
+	if (CurrentEventId == TEXT("WanderingMerchant"))
+	{
+		bool bLeaveShop = ChoiceIndex == PendingEventChoiceCount - 1;
+		if (PendingShopCards.IsValidIndex(ChoiceIndex))
+		{
+			UCardDefinition* Card = PendingShopCards[ChoiceIndex];
+			const int32 Price = GetCardShopPrice(Card);
+			if (!Card)
+			{
+				Result = TEXT("这个货位已经空了。");
+			}
+			else if (!Progression || Progression->GetGold() < Price)
+			{
+				Result = TEXT("金币不足，商人把卡牌收回了绒布下。");
+			}
+			else if (ActiveCardCombat && ActiveCardCombat->GrantRunCard(Card)
+				&& Progression->SpendGold(Price))
+			{
+				PendingShopCards[ChoiceIndex] = nullptr;
+				Result = FString::Printf(TEXT("花费 %d 金币购买【%s】。"), Price, *Card->DisplayName.ToString());
+			}
+			else
+			{
+				Result = TEXT("交易未能完成，金币没有扣除。");
+			}
+		}
+		else if (ChoiceIndex == 5)
+		{
+			const int32 Price = 60 + (Progression ? Progression->GetDeletionCount() * 20 : 0);
+			if (!Progression || Progression->GetGold() < Price)
+			{
+				Result = TEXT("金币不足，无法支付删牌费用。");
+			}
+			else if (ActiveCardCombat && ActiveCardCombat->RemoveCardFromRun(BasicAttackId)
+				&& Progression->SpendGold(Price))
+			{
+				Result = FString::Printf(TEXT("花费 %d 金币移除一张基础攻击。"), Price);
+			}
+			else
+			{
+				Result = TEXT("没有可删除的基础攻击，金币没有扣除。");
+			}
+		}
+		else if (ChoiceIndex == 6)
+		{
+			if (!Progression || Progression->GetGold() < 35)
+			{
+				Result = TEXT("金币不足，无法购买恢复。");
+			}
+			else if (PlayerCombatant->GetCurrentHealth() >= PlayerCombatant->GetMaxHealth())
+			{
+				Result = TEXT("生命已满，无需购买恢复。");
+			}
+			else if (Progression->SpendGold(35))
+			{
+				PlayerCombatant->RestoreHealth(25);
+				Result = TEXT("花费 35 金币，恢复 25 点生命。");
+			}
+		}
+		else if (ChoiceIndex == 7)
+		{
+			if (!PendingEventBlessing)
+			{
+				Result = TEXT("本次旅途可获得的祝福已经售罄。");
+			}
+			else if (!Progression || Progression->GetGold() < PendingEventBlessing->ShopPrice)
+			{
+				Result = TEXT("金币不足，无法购买这枚祝福。");
+			}
+			else if (Progression->GrantBlessing(PendingEventBlessing->BlessingId)
+				&& Progression->SpendGold(PendingEventBlessing->ShopPrice))
+			{
+				Result = FString::Printf(TEXT("获得祝福【%s】。"), *PendingEventBlessing->DisplayName.ToString());
+				PendingEventBlessing = SelectAvailableBlessing(TEXT("ShopBlessing"));
+			}
+		}
+		else
+		{
+			Result = TEXT("你向商队点头告别，没有被强制消费。");
+			bLeaveShop = true;
+		}
+
+		if (!bLeaveShop)
+		{
+			if (Progression) Progression->RecordEventSelection(CurrentEventId, ChoiceIndex);
+			SyncRunHealthFromPlayer();
+			PendingEventFeedback = Result;
+			PresentEventChoices(CurrentEventId);
+			return;
+		}
+	}
+	else if (CurrentEventId == TEXT("AncientChest"))
+	{
+		if (ChoiceIndex == 0)
+		{
+			if (Progression) Progression->AddGold(45);
+			Result = TEXT("宝箱吐出 45 枚仍带余温的金币。");
+		}
+		else if (ChoiceIndex == 1)
+		{
+			if (Progression && PendingEventBlessing
+				&& Progression->GrantBlessing(PendingEventBlessing->BlessingId))
+			{
+				Result = FString::Printf(TEXT("获得祝福【%s】。"), *PendingEventBlessing->DisplayName.ToString());
+			}
+			else
+			{
+				if (Progression) Progression->AddGold(30);
+				Result = TEXT("圣徽锁已经空了，封印转化为 30 金币。");
+			}
+		}
+		else
+		{
+			if (PendingTreasureCard && ActiveCardCombat
+				&& ActiveCardCombat->GrantRunCard(PendingTreasureCard))
+			{
+				Result = FString::Printf(TEXT("获得卡牌【%s】。"), *PendingTreasureCard->DisplayName.ToString());
+			}
+			else
+			{
+				if (Progression) Progression->AddGold(30);
+				Result = TEXT("卡牌锁已经空了，封印转化为 30 金币。");
+			}
+		}
+	}
+	else if (CurrentEventId == TEXT("MoonlitWell"))
 	{
 		if (ChoiceIndex == 0)
 		{
@@ -1271,13 +1496,26 @@ void AWorldWalkerGameModeBase::CompleteActiveNode(const FString& ResolutionMessa
 	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
 		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
 		: nullptr;
+	const int32 ChapterBefore = Progression ? Progression->GetCurrentChapter() : 0;
 	if (!Progression || !Progression->CompleteActiveNode())
 	{
 		return;
 	}
 
 	CurrentEventId = NAME_None;
+	PendingEventChoiceCount = 0;
+	PendingEventFeedback.Reset();
+	PendingShopCards.Reset();
+	PendingTreasureCard = nullptr;
+	PendingEventBlessing = nullptr;
 	const bool bChapterComplete = Progression->IsChapterComplete();
+	FString FinalMessage = ResolutionMessage;
+	if (!bChapterComplete && Progression->GetCurrentChapter() > ChapterBefore)
+	{
+		FinalMessage += FString::Printf(
+			TEXT("\n章节过渡完成：进入第 %d 章，生命、牌组、金币与祝福全部保留。"),
+			Progression->GetCurrentChapter());
+	}
 	FantasyRunFlowState = bChapterComplete
 		? EFantasyRunFlowState::ChapterComplete
 		: EFantasyRunFlowState::Resolution;
@@ -1287,11 +1525,11 @@ void AWorldWalkerGameModeBase::CompleteActiveNode(const FString& ResolutionMessa
 	}
 	if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
 	{
-		Controller->ShowNodeResolution(ResolutionMessage, bChapterComplete);
+		Controller->ShowNodeResolution(FinalMessage, bChapterComplete);
 	}
 	if (bChapterComplete)
 	{
-		UE_LOG(LogTemp, Display, TEXT("W01_CHAPTER_COMPLETE Chapter=1"));
+		UE_LOG(LogTemp, Display, TEXT("W01_CAMPAIGN_COMPLETE Chapters=3 Depths=18"));
 	}
 }
 
@@ -1312,7 +1550,7 @@ void AWorldWalkerGameModeBase::HandleNodeResolutionContinue()
 		if (AWorldWalkerPlayerController* Controller = GetWorldWalkerController())
 		{
 			Controller->ExitCombatToExploration(
-				TEXT("灰烬章节已完成。你可以与营地居民交谈，或从右后方的门返回主世界。"));
+				TEXT("三章十八层旅途已完成。你可以与营地居民交谈，或从右后方的门返回主世界。"));
 		}
 		return;
 	}
@@ -1418,6 +1656,7 @@ void AWorldWalkerGameModeBase::StartCombat(
 	MechanicTurnTriggerCounts.Reset();
 	MechanicBattleTriggerCounts.Reset();
 	MechanicSuppressedTurns.Reset();
+	BlessingBattleTriggerCounts.Reset();
 	if (ActiveFantasyEnemyDefinition)
 	{
 		ActiveEnemy->GetCombatantComponent()->ConfigureMaxHealth(ActiveFantasyEnemyDefinition->MaxHealth);
@@ -1441,6 +1680,8 @@ void AWorldWalkerGameModeBase::StartCombat(
 		ActiveCardCombat->AddValor(InitialValor);
 	}
 	DispatchEnemyMechanics(EFantasyMechanicTrigger::BattleStarted);
+	DispatchPlayerBlessings(EFantasyBlessingTrigger::BattleStarted);
+	DispatchPlayerBlessings(EFantasyBlessingTrigger::PlayerTurnStarted);
 
 	FantasyRunFlowState = EFantasyRunFlowState::PlayerTurn;
 	ActivePlayer->SetCombatLocked(true);
@@ -1544,6 +1785,7 @@ void AWorldWalkerGameModeBase::HandlePlayCard(const int32 HandIndex)
 		}
 	}
 	ResolvePlayerCardEffects(Card);
+	DispatchPlayerBlessings(EFantasyBlessingTrigger::PlayerCardResolved, Card);
 	ActiveCardCombat->FinalizePlayedCard(Card);
 	bool bTriggeredReactivePassive = false;
 	if (!bEnemyReactivePassiveTriggered && ActiveFantasyEnemyDefinition
@@ -1643,6 +1885,7 @@ void AWorldWalkerGameModeBase::HandleEnemyTurn()
 	++CurrentEnemyTurnNumber;
 	MechanicTurnTriggerCounts.Reset();
 	DispatchEnemyMechanics(EFantasyMechanicTrigger::EnemyTurnStarted);
+	DispatchPlayerBlessings(EFantasyBlessingTrigger::EnemyTurnStarted);
 	for (auto It = MechanicSuppressedTurns.CreateIterator(); It; ++It)
 	{
 		It.Value() = FMath::Max(0, It.Value() - 1);
@@ -1789,6 +2032,7 @@ void AWorldWalkerGameModeBase::FinishEnemyTurnSequence()
 	}
 
 	ActiveCardCombat->StartPlayerTurn();
+	DispatchPlayerBlessings(EFantasyBlessingTrigger::PlayerTurnStarted);
 	bWaitingForEnemy = false;
 	FantasyRunFlowState = EFantasyRunFlowState::PlayerTurn;
 	RefreshCombatUI();
@@ -2033,6 +2277,10 @@ int32 AWorldWalkerGameModeBase::ResolveDamageAgainstPlayer(
 	const int32 HealthDamage = bPiercing
 		? Damage
 		: ActiveCardCombat->AbsorbIncomingDamage(Damage);
+	if (HealthDamage > 0)
+	{
+		DispatchPlayerBlessings(EFantasyBlessingTrigger::PlayerDamaged, nullptr, HealthDamage);
+	}
 	return HealthDamage;
 }
 
@@ -2387,6 +2635,16 @@ void AWorldWalkerGameModeBase::ExecuteEnemyMechanicEffects(
 				ActiveCardCombat->AddBlock(Effect.Magnitude);
 			}
 			break;
+		case EFantasyCombatEffectType::Heal:
+			if (Effect.Target == EFantasyCombatTarget::Self)
+			{
+				ActiveEnemy->GetCombatantComponent()->RestoreHealth(Effect.Magnitude);
+			}
+			else
+			{
+				ActivePlayer->GetCombatantComponent()->RestoreHealth(Effect.Magnitude);
+			}
+			break;
 		case EFantasyCombatEffectType::ApplyStatus:
 			(Effect.Target == EFantasyCombatTarget::Self ? EnemyFantasyState : PlayerFantasyState)
 				.AddStatus(Effect.Status, Effect.Magnitude);
@@ -2413,6 +2671,167 @@ void AWorldWalkerGameModeBase::ExecuteEnemyMechanicEffects(
 			break;
 		case EFantasyCombatEffectType::AddTemporaryCard:
 			if (Effect.Target == EFantasyCombatTarget::Opponent)
+			{
+				ActiveCardCombat->AddTemporaryCardToDiscard(
+					ActiveCardCombat->FindCardDefinition(Effect.PayloadId), Effect.Magnitude, Effect.Limit);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void AWorldWalkerGameModeBase::LoadBlessingDefinitions()
+{
+	if (!BlessingDefinitions.IsEmpty())
+	{
+		return;
+	}
+	UAssetManager& AssetManager = UAssetManager::Get();
+	const FString Root(TEXT("/Game/WorldWalker/Worlds/W01_EasternHorror/Data/Blessings"));
+	AssetManager.ScanPathsForPrimaryAssets(
+		UFantasyBlessingDefinition::PrimaryAssetType,
+		{Root},
+		UFantasyBlessingDefinition::StaticClass(),
+		false,
+		false,
+		true);
+	TArray<FPrimaryAssetId> AssetIds;
+	AssetManager.GetPrimaryAssetIdList(UFantasyBlessingDefinition::PrimaryAssetType, AssetIds);
+	for (const FPrimaryAssetId& AssetId : AssetIds)
+	{
+		UFantasyBlessingDefinition* Definition = Cast<UFantasyBlessingDefinition>(
+			AssetManager.GetPrimaryAssetPath(AssetId).TryLoad());
+		if (Definition && Definition->GetPathName().StartsWith(Root)
+			&& Definition->ValidateDefinition().IsEmpty())
+		{
+			BlessingDefinitions.Add(Definition->BlessingId, Definition);
+		}
+	}
+}
+
+UFantasyBlessingDefinition* AWorldWalkerGameModeBase::SelectAvailableBlessing(
+	const FName StreamName)
+{
+	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	if (!Progression)
+	{
+		return nullptr;
+	}
+	LoadBlessingDefinitions();
+	TArray<UFantasyBlessingDefinition*> Candidates;
+	for (const TPair<FName, TObjectPtr<UFantasyBlessingDefinition>>& Pair : BlessingDefinitions)
+	{
+		UFantasyBlessingDefinition* Definition = Pair.Value;
+		if (Definition && !Progression->GetBlessings().Contains(Definition->BlessingId)
+			&& (Definition->Profession == EFantasyPlayerProfession::None
+				|| Definition->Profession == Progression->GetSelectedProfession()))
+		{
+			Candidates.Add(Definition);
+		}
+	}
+	Candidates.Sort([](const UFantasyBlessingDefinition& Left, const UFantasyBlessingDefinition& Right)
+	{
+		return Left.BlessingId.LexicalLess(Right.BlessingId);
+	});
+	if (Candidates.IsEmpty())
+	{
+		return nullptr;
+	}
+	const int32 Seed = Progression->ConsumeDeterministicSeed(StreamName);
+	return Candidates[FMath::Abs(Seed) % Candidates.Num()];
+}
+
+void AWorldWalkerGameModeBase::DispatchPlayerBlessings(
+	const EFantasyBlessingTrigger Trigger,
+	const UCardDefinition* SourceCard,
+	const int32 ActualDamage)
+{
+	UFantasyCardProgressionSubsystem* Progression = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UFantasyCardProgressionSubsystem>()
+		: nullptr;
+	if (!Progression
+		|| (!bCombatActive && Trigger != EFantasyBlessingTrigger::RewardSkipped))
+	{
+		return;
+	}
+	LoadBlessingDefinitions();
+	for (const FName BlessingId : Progression->GetBlessings())
+	{
+		const TObjectPtr<UFantasyBlessingDefinition>* Found = BlessingDefinitions.Find(BlessingId);
+		const UFantasyBlessingDefinition* Definition = Found ? Found->Get() : nullptr;
+		if (!Definition || Definition->Trigger != Trigger
+			|| (Definition->Profession != EFantasyPlayerProfession::None
+				&& Definition->Profession != Progression->GetSelectedProfession())
+			|| (!Definition->RequiredCardTag.IsNone()
+				&& (!SourceCard || !SourceCard->BuildTags.Contains(Definition->RequiredCardTag)))
+			|| (Definition->MaxTriggersPerBattle > 0
+				&& BlessingBattleTriggerCounts.FindRef(BlessingId) >= Definition->MaxTriggersPerBattle))
+		{
+			continue;
+		}
+
+		++BlessingBattleTriggerCounts.FindOrAdd(BlessingId);
+		ExecutePlayerBlessingEffects(Definition->Effects);
+		Progression->LogStructuredEvent(
+			TEXT("BlessingTriggered"),
+			{{TEXT("blessingId"), BlessingId.ToString()}},
+			{{TEXT("turn"), CurrentEnemyTurnNumber}, {TEXT("actualDamage"), ActualDamage}});
+	}
+}
+
+void AWorldWalkerGameModeBase::ExecutePlayerBlessingEffects(
+	const TArray<FFantasyCombatEffectSpec>& Effects)
+{
+	if (!ActivePlayer || !ActiveCardCombat)
+	{
+		return;
+	}
+	for (const FFantasyCombatEffectSpec& Effect : Effects)
+	{
+		switch (Effect.EffectType)
+		{
+		case EFantasyCombatEffectType::Damage:
+			if (Effect.Target == EFantasyCombatTarget::Opponent && ActiveEnemy)
+			{
+				ActiveEnemy->GetCombatantComponent()->ReceiveDamage(
+					ResolveDamageAgainstEnemy(Effect.Magnitude, false, false, Effect.bPiercing));
+			}
+			break;
+		case EFantasyCombatEffectType::Block:
+			if (Effect.Target == EFantasyCombatTarget::Self) ActiveCardCombat->AddBlock(Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::Heal:
+			if (Effect.Target == EFantasyCombatTarget::Self)
+			{
+				ActivePlayer->GetCombatantComponent()->RestoreHealth(Effect.Magnitude);
+			}
+			break;
+		case EFantasyCombatEffectType::Draw:
+			if (Effect.Target == EFantasyCombatTarget::Self) ActiveCardCombat->DrawCards(Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::ApplyStatus:
+			(Effect.Target == EFantasyCombatTarget::Self ? PlayerFantasyState : EnemyFantasyState)
+				.AddStatus(Effect.Status, Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::RemoveStatus:
+			(Effect.Target == EFantasyCombatTarget::Self ? PlayerFantasyState : EnemyFantasyState)
+				.RemoveStatus(Effect.Status, Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::GainValor:
+			if (Effect.Target == EFantasyCombatTarget::Self) ActiveCardCombat->AddValor(Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::GainAction:
+			if (Effect.Target == EFantasyCombatTarget::Self) ActiveCardCombat->AddActionPoints(Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::GainMana:
+			if (Effect.Target == EFantasyCombatTarget::Self) ActiveCardCombat->AddMana(Effect.Magnitude);
+			break;
+		case EFantasyCombatEffectType::AddTemporaryCard:
+			if (Effect.Target == EFantasyCombatTarget::Self)
 			{
 				ActiveCardCombat->AddTemporaryCardToDiscard(
 					ActiveCardCombat->FindCardDefinition(Effect.PayloadId), Effect.Magnitude, Effect.Limit);
@@ -2600,6 +3019,20 @@ void AWorldWalkerGameModeBase::FinishCombat(const bool bPlayerWon)
 	else if (Progression)
 	{
 		Progression->RecordEnemyDefeated(EnemyId);
+		const EFantasyEncounterTier Tier = ActiveFantasyEnemyDefinition
+			? ActiveFantasyEnemyDefinition->EncounterTier
+			: EFantasyEncounterTier::Normal;
+		const int32 GoldReward = Tier == EFantasyEncounterTier::Boss
+			? 45
+			: Tier == EFantasyEncounterTier::Elite ? 30 : 18;
+		Progression->AddGold(GoldReward);
+		if (Tier == EFantasyEncounterTier::Boss)
+		{
+			if (UFantasyBlessingDefinition* Blessing = SelectAvailableBlessing(TEXT("BossBlessing")))
+			{
+				Progression->GrantBlessing(Blessing->BlessingId);
+			}
+		}
 	}
 
 	if (bPlayerWon && ActiveEnemy)
@@ -2769,7 +3202,9 @@ void AWorldWalkerGameModeBase::HandleRewardSkip()
 		: nullptr)
 	{
 		Progression->RecordRewardSelection(NAME_None, true, INDEX_NONE);
+		Progression->AddGold(8);
 	}
+	DispatchPlayerBlessings(EFantasyBlessingTrigger::RewardSkipped);
 }
 
 void AWorldWalkerGameModeBase::HandleReturnToExploration()

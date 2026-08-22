@@ -197,7 +197,7 @@ bool FFantasyM2MageArchetypeTest::RunTest(const FString& Parameters)
 					Upgrade->BuildRulesText(), Card->BuildRulesText());
 			}
 		}
-		TestEqual(*FString::Printf(TEXT("Exactly three base cards for %s"), *Archetype.ToString()), BaseCount, 3);
+		TestEqual(*FString::Printf(TEXT("Exactly six base cards for %s"), *Archetype.ToString()), BaseCount, 6);
 	}
 	return true;
 }

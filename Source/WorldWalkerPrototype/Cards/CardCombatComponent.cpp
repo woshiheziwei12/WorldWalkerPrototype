@@ -373,6 +373,26 @@ TArray<UCardDefinition*> UCardCombatComponent::BuildRewardChoices(const int32 Ch
 		: FMath::Rand());
 	ShuffleCards(RewardPool, RewardRandomStream);
 	TArray<UCardDefinition*> Choices;
+	TSet<FName> DeckArchetypes;
+	for (const UCardDefinition* DeckCard : StartingDeck)
+	{
+		if (!DeckCard) continue;
+		for (const FName Tag : DeckCard->BuildTags)
+		{
+			if (Tag.ToString().StartsWith(TEXT("Archetype."))) DeckArchetypes.Add(Tag);
+		}
+	}
+	const int32 SynergyIndex = RewardPool.IndexOfByPredicate(
+		[&DeckArchetypes](const UCardDefinition* Candidate)
+		{
+			return Candidate && Candidate->BuildTags.ContainsByPredicate(
+				[&DeckArchetypes](const FName Tag) { return DeckArchetypes.Contains(Tag); });
+		});
+	if (SafeChoiceCount > 0 && RewardPool.IsValidIndex(SynergyIndex))
+	{
+		Choices.Add(RewardPool[SynergyIndex]);
+		RewardPool.RemoveAtSwap(SynergyIndex, EAllowShrinking::No);
+	}
 	while (Choices.Num() < SafeChoiceCount && !RewardPool.IsEmpty())
 	{
 		Choices.Add(RewardPool.Pop(EAllowShrinking::No));

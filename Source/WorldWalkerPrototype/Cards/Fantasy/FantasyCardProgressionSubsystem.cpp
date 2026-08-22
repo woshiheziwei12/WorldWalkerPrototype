@@ -10,7 +10,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M2-v1"));
+const FString UFantasyCardProgressionSubsystem::DefaultContentVersion(TEXT("W01-M3-v1"));
 
 namespace
 {
@@ -634,10 +634,11 @@ bool UFantasyCardProgressionSubsystem::GrantBlessing(const FName BlessingId)
 FString UFantasyCardProgressionSubsystem::BuildRunSummary() const
 {
 	return FString::Printf(
-		TEXT("经典第一章 · %s · %s · 路程 %d/6 · 生命 %d/%d · 金币 %d · 获得 %d 张 · 移除 %d 张 · 祝福 %d"),
+		TEXT("经典旅途 · %s · %s · 第 %d 章 · 总路程 %d/18 · 生命 %d/%d · 金币 %d · 获得 %d 张 · 移除 %d 张 · 祝福 %d"),
 		*GetProfessionDisplayName(),
 		*GetDifficultyName(),
-		FMath::Clamp(ChapterDepth + 1, 1, GetTotalRouteDepths()),
+		CurrentChapter,
+		FMath::Clamp(GetGlobalDepth() + 1, 1, 18),
 		CurrentRunHealth,
 		RunMaxHealth,
 		Gold,

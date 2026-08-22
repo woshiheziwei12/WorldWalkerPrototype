@@ -91,6 +91,8 @@ public:
 	bool HasActiveNode() const { return bHasActiveNode; }
 	const FFantasyRouteNodeChoice& GetActiveNode() const { return ActiveNode; }
 	int32 GetChapterDepth() const { return ChapterDepth; }
+	int32 GetCurrentChapter() const { return CurrentChapter; }
+	int32 GetGlobalDepth() const { return (CurrentChapter - 1) * 6 + ChapterDepth; }
 	int32 GetTotalRouteDepths() const;
 	bool IsChapterComplete() const { return bChapterComplete; }
 	void AddPendingBattleBoon(int32 Block, int32 Valor);

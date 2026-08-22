@@ -41,6 +41,7 @@ W01_ROOT = "/Game/WorldWalker/Worlds/W01_EasternHorror"
 W01_CARD_ROOT = f"{W01_ROOT}/Data/Cards"
 W01_ENEMY_ROOT = f"{W01_ROOT}/Data/Enemies"
 W01_CHAPTER_ROOT = f"{W01_ROOT}/Data/Encounters"
+W01_BLESSING_ROOT = f"{W01_ROOT}/Data/Blessings"
 W01_CARD_ART_ROOT = (
     f"{W01_ROOT}/ThirdParty/Zonked/FantasyActionIcons/Cards"
 )
@@ -1181,6 +1182,193 @@ M2_MAGE_CARD_SPECS = (
 )
 
 
+def _mage_upgrade_pair(
+    stem,
+    display_name,
+    archetype,
+    card_type,
+    base_effects,
+    upgrade_effects,
+    *,
+    mana_cost=0,
+    action_cost=0,
+    artwork="T_Card_ArcaneSpark",
+    extra_tags=(),
+):
+    card_id = f"Mage_{stem}"
+    upgrade_id = f"{card_id}Plus"
+    tags = (f"Archetype.{archetype}",) + tuple(extra_tags)
+    return (
+        _card(
+            f"DA_Card_Mage{stem}", card_id, display_name, card_type,
+            tuple(base_effects), artwork,
+            f"【M3 {archetype} 构筑】十八层旅途核心牌。",
+            reward_eligible=True, mana_cost=mana_cost, action_cost=action_cost,
+            profession=unreal.FantasyPlayerProfession.MAGE,
+            school=unreal.CardSchool.ARCANE,
+            upgrade_card_id=upgrade_id, build_tags=tags,
+        ),
+        _card(
+            f"DA_Card_Mage{stem}Plus", upgrade_id, f"{display_name}+", card_type,
+            tuple(upgrade_effects), artwork,
+            f"【M3 {archetype} 升级】十八层旅途唯一升级。",
+            mana_cost=mana_cost, action_cost=action_cost,
+            profession=unreal.FantasyPlayerProfession.MAGE,
+            school=unreal.CardSchool.ARCANE, upgrade_level=1, build_tags=tags,
+        ),
+    )
+
+
+M3_MAGE_CARD_SPECS = sum((
+    _mage_upgrade_pair(
+        "CinderWard", "余烬护壁", "Fire", unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.BURNING),
+         _effect(unreal.FantasyCombatEffectType.BLOCK, 6,
+                 unreal.FantasyCombatTarget.SELF)),
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.BURNING),
+         _effect(unreal.FantasyCombatEffectType.BLOCK, 8,
+                 unreal.FantasyCombatTarget.SELF)),
+        mana_cost=2, artwork="T_Card_KiteShieldGuard", extra_tags=("Element.Fire",),
+    ),
+    _mage_upgrade_pair(
+        "InfernoPulse", "烈焰脉冲", "Fire", unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 6),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.BURNING)),
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE, 8),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 4,
+                 status=unreal.FantasyCombatStatus.BURNING)),
+        mana_cost=3, extra_tags=("Element.Fire",),
+    ),
+    _mage_upgrade_pair(
+        "PhoenixRite", "凤凰仪式", "Fire", unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_DAMAGE, 0,
+                 status=unreal.FantasyCombatStatus.BURNING, multiplier=3),
+         _effect(unreal.FantasyCombatEffectType.HEAL, 6,
+                 unreal.FantasyCombatTarget.SELF)),
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_DAMAGE, 0,
+                 status=unreal.FantasyCombatStatus.BURNING, multiplier=4),
+         _effect(unreal.FantasyCombatEffectType.HEAL, 8,
+                 unreal.FantasyCombatTarget.SELF)),
+        mana_cost=4, extra_tags=("Element.Fire",),
+    ),
+    _mage_upgrade_pair(
+        "Snowblind", "雪盲", "Frost", unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.CHILL),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                 status=unreal.FantasyCombatStatus.WEAK)),
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 4,
+                 status=unreal.FantasyCombatStatus.CHILL),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.WEAK)),
+        mana_cost=2,
+    ),
+    _mage_upgrade_pair(
+        "FrozenRampart", "冻结壁垒", "Frost", unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.CHILL),
+         _effect(unreal.FantasyCombatEffectType.BLOCK, 10,
+                 unreal.FantasyCombatTarget.SELF)),
+        (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 3,
+                 status=unreal.FantasyCombatStatus.CHILL),
+         _effect(unreal.FantasyCombatEffectType.BLOCK, 13,
+                 unreal.FantasyCombatTarget.SELF)),
+        mana_cost=3, artwork="T_Card_KiteShieldGuard",
+    ),
+    _mage_upgrade_pair(
+        "AbsoluteZero", "绝对零度", "Frost", unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_DAMAGE, 0,
+                 status=unreal.FantasyCombatStatus.CHILL, multiplier=2),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                 status=unreal.FantasyCombatStatus.WEAK)),
+        (_effect(unreal.FantasyCombatEffectType.CONSUME_STATUS_FOR_DAMAGE, 0,
+                 status=unreal.FantasyCombatStatus.CHILL, multiplier=3),
+         _effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+                 status=unreal.FantasyCombatStatus.WEAK)),
+        mana_cost=3,
+    ),
+    _mage_upgrade_pair(
+        "ManaVault", "法力秘库", "Arcane", unreal.CardType.MANA,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 8,
+                 unreal.FantasyCombatTarget.SELF),),
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 11,
+                 unreal.FantasyCombatTarget.SELF),),
+    ),
+    _mage_upgrade_pair(
+        "AstralDraw", "星界牵引", "Arcane", unreal.CardType.ACTION,
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 2,
+                 unreal.FantasyCombatTarget.SELF),
+         _effect(unreal.FantasyCombatEffectType.DRAW, 3,
+                 unreal.FantasyCombatTarget.SELF)),
+        (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 3,
+                 unreal.FantasyCombatTarget.SELF),
+         _effect(unreal.FantasyCombatEffectType.DRAW, 4,
+                 unreal.FantasyCombatTarget.SELF)),
+        action_cost=1, artwork="T_Card_ReadOpening",
+    ),
+    _mage_upgrade_pair(
+        "Starfall", "星陨术", "Arcane", unreal.CardType.SPELL,
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE_PER_MANA, 8, multiplier=2),),
+        (_effect(unreal.FantasyCombatEffectType.DAMAGE_PER_MANA, 10, multiplier=3),),
+        mana_cost=4,
+    ),
+), ())
+
+
+BLESSING_SPECS = (
+    ("IronWill", "钢铁意志", "每场战斗开始时获得 8 格挡。", None,
+     unreal.FantasyBlessingTrigger.BATTLE_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.BLOCK, 8,
+              unreal.FantasyCombatTarget.SELF),), "", 1, 85),
+    ("QuickHands", "迅捷之手", "每场战斗开始时额外抽 1 张牌。", None,
+     unreal.FantasyBlessingTrigger.BATTLE_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.DRAW, 1,
+              unreal.FantasyCombatTarget.SELF),), "", 1, 95),
+    ("SecondWind", "第二阵风", "每场战斗开始时恢复 6 点生命。", None,
+     unreal.FantasyBlessingTrigger.BATTLE_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.HEAL, 6,
+              unreal.FantasyCombatTarget.SELF),), "", 1, 80),
+    ("ThornWard", "荆棘守护", "每场战斗前三次受到生命伤害时反击 2 点。", None,
+     unreal.FantasyBlessingTrigger.PLAYER_DAMAGED,
+     (_effect(unreal.FantasyCombatEffectType.DAMAGE, 2),), "", 3, 90),
+    ("BattleRhythm", "战斗节奏", "每个玩家回合额外获得 1 行动力。", None,
+     unreal.FantasyBlessingTrigger.PLAYER_TURN_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.GAIN_ACTION, 1,
+              unreal.FantasyCombatTarget.SELF),), "", 0, 100),
+    ("MercyOfRoad", "旅途仁慈", "跳过战利品时恢复 5 点生命。", None,
+     unreal.FantasyBlessingTrigger.REWARD_SKIPPED,
+     (_effect(unreal.FantasyCombatEffectType.HEAL, 5,
+              unreal.FantasyCombatTarget.SELF),), "", 0, 75),
+    ("MageKindling", "余烬火种", "每次打出火焰牌额外施加 1 层燃烧。", "Mage",
+     unreal.FantasyBlessingTrigger.PLAYER_CARD_RESOLVED,
+     (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+              status=unreal.FantasyCombatStatus.BURNING),), "Element.Fire", 6, 100),
+    ("MageWinterVeil", "冬幕", "每次打出冰霜牌获得 3 格挡。", "Mage",
+     unreal.FantasyBlessingTrigger.PLAYER_CARD_RESOLVED,
+     (_effect(unreal.FantasyCombatEffectType.BLOCK, 3,
+              unreal.FantasyCombatTarget.SELF),), "Archetype.Frost", 6, 100),
+    ("MageArcaneReserve", "奥术储备", "每场战斗开始时获得 5 法力。", "Mage",
+     unreal.FantasyBlessingTrigger.BATTLE_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.GAIN_MANA, 5,
+              unreal.FantasyCombatTarget.SELF),), "", 1, 100),
+    ("MageLivingSpellbook", "活体法典", "每个玩家回合额外抽 1 张牌。", "Mage",
+     unreal.FantasyBlessingTrigger.PLAYER_TURN_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.DRAW, 1,
+              unreal.FantasyCombatTarget.SELF),), "", 0, 110),
+    ("MageColdSnap", "骤寒", "每场战斗开始时施加 2 层寒冷。", "Mage",
+     unreal.FantasyBlessingTrigger.BATTLE_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 2,
+              status=unreal.FantasyCombatStatus.CHILL),), "", 1, 90),
+    ("MageManaWard", "法力护幕", "每个敌方回合开始时获得 4 格挡。", "Mage",
+     unreal.FantasyBlessingTrigger.ENEMY_TURN_STARTED,
+     (_effect(unreal.FantasyCombatEffectType.BLOCK, 4,
+              unreal.FantasyCombatTarget.SELF),), "", 0, 105),
+)
+
+
 ENEMY_CARD_SPECS = (
     _card(
         "DA_EnemyCard_ClawStrike", "Enemy_ClawStrike", "爪击",
@@ -1486,7 +1674,8 @@ CARD_SPECS = (
     + PLAYER_REWARD_CARD_SPECS
     + MAGE_CARD_SPECS
     + MAGE_REWARD_CARD_SPECS
-    + M2_MAGE_CARD_SPECS
+	+ M2_MAGE_CARD_SPECS
+	+ M3_MAGE_CARD_SPECS
     + ENEMY_CARD_SPECS
     + M2_ENEMY_CARD_SPECS
 )
@@ -1902,7 +2091,55 @@ M2_ENEMY_SPECS = (
     ),
 )
 
-ENEMY_SPECS = ENEMY_SPECS + M2_ENEMY_SPECS
+M3_BOSS_SPECS = (
+    _enemy(
+        "DA_Enemy_WolfKing", "WolfKing", "狼王", 112,
+        (("Enemy_WolfBite", 3), ("Enemy_WolfMaul", 3), ("Enemy_Bark", 2)),
+        unreal.FantasyEnemyVisualProfile.WARRIOR,
+        "WolfKing.Hunt", "群猎", "每个敌方回合开始时获得 1 力量，形成可预期的软狂暴。",
+        (_fallback_intent("FallbackRoyalMaul", "王者扑杀（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 9),)),),
+        max_hand=5, max_action=1, cards_per_turn=2, boss=True,
+        mechanics=(_mechanic(
+            "WolfKing.Hunt", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.APPLY_STATUS, 1,
+                     unreal.FantasyCombatTarget.SELF,
+                     unreal.FantasyCombatStatus.STRENGTH),),
+        ),),
+    ),
+    _enemy(
+        "DA_Enemy_BlackForestWitch", "BlackForestWitch", "黑森林女巫", 124,
+        (("Enemy_Mana", 3), ("Enemy_WitchHex", 3),
+         ("Enemy_WitchDrain", 2), ("Enemy_FireBlast", 3)),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "BlackForestWitch.Coven", "巫契", "每个敌方回合额外向玩家弃牌堆加入一张有上限的临时诅咒。",
+        (_fallback_intent("FallbackCoven", "巫契飞弹（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 8),)),),
+        max_hand=5, max_action=1, starting_mana=3, cards_per_turn=3, boss=True,
+        mechanics=(_mechanic(
+            "BlackForestWitch.Coven", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.ADD_TEMPORARY_CARD, 1,
+                     payload_id="Mage_HexCurse", limit=4),),
+        ),),
+    ),
+    _enemy(
+        "DA_Enemy_MagicMirrorGuardian", "MagicMirrorGuardian", "魔镜守护者", 138,
+        (("Enemy_Wisdom", 3), ("Enemy_CrystalBall", 3),
+         ("Enemy_ElementalWave", 3), ("Enemy_FireBlast", 3)),
+        unreal.FantasyEnemyVisualProfile.WIZARD,
+        "MagicMirror.Reflection", "镜面蓄能", "每个敌方回合开始时获得 5 格挡；玩家需规划爆发窗口。",
+        (_fallback_intent("FallbackReflection", "镜光（兼容意图）",
+                          (_effect(unreal.FantasyCombatEffectType.DAMAGE, 10),)),),
+        max_hand=5, max_action=1, starting_mana=4, cards_per_turn=3, boss=True,
+        mechanics=(_mechanic(
+            "MagicMirror.Reflection", unreal.FantasyMechanicTrigger.ENEMY_TURN_STARTED,
+            (_effect(unreal.FantasyCombatEffectType.BLOCK, 5,
+                     unreal.FantasyCombatTarget.SELF),),
+        ),),
+    ),
+)
+
+ENEMY_SPECS = ENEMY_SPECS + M2_ENEMY_SPECS + M3_BOSS_SPECS
 
 
 ENEMY_CONTENT_CONTRACTS = {
@@ -1923,6 +2160,15 @@ ENEMY_CONTENT_CONTRACTS = {
     "TavernDrunk": (unreal.FantasyEncounterTier.NORMAL, "VillageHuman", 2, 0, 3, 1.0),
     "RangerHunter": (unreal.FantasyEncounterTier.NORMAL, "Ranger", 3, 0, 3, 1.0),
     "WitchAcolyte": (unreal.FantasyEncounterTier.NORMAL, "BlackForest", 3, 0, 3, 1.0),
+    "WolfKing": (unreal.FantasyEncounterTier.BOSS, "ForestBeast", 9, 5, 5, 2.0),
+    "BlackForestWitch": (unreal.FantasyEncounterTier.BOSS, "BlackForest", 9, 5, 5, 2.0),
+    "MagicMirrorGuardian": (unreal.FantasyEncounterTier.BOSS, "Construct", 10, 5, 5, 2.0),
+}
+
+ENEMY_CHAPTERS = {
+    "WolfKing": 2,
+    "BlackForestWitch": 2,
+    "MagicMirrorGuardian": 3,
 }
 
 
@@ -1989,6 +2235,44 @@ CHAPTER_DEPTH_SPECS = (
 )
 
 
+def chapter_depth_specs(chapter_number):
+    if chapter_number == 1:
+        return CHAPTER_DEPTH_SPECS
+    prefix = f"C{chapter_number}"
+    area = "黑森林" if chapter_number == 2 else "诅咒古堡"
+    return (
+        {"depth": 0, "tier": unreal.FantasyEncounterTier.NORMAL,
+         "choice_count": 3, "combat_choice_count": 3, "non_combat": ()},
+        {"depth": 1, "tier": unreal.FantasyEncounterTier.NORMAL,
+         "choice_count": 3, "combat_choice_count": 0, "non_combat": (
+             (f"{prefix}D1_Shop", "夜路商队", "购买职业牌、删牌、恢复或祝福，也可直接离开。",
+              unreal.FantasyRouteNodeType.SHOP, "WanderingMerchant", 1.0),
+             (f"{prefix}D1_Chest", "封印宝箱", "从金币、祝福和卡牌中选择一项。",
+              unreal.FantasyRouteNodeType.TREASURE, "AncientChest", 1.0),
+             (f"{prefix}D1_Rest", f"{area}营火", "恢复、升级或准备下一场战斗。",
+              unreal.FantasyRouteNodeType.REST, "ExileCamp", 1.0),
+         )},
+        {"depth": 2, "tier": unreal.FantasyEncounterTier.NORMAL,
+         "choice_count": 3, "combat_choice_count": 3, "non_combat": ()},
+        {"depth": 3, "tier": unreal.FantasyEncounterTier.NORMAL,
+         "choice_count": 3, "combat_choice_count": 2, "non_combat": (
+             (f"{prefix}D3_Chest", "遗失宝箱", "打开一枚封印锁扣。",
+              unreal.FantasyRouteNodeType.TREASURE, "AncientChest", 1.0),
+         )},
+        {"depth": 4, "tier": unreal.FantasyEncounterTier.NORMAL,
+         "choice_count": 3, "combat_choice_count": 0, "non_combat": (
+             (f"{prefix}D4_Shop", "守关前商队", "最后一次购买、删牌、恢复或祝福。",
+              unreal.FantasyRouteNodeType.SHOP, "WanderingMerchant", 1.0),
+             (f"{prefix}D4_Chest", "守关宝箱", "在守关战前取得一项资源。",
+              unreal.FantasyRouteNodeType.TREASURE, "AncientChest", 1.0),
+             (f"{prefix}D4_Rest", "守关营火", "守关战前恢复、升级或拿取旧盾。",
+              unreal.FantasyRouteNodeType.REST, "ExileCamp", 1.0),
+         )},
+        {"depth": 5, "tier": unreal.FantasyEncounterTier.BOSS,
+         "choice_count": 1, "combat_choice_count": 1, "non_combat": ()},
+    )
+
+
 def ensure_directory(path):
     if not unreal.EditorAssetLibrary.does_directory_exist(path):
         if not unreal.EditorAssetLibrary.make_directory(path):
@@ -2003,6 +2287,7 @@ def ensure_world_directories(root):
         f"{root}/Data/Cards",
         f"{root}/Data/Enemies",
         f"{root}/Data/Encounters",
+        f"{root}/Data/Blessings",
         f"{root}/Data/Events",
         f"{root}/Data/NPCs",
         f"{root}/Art",
@@ -2104,6 +2389,41 @@ def make_combat_effect(spec):
     effect.set_editor_property("limit", spec.get("limit", 0))
     effect.set_editor_property("multiplier", spec.get("multiplier", 1))
     return effect
+
+
+def ensure_blessing_definition(spec):
+    blessing_id, display_name, description, profession, trigger, effects, required_tag, limit, price = spec
+    asset_name = f"DA_Blessing_{blessing_id}"
+    asset_path = f"{W01_BLESSING_ROOT}/{asset_name}"
+    blessing = (
+        unreal.EditorAssetLibrary.load_asset(asset_path)
+        if unreal.EditorAssetLibrary.does_asset_exist(asset_path)
+        else None
+    )
+    if blessing is None:
+        factory = unreal.DataAssetFactory()
+        factory.set_editor_property("data_asset_class", unreal.FantasyBlessingDefinition)
+        blessing = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+            asset_name, W01_BLESSING_ROOT, unreal.FantasyBlessingDefinition, factory
+        )
+        if blessing is None:
+            raise RuntimeError(f"Failed to create FantasyBlessingDefinition: {asset_path}")
+    profession_value = unreal.FantasyPlayerProfession.NONE
+    if profession == "Mage":
+        profession_value = unreal.FantasyPlayerProfession.MAGE
+    blessing.set_editor_property("blessing_id", unreal.Name(blessing_id))
+    blessing.set_editor_property("display_name", display_name)
+    blessing.set_editor_property("description", description)
+    blessing.set_editor_property("profession", profession_value)
+    blessing.set_editor_property("trigger", trigger)
+    blessing.set_editor_property("required_card_tag", unreal.Name(required_tag))
+    blessing.set_editor_property("max_triggers_per_battle", limit)
+    blessing.set_editor_property("shop_price", price)
+    blessing.set_editor_property(
+        "effects", [make_combat_effect(effect) for effect in effects]
+    )
+    unreal.EditorAssetLibrary.save_loaded_asset(blessing, only_if_is_dirty=False)
+    return asset_path
 
 
 def ensure_card_definition(spec):
@@ -2290,9 +2610,12 @@ def ensure_enemy_definition(spec, card_assets_by_id):
     tier, family, danger, min_depth, max_depth, reward_weight = contract
     enemy.set_editor_property("encounter_tier", tier)
     enemy.set_editor_property("family", unreal.Name(family))
-    enemy.set_editor_property("chapter", 1)
+    enemy_chapter = ENEMY_CHAPTERS.get(spec["enemy_id"], 1)
+    enemy.set_editor_property("chapter", enemy_chapter)
     enemy.set_editor_property("danger_rating", danger)
-    enemy.set_editor_property("unlock_condition", unreal.Name("W01.Chapter1"))
+    enemy.set_editor_property(
+        "unlock_condition", unreal.Name(f"W01.Chapter{enemy_chapter}")
+    )
     enemy.set_editor_property("min_depth", min_depth)
     enemy.set_editor_property("max_depth", max_depth)
     enemy.set_editor_property("reward_weight", reward_weight)
@@ -2360,56 +2683,67 @@ def make_route_depth_definition(spec):
     return depth
 
 
-def ensure_chapter_definition():
-    asset_name = "DA_Chapter_W01_AshenKingdom"
-    asset_path = f"{W01_CHAPTER_ROOT}/{asset_name}"
-    chapter = (
-        unreal.EditorAssetLibrary.load_asset(asset_path)
-        if unreal.EditorAssetLibrary.does_asset_exist(asset_path)
-        else None
-    )
-    if chapter is None:
-        factory = unreal.DataAssetFactory()
-        factory.set_editor_property(
-            "data_asset_class",
-            unreal.FantasyChapterDefinition,
-        )
-        chapter = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
-            asset_name,
-            W01_CHAPTER_ROOT,
-            unreal.FantasyChapterDefinition,
-            factory,
+def ensure_chapter_definitions():
+    chapter_names = {
+        1: "DA_Chapter_W01_AshenKingdom",
+        2: "DA_Chapter_W01_BlackForest",
+        3: "DA_Chapter_W01_CursedCastle",
+    }
+    paths = []
+    for chapter_number, asset_name in chapter_names.items():
+        asset_path = f"{W01_CHAPTER_ROOT}/{asset_name}"
+        chapter = (
+            unreal.EditorAssetLibrary.load_asset(asset_path)
+            if unreal.EditorAssetLibrary.does_asset_exist(asset_path)
+            else None
         )
         if chapter is None:
-            raise RuntimeError(
-                f"Failed to create FantasyChapterDefinition: {asset_path}"
+            factory = unreal.DataAssetFactory()
+            factory.set_editor_property(
+                "data_asset_class", unreal.FantasyChapterDefinition
             )
-        unreal.log(f"Created FantasyChapterDefinition: {asset_path}")
-
-    enemy_assets = []
-    for spec in ENEMY_SPECS:
-        enemy_path = f"{W01_ENEMY_ROOT}/{spec['asset_name']}"
-        enemy = unreal.EditorAssetLibrary.load_asset(enemy_path)
-        if enemy is None:
-            raise RuntimeError(
-                f"Chapter encounter pool references missing enemy: {enemy_path}"
+            chapter = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+                asset_name, W01_CHAPTER_ROOT,
+                unreal.FantasyChapterDefinition, factory,
             )
-        enemy_assets.append(enemy)
+            if chapter is None:
+                raise RuntimeError(f"Failed to create FantasyChapterDefinition: {asset_path}")
 
-    chapter.set_editor_property("chapter_id", unreal.Name("W01.AshenKingdom.Chapter1"))
-    chapter.set_editor_property("chapter_number", 1)
-    chapter.set_editor_property("total_depths", 6)
-    chapter.set_editor_property("unlock_condition", unreal.Name("W01.Chapter1"))
-    chapter.set_editor_property("encounter_pool", enemy_assets)
-    chapter.set_editor_property(
-        "depth_definitions",
-        [make_route_depth_definition(spec) for spec in CHAPTER_DEPTH_SPECS],
-    )
-    unreal.EditorAssetLibrary.save_loaded_asset(chapter, only_if_is_dirty=False)
-    return asset_path
+        enemy_assets = []
+        for spec in ENEMY_SPECS:
+            enemy_id = spec["enemy_id"]
+            tier = ENEMY_CONTENT_CONTRACTS[enemy_id][0]
+            introduced = ENEMY_CHAPTERS.get(enemy_id, 1)
+            if introduced > chapter_number:
+                continue
+            if tier == unreal.FantasyEncounterTier.BOSS and introduced != chapter_number:
+                continue
+            enemy_path = f"{W01_ENEMY_ROOT}/{spec['asset_name']}"
+            enemy = unreal.EditorAssetLibrary.load_asset(enemy_path)
+            if enemy is None:
+                raise RuntimeError(f"Chapter encounter pool references missing enemy: {enemy_path}")
+            enemy_assets.append(enemy)
+
+        chapter.set_editor_property(
+            "chapter_id", unreal.Name(f"W01.AshenKingdom.Chapter{chapter_number}")
+        )
+        chapter.set_editor_property("chapter_number", chapter_number)
+        chapter.set_editor_property("total_depths", 6)
+        chapter.set_editor_property(
+            "unlock_condition", unreal.Name(f"W01.Chapter{chapter_number}")
+        )
+        chapter.set_editor_property("encounter_pool", enemy_assets)
+        chapter.set_editor_property(
+            "depth_definitions",
+            [make_route_depth_definition(spec)
+             for spec in chapter_depth_specs(chapter_number)],
+        )
+        unreal.EditorAssetLibrary.save_loaded_asset(chapter, only_if_is_dirty=False)
+        paths.append(asset_path)
+    return paths
 
 
-def ensure_campaign_definition(chapter_path):
+def ensure_campaign_definition(chapter_paths):
     asset_name = "DA_Campaign_W01_AshenKingdom"
     asset_path = f"{W01_CHAPTER_ROOT}/{asset_name}"
     campaign = (
@@ -2428,18 +2762,20 @@ def ensure_campaign_definition(chapter_path):
         if campaign is None:
             raise RuntimeError(f"Failed to create FantasyCampaignDefinition: {asset_path}")
 
-    chapter = unreal.EditorAssetLibrary.load_asset(chapter_path)
     slots = []
     for number in range(1, 4):
+        chapter = unreal.EditorAssetLibrary.load_asset(chapter_paths[number - 1])
+        if chapter is None:
+            raise RuntimeError(f"Campaign chapter failed to load: {chapter_paths[number - 1]}")
         slot = unreal.FantasyCampaignChapterSlot()
         slot.set_editor_property("chapter_id", unreal.Name(f"W01.AshenKingdom.Chapter{number}"))
         slot.set_editor_property("chapter_number", number)
-        slot.set_editor_property("open", number == 1)
-        slot.set_editor_property("definition", chapter if number == 1 else None)
+        slot.set_editor_property("open", True)
+        slot.set_editor_property("definition", chapter)
         slots.append(slot)
     campaign.set_editor_property("campaign_id", unreal.Name("W01.AshenKingdom"))
     campaign.set_editor_property("planned_chapter_count", 3)
-    campaign.set_editor_property("open_chapter_count", 1)
+    campaign.set_editor_property("open_chapter_count", 3)
     campaign.set_editor_property("chapters", slots)
     unreal.EditorAssetLibrary.save_loaded_asset(campaign, only_if_is_dirty=False)
     return asset_path
@@ -2515,6 +2851,13 @@ def main():
         f"starter_copies={knight_starter_copy_count} rewards={knight_reward_count}"
     )
 
+    for blessing_spec in BLESSING_SPECS:
+        ensure_blessing_definition(blessing_spec)
+    unreal.log(
+        "W01_BLESSING_SETUP_COMPLETE "
+        f"definitions={len(BLESSING_SPECS)} shared=6 mage=6 data_driven=1"
+    )
+
     enemy_deck_copy_count = sum(
         copies
         for enemy_spec in ENEMY_SPECS
@@ -2525,16 +2868,16 @@ def main():
         unreal.log(
             f"Enemy content ready: {enemy_spec['enemy_id']} -> {enemy_path}"
         )
-    chapter_path = ensure_chapter_definition()
-    campaign_path = ensure_campaign_definition(chapter_path)
+    chapter_paths = ensure_chapter_definitions()
+    campaign_path = ensure_campaign_definition(chapter_paths)
     unreal.log(
         "W01_CHAPTER_DEFINITION_SETUP_COMPLETE "
-        f"asset={chapter_path} depths={len(CHAPTER_DEPTH_SPECS)} "
+        f"assets={len(chapter_paths)} depths={len(CHAPTER_DEPTH_SPECS) * 3} "
         f"encounters={len(ENEMY_SPECS)} generator=weighted-constrained"
     )
     unreal.log(
         "W01_CAMPAIGN_DEFINITION_SETUP_COMPLETE "
-        f"asset={campaign_path} planned_chapters=3 open_chapters=1"
+        f"asset={campaign_path} planned_chapters=3 open_chapters=3"
     )
     unreal.log(
         "W01_ENEMY_DECK_SETUP_COMPLETE "
@@ -2546,7 +2889,7 @@ def main():
     unreal.log(
         "W01_CONTENT_CONTRACT_SETUP_COMPLETE "
         f"cards={len(CARD_SPECS)} enemies={len(ENEMY_SPECS)} "
-        "normal=14 elite=2 boss=1 upgrade_rule=single-level"
+        "normal=14 elite=2 boss=4 upgrade_rule=single-level"
     )
 
     # Definitions above are saved at their point of mutation. Avoid recursively

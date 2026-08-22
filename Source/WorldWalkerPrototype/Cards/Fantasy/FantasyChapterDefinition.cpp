@@ -138,15 +138,17 @@ TArray<FString> UFantasyChapterDefinition::ValidateDefinition() const
 				*Enemy->EnemyId.ToString()));
 		}
 		EnemyIds.Add(Enemy->EnemyId);
-		if (Enemy->Chapter != ChapterNumber)
+		if (Enemy->Chapter > ChapterNumber
+			|| (Enemy->EncounterTier == EFantasyEncounterTier::Boss
+				&& Enemy->Chapter != ChapterNumber))
 		{
 			Errors.Add(FString::Printf(
-				TEXT("Encounter %s belongs to chapter %d, expected %d."),
+				TEXT("Encounter %s cannot appear in chapter %d (introduced in %d)."),
 				*Enemy->EnemyId.ToString(),
-				Enemy->Chapter,
-				ChapterNumber));
+				ChapterNumber,
+				Enemy->Chapter));
 		}
-		if (!Enemy->UnlockCondition.IsNone()
+		if (Enemy->Chapter == ChapterNumber && !Enemy->UnlockCondition.IsNone()
 			&& Enemy->UnlockCondition != UnlockCondition)
 		{
 			Errors.Add(FString::Printf(
@@ -225,7 +227,9 @@ TArray<FString> UFantasyChapterDefinition::ValidateDefinition() const
 				|| Candidate.DisplayName.IsEmpty() || Candidate.Description.IsEmpty()
 				|| Candidate.Weight <= 0.0f
 				|| (Candidate.NodeType != EFantasyRouteNodeType::Event
-					&& Candidate.NodeType != EFantasyRouteNodeType::Rest))
+					&& Candidate.NodeType != EFantasyRouteNodeType::Rest
+					&& Candidate.NodeType != EFantasyRouteNodeType::Shop
+					&& Candidate.NodeType != EFantasyRouteNodeType::Treasure))
 			{
 				Errors.Add(FString::Printf(
 					TEXT("Depth %d has an invalid non-combat candidate %s."),
@@ -278,8 +282,11 @@ bool UFantasyChapterDefinition::GenerateRouteChoices(
 	for (const TSoftObjectPtr<UFantasyEnemyDefinition>& EnemyReference : EncounterPool)
 	{
 		const UFantasyEnemyDefinition* Enemy = EnemyReference.LoadSynchronous();
-		if (Enemy && Enemy->Chapter == ChapterNumber
-			&& (Enemy->UnlockCondition.IsNone() || Enemy->UnlockCondition == UnlockCondition)
+		if (Enemy && Enemy->Chapter <= ChapterNumber
+			&& (Enemy->EncounterTier != EFantasyEncounterTier::Boss
+				|| Enemy->Chapter == ChapterNumber)
+			&& (Enemy->Chapter < ChapterNumber || Enemy->UnlockCondition.IsNone()
+				|| Enemy->UnlockCondition == UnlockCondition)
 			&& Enemy->EncounterTier == DepthDefinition->EncounterTier
 			&& Enemy->MinDepth <= Depth && Enemy->MaxDepth >= Depth
 			&& Enemy->RewardWeight > 0.0f)

@@ -25,7 +25,7 @@ bool FFantasyDeterministicRouteTest::RunTest(const FString& Parameters)
 		Progression->ConfigureRun(RouteSeed, TEXT("W01-M1-test"));
 		Progression->SelectProfession(EFantasyPlayerProfession::Mage);
 		Progression->EnsureRunStarted();
-		for (int32 Depth = 0; Depth < Progression->GetTotalRouteDepths(); ++Depth)
+		for (int32 Depth = 0; Depth < 18; ++Depth)
 		{
 			Signatures.Add(Progression->BuildRouteChoiceSignature());
 			FFantasyRouteNodeChoice Selected;
@@ -42,7 +42,7 @@ bool FFantasyDeterministicRouteTest::RunTest(const FString& Parameters)
 	const TArray<FString> FirstRun = BuildSignatures(314159);
 	const TArray<FString> Replay = BuildSignatures(314159);
 	const TArray<FString> DifferentSeed = BuildSignatures(271828);
-	TestEqual(TEXT("A complete chapter exposes six route layers"), FirstRun.Num(), 6);
+	TestEqual(TEXT("A complete campaign exposes eighteen route layers"), FirstRun.Num(), 18);
 	TestTrue(TEXT("Same Seed and content version reproduce all route layers"), Replay == FirstRun);
 	TestTrue(TEXT("A different Seed changes the route ordering"), DifferentSeed != FirstRun);
 
