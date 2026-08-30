@@ -71,8 +71,10 @@ env/
 /Downloads/
 /DownloadCache/
 /VendorDownloads/
+/Content/WorldWalker/Shared/ThirdParty/
 /Cache/
 /Temp/
+/tmp/
 *.download
 *.part
 *.crdownload

@@ -32,6 +32,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "Particles/ParticleSystem.h"
@@ -1145,7 +1147,7 @@ void AWorldHubLayout::ConfigureMainWorldEnvironment()
 
 	for (TActorIterator<ADirectionalLight> It(GetWorld()); It; ++It)
 	{
-		if (UDirectionalLightComponent* ExistingSun = It->GetComponent())
+		if (UDirectionalLightComponent* ExistingSun = Cast<UDirectionalLightComponent>(It->GetLightComponent()))
 		{
 			EnvironmentDirectionalLights.Add(ExistingSun);
 			OriginalDirectionalLightVisibility.Add(ExistingSun->GetVisibleFlag());
@@ -1289,11 +1291,20 @@ void AWorldHubLayout::ConfigureMainWorldMovementAndCamera()
 			bOriginalCameraRotationLagEnabled = MainWorldCameraBoom->bEnableCameraRotationLag;
 			bCameraSnapshotValid = true;
 		}
-		MainWorldCameraBoom->TargetArmLength = 410.0f;
-		MainWorldCameraBoom->bEnableCameraLag = true;
+		const bool bAvatarCapture = FParse::Param(
+			FCommandLine::Get(), TEXT("WWAvatarCapture"));
+		MainWorldCameraBoom->TargetArmLength = bAvatarCapture ? 120.0f : 410.0f;
+		if (bAvatarCapture && MainWorldCharacter->GetController())
+		{
+			MainWorldCharacter->GetController()->SetControlRotation(FRotator(
+				-8.0f,
+				MainWorldCharacter->GetActorRotation().Yaw + 180.0f,
+				0.0f));
+		}
+		MainWorldCameraBoom->bEnableCameraLag = !bAvatarCapture;
 		MainWorldCameraBoom->CameraLagSpeed = 12.0f;
 		MainWorldCameraBoom->CameraLagMaxDistance = 28.0f;
-		MainWorldCameraBoom->bEnableCameraRotationLag = true;
+		MainWorldCameraBoom->bEnableCameraRotationLag = !bAvatarCapture;
 		MainWorldCameraBoom->CameraRotationLagSpeed = 16.0f;
 	}
 }
@@ -1679,7 +1690,8 @@ void AWorldHubLayout::UpdateMainWorldMovement(const float DeltaSeconds)
 			DeltaSeconds,
 			8.0f));
 	}
-	if (MainWorldCameraBoom)
+	if (MainWorldCameraBoom
+		&& !FParse::Param(FCommandLine::Get(), TEXT("WWAvatarCapture")))
 	{
 		const float TargetArmLength = 410.0f + SprintBlend * 22.0f - LandingResponse * 10.0f;
 		MainWorldCameraBoom->TargetArmLength = FMath::FInterpTo(

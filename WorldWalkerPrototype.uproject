@@ -2,15 +2,28 @@
 	"FileVersion": 3,
 	"EngineAssociation": "5.8",
 	"Category": "Games",
-	"Description": "A C++ prototype for a world-traversing 3D card RPG roguelite.",
+	"Description": "A C++ multi-world RPG/roguelite prototype with independent 3D and 2D game worlds.",
 	"Modules": [
 		{
 			"Name": "WorldWalkerPrototype",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "WorldWalkerW11",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
+		{
+			"Name": "Paper2D",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemSteam",
+			"Enabled": true
+		},
 		{
 			"Name": "PythonScriptPlugin",
 			"Enabled": true,
