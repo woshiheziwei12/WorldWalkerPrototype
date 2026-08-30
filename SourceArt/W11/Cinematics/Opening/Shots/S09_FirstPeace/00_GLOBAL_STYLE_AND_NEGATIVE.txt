@@ -1,0 +1,15 @@
+Use case: stylized-concept
+Asset type: cinematic shot for an original Chinese xianxia 2D roguelite opening film
+Style/medium: premium hand-painted 2D cinematic animation, Chinese ink-wash atmosphere blended with refined painterly cel shading, restrained semi-realistic anatomy, layered parallax depth, subtle film grain
+Composition/framing: strict 16:9 cinematic composition, clear focal hierarchy, safe crop for 2.39:1 letterbox, physically plausible camera movement
+Lighting/mood: dramatic but restrained, volumetric mist, readable silhouettes, natural contrast
+Continuity: preserve all established character facial features, costume colors, props and world motifs across shots
+Gu Changyuan young anchor: 27-year-old lean East Asian man, angular determined eyes, tiny scar at tail of left eyebrow, long black hair tied high, no facial hair, worn white-gray short robes, dark bracers, muted crimson scarf, compassionate and practical
+Gu Changyuan ruler anchor: outward 45-year-old version of exactly the same man, same face and eyebrow scar, no facial hair, one silver streak at temple, same crimson scarf under restrained black-jade and cold-gold layered robes, dim halo made from six jade slips, exhausted and absolutely convinced, never smiling cruelly
+Demon court anchor: smoke-black humanoid bodies, cracked blank white porcelain masks, no western horns or wings, dark crimson wish-flame suspended inside chest, dirty bronze and black iron armor for commanders
+World motifs: mountain wood-and-stone cities, cliff roads, green tiled roofs, terraced spirit fields, muted crimson cloth as resistance sign, six-jade-slip ring as authoritarian-order sign
+Constraints: original design only; no readable text inside generated footage; no subtitles; no UI; no logo; no watermark; no existing franchise resemblance; no photorealism; no plastic 3D render; no extra limbs or fingers; no rapidly changing faces; no costume morphing; no random weapons; no modern objects
+
+Negative prompt:
+watermark, logo, subtitles, readable letters, modern city, modern firearm, western demon horns, bat wings, superhero costume, sci-fi armor, photorealistic live action, glossy 3D, plastic skin, chibi, comedy, oversaturated neon, excessive particles, flickering face, identity drift, costume change, duplicated person, extra limbs, malformed hands, broken anatomy, unstable architecture, camera teleport, fast chaotic motion
+

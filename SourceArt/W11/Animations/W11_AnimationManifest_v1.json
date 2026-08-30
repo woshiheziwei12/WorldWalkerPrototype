@@ -1,0 +1,1360 @@
+{
+  "schema_version": 1,
+  "content_version": "W11-ANIM-SAMPLE-v3",
+  "separation_contract": {
+    "characters_contain_skill_vfx": false,
+    "skills_contain_character_art": false,
+    "character_actions": [
+      "Idle",
+      "Move",
+      "Cast",
+      "Hit"
+    ],
+    "cast_anchor": "character_root",
+    "directional_skills_authored_facing": "Right"
+  },
+  "characters": [
+    {
+      "hero_id": "Hero.Wei",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Wei/Sheets/W11_Hero_Wei_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Wei/Sheets/W11_Hero_Wei_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Wei/Sheets/W11_Hero_Wei_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Idle/W11_Hero_Wei_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Idle/W11_Hero_Wei_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Idle/W11_Hero_Wei_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Idle/W11_Hero_Wei_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Idle/W11_Hero_Wei_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Idle/W11_Hero_Wei_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Idle/W11_Hero_Wei_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Idle/W11_Hero_Wei_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Move/W11_Hero_Wei_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Move/W11_Hero_Wei_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Move/W11_Hero_Wei_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Move/W11_Hero_Wei_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Move/W11_Hero_Wei_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Move/W11_Hero_Wei_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Move/W11_Hero_Wei_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Move/W11_Hero_Wei_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Cast/W11_Hero_Wei_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Cast/W11_Hero_Wei_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Cast/W11_Hero_Wei_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Cast/W11_Hero_Wei_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Cast/W11_Hero_Wei_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Cast/W11_Hero_Wei_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Cast/W11_Hero_Wei_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Cast/W11_Hero_Wei_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Hit/W11_Hero_Wei_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Hit/W11_Hero_Wei_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Hit/W11_Hero_Wei_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Right/Hit/W11_Hero_Wei_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Hit/W11_Hero_Wei_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Hit/W11_Hero_Wei_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Hit/W11_Hero_Wei_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Wei/Frames/Left/Hit/W11_Hero_Wei_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Dong",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Dong/Sheets/W11_Hero_Dong_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Dong/Sheets/W11_Hero_Dong_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Dong/Sheets/W11_Hero_Dong_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Idle/W11_Hero_Dong_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Idle/W11_Hero_Dong_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Idle/W11_Hero_Dong_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Idle/W11_Hero_Dong_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Idle/W11_Hero_Dong_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Idle/W11_Hero_Dong_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Idle/W11_Hero_Dong_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Idle/W11_Hero_Dong_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Move/W11_Hero_Dong_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Move/W11_Hero_Dong_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Move/W11_Hero_Dong_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Move/W11_Hero_Dong_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Move/W11_Hero_Dong_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Move/W11_Hero_Dong_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Move/W11_Hero_Dong_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Move/W11_Hero_Dong_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Cast/W11_Hero_Dong_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Cast/W11_Hero_Dong_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Cast/W11_Hero_Dong_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Cast/W11_Hero_Dong_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Cast/W11_Hero_Dong_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Cast/W11_Hero_Dong_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Cast/W11_Hero_Dong_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Cast/W11_Hero_Dong_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Hit/W11_Hero_Dong_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Hit/W11_Hero_Dong_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Hit/W11_Hero_Dong_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Right/Hit/W11_Hero_Dong_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Hit/W11_Hero_Dong_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Hit/W11_Hero_Dong_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Hit/W11_Hero_Dong_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Dong/Frames/Left/Hit/W11_Hero_Dong_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Tian",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Tian/Sheets/W11_Hero_Tian_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Tian/Sheets/W11_Hero_Tian_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Tian/Sheets/W11_Hero_Tian_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Idle/W11_Hero_Tian_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Idle/W11_Hero_Tian_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Idle/W11_Hero_Tian_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Idle/W11_Hero_Tian_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Idle/W11_Hero_Tian_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Idle/W11_Hero_Tian_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Idle/W11_Hero_Tian_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Idle/W11_Hero_Tian_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Move/W11_Hero_Tian_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Move/W11_Hero_Tian_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Move/W11_Hero_Tian_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Move/W11_Hero_Tian_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Move/W11_Hero_Tian_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Move/W11_Hero_Tian_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Move/W11_Hero_Tian_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Move/W11_Hero_Tian_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Cast/W11_Hero_Tian_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Cast/W11_Hero_Tian_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Cast/W11_Hero_Tian_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Cast/W11_Hero_Tian_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Cast/W11_Hero_Tian_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Cast/W11_Hero_Tian_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Cast/W11_Hero_Tian_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Cast/W11_Hero_Tian_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Hit/W11_Hero_Tian_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Hit/W11_Hero_Tian_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Hit/W11_Hero_Tian_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Right/Hit/W11_Hero_Tian_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Hit/W11_Hero_Tian_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Hit/W11_Hero_Tian_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Hit/W11_Hero_Tian_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Tian/Frames/Left/Hit/W11_Hero_Tian_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Xiang",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Xiang/Sheets/W11_Hero_Xiang_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Xiang/Sheets/W11_Hero_Xiang_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Xiang/Sheets/W11_Hero_Xiang_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Idle/W11_Hero_Xiang_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Idle/W11_Hero_Xiang_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Idle/W11_Hero_Xiang_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Idle/W11_Hero_Xiang_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Idle/W11_Hero_Xiang_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Idle/W11_Hero_Xiang_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Idle/W11_Hero_Xiang_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Idle/W11_Hero_Xiang_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Move/W11_Hero_Xiang_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Move/W11_Hero_Xiang_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Move/W11_Hero_Xiang_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Move/W11_Hero_Xiang_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Move/W11_Hero_Xiang_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Move/W11_Hero_Xiang_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Move/W11_Hero_Xiang_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Move/W11_Hero_Xiang_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Cast/W11_Hero_Xiang_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Cast/W11_Hero_Xiang_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Cast/W11_Hero_Xiang_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Cast/W11_Hero_Xiang_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Cast/W11_Hero_Xiang_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Cast/W11_Hero_Xiang_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Cast/W11_Hero_Xiang_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Cast/W11_Hero_Xiang_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Hit/W11_Hero_Xiang_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Hit/W11_Hero_Xiang_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Hit/W11_Hero_Xiang_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Right/Hit/W11_Hero_Xiang_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Hit/W11_Hero_Xiang_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Hit/W11_Hero_Xiang_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Hit/W11_Hero_Xiang_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Xiang/Frames/Left/Hit/W11_Hero_Xiang_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Pu",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Pu/Sheets/W11_Hero_Pu_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Pu/Sheets/W11_Hero_Pu_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Pu/Sheets/W11_Hero_Pu_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Idle/W11_Hero_Pu_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Idle/W11_Hero_Pu_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Idle/W11_Hero_Pu_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Idle/W11_Hero_Pu_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Idle/W11_Hero_Pu_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Idle/W11_Hero_Pu_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Idle/W11_Hero_Pu_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Idle/W11_Hero_Pu_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Move/W11_Hero_Pu_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Move/W11_Hero_Pu_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Move/W11_Hero_Pu_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Move/W11_Hero_Pu_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Move/W11_Hero_Pu_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Move/W11_Hero_Pu_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Move/W11_Hero_Pu_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Move/W11_Hero_Pu_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Cast/W11_Hero_Pu_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Cast/W11_Hero_Pu_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Cast/W11_Hero_Pu_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Cast/W11_Hero_Pu_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Cast/W11_Hero_Pu_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Cast/W11_Hero_Pu_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Cast/W11_Hero_Pu_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Cast/W11_Hero_Pu_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Hit/W11_Hero_Pu_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Hit/W11_Hero_Pu_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Hit/W11_Hero_Pu_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Right/Hit/W11_Hero_Pu_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Hit/W11_Hero_Pu_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Hit/W11_Hero_Pu_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Hit/W11_Hero_Pu_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Pu/Frames/Left/Hit/W11_Hero_Pu_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Ying",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Ying/Sheets/W11_Hero_Ying_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Ying/Sheets/W11_Hero_Ying_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Ying/Sheets/W11_Hero_Ying_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Idle/W11_Hero_Ying_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Idle/W11_Hero_Ying_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Idle/W11_Hero_Ying_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Idle/W11_Hero_Ying_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Idle/W11_Hero_Ying_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Idle/W11_Hero_Ying_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Idle/W11_Hero_Ying_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Idle/W11_Hero_Ying_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Move/W11_Hero_Ying_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Move/W11_Hero_Ying_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Move/W11_Hero_Ying_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Move/W11_Hero_Ying_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Move/W11_Hero_Ying_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Move/W11_Hero_Ying_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Move/W11_Hero_Ying_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Move/W11_Hero_Ying_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Cast/W11_Hero_Ying_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Cast/W11_Hero_Ying_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Cast/W11_Hero_Ying_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Cast/W11_Hero_Ying_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Cast/W11_Hero_Ying_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Cast/W11_Hero_Ying_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Cast/W11_Hero_Ying_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Cast/W11_Hero_Ying_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Hit/W11_Hero_Ying_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Hit/W11_Hero_Ying_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Hit/W11_Hero_Ying_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Right/Hit/W11_Hero_Ying_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Hit/W11_Hero_Ying_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Hit/W11_Hero_Ying_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Hit/W11_Hero_Ying_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Ying/Frames/Left/Hit/W11_Hero_Ying_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Li",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Li/Sheets/W11_Hero_Li_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Li/Sheets/W11_Hero_Li_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Li/Sheets/W11_Hero_Li_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Idle/W11_Hero_Li_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Idle/W11_Hero_Li_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Idle/W11_Hero_Li_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Idle/W11_Hero_Li_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Idle/W11_Hero_Li_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Idle/W11_Hero_Li_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Idle/W11_Hero_Li_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Idle/W11_Hero_Li_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Move/W11_Hero_Li_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Move/W11_Hero_Li_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Move/W11_Hero_Li_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Move/W11_Hero_Li_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Move/W11_Hero_Li_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Move/W11_Hero_Li_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Move/W11_Hero_Li_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Move/W11_Hero_Li_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Cast/W11_Hero_Li_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Cast/W11_Hero_Li_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Cast/W11_Hero_Li_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Cast/W11_Hero_Li_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Cast/W11_Hero_Li_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Cast/W11_Hero_Li_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Cast/W11_Hero_Li_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Cast/W11_Hero_Li_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Hit/W11_Hero_Li_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Hit/W11_Hero_Li_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Hit/W11_Hero_Li_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Right/Hit/W11_Hero_Li_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Hit/W11_Hero_Li_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Hit/W11_Hero_Li_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Hit/W11_Hero_Li_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Li/Frames/Left/Hit/W11_Hero_Li_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Jia",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Jia/Sheets/W11_Hero_Jia_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Jia/Sheets/W11_Hero_Jia_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Jia/Sheets/W11_Hero_Jia_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Idle/W11_Hero_Jia_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Idle/W11_Hero_Jia_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Idle/W11_Hero_Jia_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Idle/W11_Hero_Jia_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Idle/W11_Hero_Jia_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Idle/W11_Hero_Jia_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Idle/W11_Hero_Jia_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Idle/W11_Hero_Jia_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Move/W11_Hero_Jia_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Move/W11_Hero_Jia_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Move/W11_Hero_Jia_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Move/W11_Hero_Jia_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Move/W11_Hero_Jia_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Move/W11_Hero_Jia_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Move/W11_Hero_Jia_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Move/W11_Hero_Jia_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Cast/W11_Hero_Jia_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Cast/W11_Hero_Jia_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Cast/W11_Hero_Jia_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Cast/W11_Hero_Jia_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Cast/W11_Hero_Jia_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Cast/W11_Hero_Jia_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Cast/W11_Hero_Jia_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Cast/W11_Hero_Jia_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Hit/W11_Hero_Jia_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Hit/W11_Hero_Jia_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Hit/W11_Hero_Jia_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Right/Hit/W11_Hero_Jia_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Hit/W11_Hero_Jia_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Hit/W11_Hero_Jia_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Hit/W11_Hero_Jia_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Jia/Frames/Left/Hit/W11_Hero_Jia_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Yu",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Yu/Sheets/W11_Hero_Yu_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Yu/Sheets/W11_Hero_Yu_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Yu/Sheets/W11_Hero_Yu_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Idle/W11_Hero_Yu_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Idle/W11_Hero_Yu_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Idle/W11_Hero_Yu_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Idle/W11_Hero_Yu_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Idle/W11_Hero_Yu_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Idle/W11_Hero_Yu_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Idle/W11_Hero_Yu_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Idle/W11_Hero_Yu_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 24.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_03.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_04.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_05.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_06.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_07.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_08.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_09.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_10.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_11.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_12.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_13.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_14.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_15.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_16.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_17.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_18.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_19.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_20.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_21.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_22.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Move/W11_Hero_Yu_Right_Move_23.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_03.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_04.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_05.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_06.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_07.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_08.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_09.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_10.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_11.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_12.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_13.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_14.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_15.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_16.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_17.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_18.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_19.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_20.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_21.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_22.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Move/W11_Hero_Yu_Left_Move_23.png"
+          ],
+          "frame_size": [
+            512,
+            512
+          ],
+          "pixels_per_unreal_unit": 1.6,
+          "sample": true
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Cast/W11_Hero_Yu_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Cast/W11_Hero_Yu_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Cast/W11_Hero_Yu_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Cast/W11_Hero_Yu_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Cast/W11_Hero_Yu_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Cast/W11_Hero_Yu_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Cast/W11_Hero_Yu_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Cast/W11_Hero_Yu_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Hit/W11_Hero_Yu_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Hit/W11_Hero_Yu_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Hit/W11_Hero_Yu_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Right/Hit/W11_Hero_Yu_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Hit/W11_Hero_Yu_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Hit/W11_Hero_Yu_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Hit/W11_Hero_Yu_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Yu/Frames/Left/Hit/W11_Hero_Yu_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    },
+    {
+      "hero_id": "Hero.Meng",
+      "source_sheet": "SourceArt/W11/Animations/Characters/Meng/Sheets/W11_Hero_Meng_CombatSheet_v1_source.png",
+      "right_atlas": "SourceArt/W11/Animations/Characters/Meng/Sheets/W11_Hero_Meng_CombatSheet_Right_v1.png",
+      "left_atlas": "SourceArt/W11/Animations/Characters/Meng/Sheets/W11_Hero_Meng_CombatSheet_Left_v1.png",
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.94375
+      ],
+      "actions": {
+        "Idle": {
+          "fps": 6.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Idle/W11_Hero_Meng_Right_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Idle/W11_Hero_Meng_Right_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Idle/W11_Hero_Meng_Right_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Idle/W11_Hero_Meng_Right_Idle_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Idle/W11_Hero_Meng_Left_Idle_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Idle/W11_Hero_Meng_Left_Idle_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Idle/W11_Hero_Meng_Left_Idle_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Idle/W11_Hero_Meng_Left_Idle_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Move": {
+          "fps": 10.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Move/W11_Hero_Meng_Right_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Move/W11_Hero_Meng_Right_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Move/W11_Hero_Meng_Right_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Move/W11_Hero_Meng_Right_Move_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Move/W11_Hero_Meng_Left_Move_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Move/W11_Hero_Meng_Left_Move_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Move/W11_Hero_Meng_Left_Move_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Move/W11_Hero_Meng_Left_Move_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Cast": {
+          "fps": 8.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Cast/W11_Hero_Meng_Right_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Cast/W11_Hero_Meng_Right_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Cast/W11_Hero_Meng_Right_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Cast/W11_Hero_Meng_Right_Cast_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Cast/W11_Hero_Meng_Left_Cast_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Cast/W11_Hero_Meng_Left_Cast_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Cast/W11_Hero_Meng_Left_Cast_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Cast/W11_Hero_Meng_Left_Cast_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        },
+        "Hit": {
+          "fps": 7.0,
+          "right": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Hit/W11_Hero_Meng_Right_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Hit/W11_Hero_Meng_Right_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Hit/W11_Hero_Meng_Right_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Right/Hit/W11_Hero_Meng_Right_Hit_03.png"
+          ],
+          "left": [
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Hit/W11_Hero_Meng_Left_Hit_00.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Hit/W11_Hero_Meng_Left_Hit_01.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Hit/W11_Hero_Meng_Left_Hit_02.png",
+            "SourceArt/W11/Animations/Characters/Meng/Frames/Left/Hit/W11_Hero_Meng_Left_Hit_03.png"
+          ],
+          "frame_size": [
+            320,
+            320
+          ],
+          "pixels_per_unreal_unit": 1.0
+        }
+      },
+      "vertical_facing_policy": "keep_last_horizontal_facing"
+    }
+  ],
+  "enemy_samples": [
+    {
+      "enemy_id": "Enemy.StoneFiend",
+      "source_sheet": "SourceArt/W11/Animations/Enemies/StoneFiend/Sheets/W11_Enemy_StoneFiend_Move12_Right_v1_source.png",
+      "inbetween_source_sheet": "SourceArt/W11/Animations/Enemies/StoneFiend/Sheets/W11_Enemy_StoneFiend_Move24_Inbetweens_v2_source.png",
+      "move": {
+        "fps": 24.0,
+        "right": [
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_00.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_01.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_02.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_03.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_04.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_05.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_06.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_07.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_08.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_09.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_10.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_11.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_12.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_13.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_14.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_15.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_16.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_17.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_18.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_19.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_20.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_21.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_22.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Right/Move/W11_Enemy_StoneFiend_Right_Move_23.png"
+        ],
+        "left": [
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_00.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_01.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_02.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_03.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_04.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_05.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_06.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_07.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_08.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_09.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_10.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_11.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_12.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_13.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_14.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_15.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_16.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_17.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_18.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_19.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_20.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_21.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_22.png",
+          "SourceArt/W11/Animations/Enemies/StoneFiend/Frames/Left/Move/W11_Enemy_StoneFiend_Left_Move_23.png"
+        ],
+        "frame_size": [
+          512,
+          512
+        ],
+        "pixels_per_unreal_unit": 1.0,
+        "sample": true
+      }
+    }
+  ],
+  "skills": [
+    {
+      "visual_id": "SkillVisual.FlowingCloudSword",
+      "ability_id": "Ability.FlowingCloudSword",
+      "source_sheet": "SourceArt/W11/Animations/Skills/FlowingCloudSword/Sheets/W11_Skill_FlowingCloudSword_Sheet_v1_source.png",
+      "atlas": "SourceArt/W11/Animations/Skills/FlowingCloudSword/Sheets/W11_Skill_FlowingCloudSword_Sheet_v1.png",
+      "frames": [
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_00.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_01.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_02.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_03.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_04.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_05.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_06.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_07.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_08.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_09.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_10.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_11.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_12.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_13.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_14.png",
+        "SourceArt/W11/Animations/Skills/FlowingCloudSword/Frames/W11_Skill_FlowingCloudSword_15.png"
+      ],
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "fps": 12.0,
+      "directional": true,
+      "authored_direction": "Right"
+    },
+    {
+      "visual_id": "SkillVisual.FiveThunder",
+      "ability_id": "Ability.FiveThunder",
+      "source_sheet": "SourceArt/W11/Animations/Skills/FiveThunder/Sheets/W11_Skill_FiveThunder_Sheet_v1_source.png",
+      "atlas": "SourceArt/W11/Animations/Skills/FiveThunder/Sheets/W11_Skill_FiveThunder_Sheet_v1.png",
+      "frames": [
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_00.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_01.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_02.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_03.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_04.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_05.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_06.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_07.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_08.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_09.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_10.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_11.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_12.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_13.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_14.png",
+        "SourceArt/W11/Animations/Skills/FiveThunder/Frames/W11_Skill_FiveThunder_15.png"
+      ],
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "fps": 14.0,
+      "directional": false,
+      "authored_direction": "None"
+    },
+    {
+      "visual_id": "SkillVisual.DarkWaterWard",
+      "ability_id": "Ability.DarkWaterWard",
+      "source_sheet": "SourceArt/W11/Animations/Skills/DarkWaterWard/Sheets/W11_Skill_DarkWaterWard_Sheet_v1_source.png",
+      "atlas": "SourceArt/W11/Animations/Skills/DarkWaterWard/Sheets/W11_Skill_DarkWaterWard_Sheet_v1.png",
+      "frames": [
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_00.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_01.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_02.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_03.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_04.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_05.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_06.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_07.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_08.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_09.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_10.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_11.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_12.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_13.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_14.png",
+        "SourceArt/W11/Animations/Skills/DarkWaterWard/Frames/W11_Skill_DarkWaterWard_15.png"
+      ],
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "fps": 10.0,
+      "directional": false,
+      "authored_direction": "None"
+    },
+    {
+      "visual_id": "SkillVisual.SpringRenewal",
+      "ability_id": "Ability.SpringRenewal",
+      "source_sheet": "SourceArt/W11/Animations/Skills/SpringRenewal/Sheets/W11_Skill_SpringRenewal_Sheet_v1_source.png",
+      "atlas": "SourceArt/W11/Animations/Skills/SpringRenewal/Sheets/W11_Skill_SpringRenewal_Sheet_v1.png",
+      "frames": [
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_00.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_01.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_02.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_03.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_04.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_05.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_06.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_07.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_08.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_09.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_10.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_11.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_12.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_13.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_14.png",
+        "SourceArt/W11/Animations/Skills/SpringRenewal/Frames/W11_Skill_SpringRenewal_15.png"
+      ],
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "fps": 10.0,
+      "directional": false,
+      "authored_direction": "None"
+    },
+    {
+      "visual_id": "SkillVisual.MoonChasingStrike",
+      "ability_id": "Ability.MoonChasingStrike",
+      "source_sheet": "SourceArt/W11/Animations/Skills/MoonChasingStrike/Sheets/W11_Skill_MoonChasingStrike_Sheet_v1_source.png",
+      "atlas": "SourceArt/W11/Animations/Skills/MoonChasingStrike/Sheets/W11_Skill_MoonChasingStrike_Sheet_v1.png",
+      "frames": [
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_00.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_01.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_02.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_03.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_04.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_05.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_06.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_07.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_08.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_09.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_10.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_11.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_12.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_13.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_14.png",
+        "SourceArt/W11/Animations/Skills/MoonChasingStrike/Frames/W11_Skill_MoonChasingStrike_15.png"
+      ],
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "fps": 16.0,
+      "directional": true,
+      "authored_direction": "Right"
+    },
+    {
+      "visual_id": "SkillVisual.TwoPolesFormation",
+      "ability_id": "Ability.TwoPolesFormation",
+      "source_sheet": "SourceArt/W11/Animations/Skills/TwoPolesFormation/Sheets/W11_Skill_TwoPolesFormation_Sheet_v1_source.png",
+      "atlas": "SourceArt/W11/Animations/Skills/TwoPolesFormation/Sheets/W11_Skill_TwoPolesFormation_Sheet_v1.png",
+      "frames": [
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_00.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_01.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_02.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_03.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_04.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_05.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_06.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_07.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_08.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_09.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_10.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_11.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_12.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_13.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_14.png",
+        "SourceArt/W11/Animations/Skills/TwoPolesFormation/Frames/W11_Skill_TwoPolesFormation_15.png"
+      ],
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "fps": 12.0,
+      "directional": false,
+      "authored_direction": "None"
+    },
+    {
+      "visual_id": "SkillVisual.CommonHitSpark",
+      "ability_id": null,
+      "source_sheet": "SourceArt/W11/Animations/Skills/CommonHitSpark/Sheets/W11_Skill_CommonHitSpark_Sheet_v1_source.png",
+      "atlas": "SourceArt/W11/Animations/Skills/CommonHitSpark/Sheets/W11_Skill_CommonHitSpark_Sheet_v1.png",
+      "frames": [
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_00.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_01.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_02.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_03.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_04.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_05.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_06.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_07.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_08.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_09.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_10.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_11.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_12.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_13.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_14.png",
+        "SourceArt/W11/Animations/Skills/CommonHitSpark/Frames/W11_Skill_CommonHitSpark_15.png"
+      ],
+      "frame_size": [
+        320,
+        320
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "fps": 18.0,
+      "directional": false,
+      "authored_direction": "None"
+    }
+  ],
+  "showcases": {
+    "preview_only": true,
+    "shared_skill": "Ability.FlowingCloudSword",
+    "files": [
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Wei_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Dong_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Tian_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Xiang_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Pu_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Ying_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Li_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Jia_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Yu_SharedFlowingCloud_BattleDemo_v1.gif",
+      "SourceArt/W11/Animations/Showcases/W11_Hero_Meng_SharedFlowingCloud_BattleDemo_v1.gif"
+    ]
+  }
+}

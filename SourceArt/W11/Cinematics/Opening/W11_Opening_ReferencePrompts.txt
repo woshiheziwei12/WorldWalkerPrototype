@@ -1,0 +1,50 @@
+W11《太虚问道》开场动画视觉参考图生成记录
+生成方式：OpenAI ImageGen 内置生成
+日期：2026-08-27
+用途：AI 视频的视觉锚点，不是最终成片帧
+
+============================================================
+W11_Opening_Styleframe_DemonRule.png
+============================================================
+
+Use case: stylized-concept
+Asset type: 16:9 cinematic styleframe for an original Chinese xianxia 2D roguelite opening film
+Primary request: a tragic wide establishing shot of the xianxia realm under the century-long rule of the Faceless Demon Court
+Scene/backdrop: an occupied mountain city built from weathered wood and dark stone beneath ash-filled clouds, cliff roads, green tiled roofs, terraced spirit fields visibly withering along the valley
+Subject: faceless smoke-black demon soldiers in cracked blank white porcelain masks draw dim crimson wish-flames from kneeling civilians; memory-like red embers flow upward into one immense restrained vortex; one commander wears dirty bronze and black iron lamellar armor
+Style/medium: premium hand-painted 2D cinematic concept art, Chinese ink-wash atmosphere blended with refined painterly cel shading, restrained semi-realistic anatomy, original xianxia world design, layered parallax depth, subtle film grain
+Composition/framing: strict landscape 16:9, high wide establishing view descending visually toward one foreground civilian whose small crimson wish-flame is being taken, clear focal hierarchy, safe crop for cinematic letterbox
+Lighting/mood: tragic and dignified rather than grotesque, charcoal sky, sickly muted crimson glow, cold volumetric mist, readable silhouettes
+Color palette: ink black, ash gray, dirty bronze, desaturated jade, restrained dark crimson
+Constraints: no gore; no western demon horns; no bat wings; no readable text; no subtitles; no UI; no logo; no watermark; no existing franchise resemblance; no photorealism; no glossy plastic 3D; no modern objects; no extra limbs; no malformed hands; no comedy; no excessive neon or particles
+
+============================================================
+W11_Opening_Styleframe_YoungGu.png
+============================================================
+
+Use case: stylized-concept
+Asset type: 16:9 cinematic character styleframe for an original Chinese xianxia 2D roguelite opening film
+Primary request: the true heroic first appearance of young Gu Changyuan, an outsider who will organize ordinary people against the Faceless Demon Court
+Scene/backdrop: a hidden resistance clinic inside a weathered mountain granary at blue-hour dusk; refugees, simple water filters, grain sacks, balance scales and a distant demon supply convoy crossing a cliff bridge are visible but secondary
+Subject: Gu Changyuan is a 27-year-old lean East Asian man with angular determined eyes, a tiny old scar at the tail of his left eyebrow, long black hair tied high, no facial hair, worn white-gray short robes, dark cloth bracers, practical boots, and one muted crimson scarf; he kneels at the same level as ordinary refugees while firmly bandaging an injured farmer's arm, then looks toward the distant convoy with focused compassion; his hands are careful and practical, not magical
+Style/medium: premium hand-painted 2D cinematic concept art, Chinese ink-wash atmosphere blended with refined painterly cel shading, restrained semi-realistic anatomy, original xianxia design, subtle film grain
+Composition/framing: strict landscape 16:9 medium-wide shot, bandaged arm and Gu's face form the primary diagonal, his line of sight leads to the distant bridge, readable face for future character-consistency reference, safe crop for cinematic letterbox
+Lighting/mood: fragile hope inside hardship, cool blue dusk from the doorway, one warm oil lamp on faces, restrained volumetric dust
+Color palette: worn gray, indigo, wood brown, muted jade, one controlled crimson scarf accent
+Constraints: Gu must look sincere, capable and compassionate, never sinister or regal; no throne; no crown; no halo; no ornate armor; no readable text; no subtitles; no UI; no logo; no watermark; no existing franchise resemblance; no photorealism; no glossy plastic 3D; no modern medical equipment; no extra limbs or fingers; no malformed hands; no random weapon
+
+============================================================
+W11_Opening_Styleframe_SteleAwakening.png
+============================================================
+
+Use case: stylized-concept
+Asset type: 16:9 cinematic ending styleframe for an original Chinese xianxia 2D roguelite opening film
+Primary request: first-person awakening in the rain-soaked nameless Hero Stele Field, designed to transition seamlessly from prerendered opening video into gameplay
+Scene/backdrop: hundreds of dark gray stone memorial steles without inscriptions across a vast overgrown field at night; low mountain fog, windblown dead grass, cold moon behind storm clouds, one immense intact stele far in the distance, one tiny amber patrol lantern moving between stones
+Subject: only one anonymous hand pressing into wet mud at the bottom edge of the frame, with no sleeve color, jewelry, body shape or gender clue; raindrops slide across the viewer's vision; no visible protagonist face
+Style/medium: premium hand-painted 2D cinematic concept art, Chinese ink-wash atmosphere blended with refined painterly cel shading, restrained semi-realistic detail, layered parallax depth, subtle film grain, original xianxia world
+Composition/framing: strict landscape 16:9 first-person low ground-level camera, nearest tilted steles create depth, distant intact stele is the main focal point, amber lantern is a small secondary focal point, safe crop for cinematic letterbox
+Lighting/mood: disoriented awakening, solemn mystery, cold silver-blue moonlight, dark rain, restrained amber contrast, dignified and ominous rather than horror
+Color palette: rain gray, slate black, moon silver, desaturated blue, tiny amber light
+Constraints: every stone surface must be blank with no readable inscription; no generated title; no subtitles; no UI; no logo; no watermark; no visible player face; no gendered clothing; no skeletons; no gore; no zombies; no western graveyard crosses; no existing franchise resemblance; no photorealism; no glossy plastic 3D; no modern objects; no extra fingers; no malformed hand; no excessive lightning or particles
+
